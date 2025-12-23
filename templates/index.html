@@ -54,15 +54,41 @@
 
 <div class="container-fluid px-5 mt-4">
     
+    {% if son_yukleme %}
+    <div class="alert alert-light border shadow-sm d-flex align-items-center justify-content-between py-2 mb-4">
+        <div>
+            <span class="badge bg-secondary me-2">Son İşlem Geçmişi</span>
+            <small class="text-muted fw-bold">
+                <i class="fas fa-history"></i> {{ son_yukleme.tarih }} tarihinde yüklendi:
+            </small> 
+            <span class="text-primary fw-bold mx-2">
+                {% if son_yukleme.tur == 'Demirbaş' %}
+                    <i class="fas fa-box"></i> {{ son_yukleme.hedef_konum }} 
+                {% else %}
+                    <i class="fas fa-users"></i> {{ son_yukleme.hedef_konum }}
+                {% endif %}
+            </span>
+            <small class="text-muted fst-italic">({{ son_yukleme.dosya_adi }})</small>
+        </div>
+        <small class="text-muted">Kaldığınız yerden devam edebilirsiniz.</small>
+    </div>
+    {% endif %}
+
+    <div class="row align-items-center mb-4">
+    
     <div class="row align-items-center mb-4">
         <div class="col-md-3"><h2 class="text-primary fw-bold mb-0"><i class="fas fa-university"></i> Kampüs Yönetimi</h2></div>
         <div class="col-md-4">
+            {% if aktif_tab != 'istatistik' %}
             <form action="/" method="GET" class="d-flex" id="searchForm">
                 <input type="hidden" name="tab" id="activeTabInput" value="{{ aktif_tab }}">
                 <input class="form-control me-2" type="search" name="q" placeholder="Detaylı arama..." value="{{ arama_terimi if arama_terimi else '' }}">
                 <button class="btn btn-outline-primary" type="submit"><i class="fas fa-search"></i></button>
-                {% if arama_terimi %} <a href="/?tab={{ aktif_tab }}" class="btn btn-outline-secondary ms-2" title="Temizle"><i class="fas fa-times"></i></a> {% endif %}
+                {% if arama_terimi %}
+                    <a href="/?tab={{ aktif_tab }}" class="btn btn-outline-secondary ms-2" title="Temizle"><i class="fas fa-times"></i></a>
+                {% endif %}
             </form>
+            {% endif %}
         </div>
         <div class="col-md-5 text-end">
             <button class="btn btn-info text-white me-1" data-bs-toggle="modal" data-bs-target="#uploadPersonelModal">
@@ -77,18 +103,13 @@
 
     <ul class="nav nav-tabs mb-3" id="myTab">
         <li class="nav-item">
-            <a class="nav-link {% if aktif_tab == 'demirbas' %}active{% endif %}" 
-               href="/?tab=demirbas" 
-               style="cursor: pointer;">
-               📦 Demirbaşlar
-            </a>
+            <a class="nav-link {% if aktif_tab == 'demirbas' %}active{% endif %}" href="/?tab=demirbas" style="cursor: pointer;">📦 Demirbaşlar</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if aktif_tab == 'personel' %}active{% endif %}" 
-               href="/?tab=personel" 
-               style="cursor: pointer;">
-               👥 Personel Listesi
-            </a>
+            <a class="nav-link {% if aktif_tab == 'personel' %}active{% endif %}" href="/?tab=personel" style="cursor: pointer;">👥 Personel Listesi</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if aktif_tab == 'istatistik' %}active{% endif %}" href="/?tab=istatistik" style="cursor: pointer;">📊 İstatistik & Analiz</a>
         </li>
     </ul>
 
@@ -290,6 +311,145 @@
                 </div>
             </div>
         </div>
+        <div class="tab-pane fade" id="istatistik">
+            <div class="card p-4 shadow-sm border-0">
+                
+                <div class="text-center mb-4">
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="analiz_secim" id="radioDemirbas" autocomplete="off" 
+                               onchange="analizTuruDegis('demirbas')" {% if analiz_turu == 'demirbas' %}checked{% endif %}>
+                        <label class="btn btn-outline-warning px-4 fw-bold" for="radioDemirbas">📦 Demirbaş Analizi</label>
+
+                        <input type="radio" class="btn-check" name="analiz_secim" id="radioPersonel" autocomplete="off" 
+                               onchange="analizTuruDegis('personel')" {% if analiz_turu == 'personel' %}checked{% endif %}>
+                        <label class="btn btn-outline-info px-4 fw-bold" for="radioPersonel">👥 Personel Analizi</label>
+                    </div>
+                </div>
+
+                <div id="form-demirbas" class="bg-light p-4 rounded border mb-4" {% if analiz_turu == 'personel' %}style="display:none;"{% endif %}>
+                    <h6 class="text-warning fw-bold mb-3"><i class="fas fa-boxes"></i> Malzeme Sayım Kriterleri</h6>
+                    <form action="/#analizSonuclari" method="GET">
+                        <input type="hidden" name="tab" value="istatistik">
+                        <input type="hidden" name="analiz_turu" value="demirbas">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Malzeme Adı</label>
+                                <input type="text" name="ist_malzeme" class="form-control" placeholder="Örn: Çöp Kutusu" value="{{ ist_malzeme }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Kampüs</label>
+                                <select name="ist_kampus" class="form-select">
+                                    <option value="Tümü">Tüm Kampüsler</option>
+                                    {% for yer in yerleskeler %}<option value="{{ yer }}" {% if ist_kampus == yer %}selected{% endif %}>{{ yer }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Bina / Konum</label>
+                                <input type="text" name="ist_konum" class="form-control" placeholder="Örn: Yurtlar" value="{{ ist_konum }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-warning w-100 fw-bold text-dark">Say</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="form-personel" class="bg-light p-4 rounded border mb-4" {% if analiz_turu == 'demirbas' %}style="display:none;"{% endif %}>
+                    <h6 class="text-info fw-bold mb-3"><i class="fas fa-users"></i> Personel Analiz Kriterleri</h6>
+                    <form action="/#analizSonuclari" method="GET">
+                        <input type="hidden" name="tab" value="istatistik">
+                        <input type="hidden" name="analiz_turu" value="personel">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Birim</label>
+                                <input type="text" name="ist_p_birim" class="form-control" placeholder="Örn: Bilgi İşlem" value="{{ ist_p_birim }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Kampüs</label>
+                                <select name="ist_p_kampus" class="form-select">
+                                    <option value="Tümü">Tüm Kampüsler</option>
+                                    {% for yer in yerleskeler %}<option value="{{ yer }}" {% if ist_p_kampus == yer %}selected{% endif %}>{{ yer }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold">Ofis / Konum</label>
+                                <input type="text" name="ist_p_ofis" class="form-control" placeholder="Örn: B-205" value="{{ ist_p_ofis }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold">Ad / Ünvan</label>
+                                <input type="text" name="ist_p_ad" class="form-control" placeholder="Opsiyonel" value="{{ ist_p_ad }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-info w-100 fw-bold text-white">Listele</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="analizSonuclariContainer">
+                    {% if analiz_sonuclari %}
+                        <div id="analizSonuclari"></div> 
+                        
+                        <div class="alert alert-success text-center border-0 shadow-sm d-flex justify-content-between align-items-center px-5">
+                            <div class="text-start">
+                                <small class="text-muted d-block text-uppercase fw-bold mb-1">Analiz Sonucu</small>
+                                <span class="fs-5">
+                                    <i class="fas fa-check-circle"></i> 
+                                    Toplam: <span class="fw-bold display-6 mx-2">{{ analiz_toplam }}</span> 
+                                    {{ 'Kişi' if analiz_turu == 'personel' else 'Adet' }} Bulundu
+                                </span>
+                            </div>
+                            
+                            <div class="col-md-4 text-end">
+                                <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}" 
+                                   class="btn btn-success fw-bold shadow-sm">
+                                    <i class="fas fa-file-excel"></i> Bu Tabloyu İndir
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive-custom mt-3" style="max-height: 500px;">
+                            <table class="table table-hover align-middle">
+                                <thead class="bg-dark text-white" style="position: sticky; top: 0;">
+                                    <tr>
+                                        {% if analiz_turu == 'personel' %}
+                                            <th>Ad Soyad</th><th>Ünvan</th><th>Birim</th><th>Kampüs</th><th>Ofis</th>
+                                        {% else %}
+                                            <th>Malzeme Adı</th><th>Kampüs</th><th>Konum / Ofis</th><th class="text-center">Adet</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in analiz_sonuclari %}
+                                    <tr>
+                                        {% if analiz_turu == 'personel' %}
+                                            <td class="fw-bold">{{ row.ad_soyad }}</td>
+                                            <td>{{ row.unvan }}</td>
+                                            <td><span class="badge bg-info text-dark">{{ row.birimi }}</span></td>
+                                            <td class="small">{{ row.kampus }}</td>
+                                            <td class="text-primary small">{{ row.ofis }}</td>
+                                        {% else %}
+                                            <td class="fw-bold">{{ row.ad }}</td>
+                                            <td><span class="badge bg-secondary">{{ row.kampus }}</span></td>
+                                            <td class="text-primary small">{{ row.konum }}</td>
+                                            <td class="text-center fw-bold fs-5 text-success">{{ row.toplam_adet }}</td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% elif (ist_malzeme or ist_p_birim or (ist_kampus and ist_kampus != 'Tümü')) %}
+                        <div class="alert alert-warning text-center">Bu kriterlere uygun kayıt bulunamadı.</div>
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-chart-pie fa-4x mb-3 text-black-50"></i>
+                            <p class="fs-5">Analiz yapmak için yukarıdan tür seçin ve filtreleyin.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -414,6 +574,26 @@
             }
             if (shouldSwitch) { rows[i].parentNode.insertBefore(rows[i + 1], rows[i]); switching = true; switchcount++; } 
             else { if (switchcount == 0 && dir == "asc") { dir = "desc"; switching = true; } }
+        }
+    }
+    // ANALİZ TÜRÜ DEĞİŞTİRME (GELİŞMİŞ)
+    function analizTuruDegis(tur) {
+        var formDemirbas = document.getElementById('form-demirbas');
+        var formPersonel = document.getElementById('form-personel');
+        var sonuclar = document.getElementById('analizSonuclariContainer');
+        
+        // 1. Sonuçları GİZLE (Çünkü tür değişti, eski sonuçlar anlamsız)
+        if (sonuclar) {
+            sonuclar.style.display = 'none';
+        }
+
+        // 2. Formları Değiştir
+        if (tur === 'personel') {
+            formDemirbas.style.display = 'none';
+            formPersonel.style.display = 'block';
+        } else {
+            formPersonel.style.display = 'none';
+            formDemirbas.style.display = 'block';
         }
     }
 </script>
