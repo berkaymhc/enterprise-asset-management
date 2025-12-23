@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ofis Detayı: {{ konum }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+    <div class="card border-0 shadow-sm mb-4 bg-primary text-white">
+        <div class="card-body text-center">
+            <h4 class="fw-bold">{{ konum }}</h4>
+            <p class="mb-0 small opacity-75">Envanter Listesi</p>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        {% for p in personeller %}
+        <div class="col-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-2 text-center">
+                    <div class="fw-bold small">{{ p.ad_soyad }}</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">{{ p.unvan }}</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="list-group shadow-sm mb-5">
+        {% for item in esyalar %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <span class="fw-bold d-block">{{ item.ad }}</span>
+                {% if item.cinsi %}
+                    <small class="text-muted d-block fst-italic">{{ item.cinsi }}</small>
+                {% endif %}
+            </div>
+            <span class="badge bg-secondary rounded-pill">{{ item.adet }}</span>
+        </div>
+        {% else %}
+        <div class="alert alert-light text-center small">Kayıtlı eşya yok.</div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>
