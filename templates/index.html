@@ -54,30 +54,17 @@
 
 <div class="container-fluid px-5 mt-4">
     
-    {% if son_yukleme %}
-    <div class="alert alert-light border shadow-sm d-flex align-items-center justify-content-between py-2 mb-4">
-        <div>
-            <span class="badge bg-secondary me-2">Son İşlem Geçmişi</span>
-            <small class="text-muted fw-bold">
-                <i class="fas fa-history"></i> {{ son_yukleme.tarih }} tarihinde yüklendi:
-            </small> 
-            <span class="text-primary fw-bold mx-2">
-                {% if son_yukleme.tur == 'Demirbaş' %}
-                    <i class="fas fa-box"></i> {{ son_yukleme.hedef_konum }} 
-                {% else %}
-                    <i class="fas fa-users"></i> {{ son_yukleme.hedef_konum }}
-                {% endif %}
-            </span>
-            <small class="text-muted fst-italic">({{ son_yukleme.dosya_adi }})</small>
+    <div class="row align-items-center mb-4">
+        <div class="col-md-3 d-flex align-items-center">
+            <h2 class="text-primary fw-bold mb-0"><i class="fas fa-university"></i> Kampüs Yönetimi</h2>
+            
+            {% if son_yukleme %}
+            <button class="btn btn-link text-muted ms-2 p-0" type="button" data-bs-toggle="collapse" data-bs-target="#gecmisPanel" title="Son Yükleme Geçmişini Gör">
+                <i class="fas fa-history"></i>
+            </button>
+            {% endif %}
         </div>
-        <small class="text-muted">Kaldığınız yerden devam edebilirsiniz.</small>
-    </div>
-    {% endif %}
 
-    <div class="row align-items-center mb-4">
-    
-    <div class="row align-items-center mb-4">
-        <div class="col-md-3"><h2 class="text-primary fw-bold mb-0"><i class="fas fa-university"></i> Kampüs Yönetimi</h2></div>
         <div class="col-md-4">
             {% if aktif_tab != 'istatistik' %}
             <form action="/" method="GET" class="d-flex" id="searchForm">
@@ -90,6 +77,7 @@
             </form>
             {% endif %}
         </div>
+
         <div class="col-md-5 text-end">
             <button class="btn btn-info text-white me-1" data-bs-toggle="modal" data-bs-target="#uploadPersonelModal">
                 <i class="fas fa-users"></i> Personel Yükle
@@ -100,6 +88,22 @@
             <a href="/rapor" class="btn btn-success"><i class="fas fa-file-excel"></i> Rapor</a>
         </div>
     </div>
+
+    {% if son_yukleme %}
+    <div class="collapse mb-3" id="gecmisPanel">
+        <div class="card card-body bg-light border-0 py-2 small shadow-sm d-flex flex-row align-items-center justify-content-between">
+            <div>
+                <strong class="text-primary">Son İşlem Bilgisi:</strong> 
+                <span class="ms-2 text-muted">{{ son_yukleme.tarih }}</span>
+                <span class="mx-2">|</span>
+                <i class="fas {{ 'fa-box text-warning' if son_yukleme.tur == 'Demirbaş' else 'fa-user text-info' }}"></i>
+                <strong>{{ son_yukleme.hedef_konum }}</strong>
+                <span class="text-muted fst-italic ms-1">({{ son_yukleme.dosya_adi }})</span>
+            </div>
+            <button type="button" class="btn-close btn-sm" data-bs-toggle="collapse" data-bs-target="#gecmisPanel"></button>
+        </div>
+    </div>
+    {% endif %}
 
     <ul class="nav nav-tabs mb-3" id="myTab">
         <li class="nav-item">
