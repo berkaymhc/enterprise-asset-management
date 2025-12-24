@@ -8,6 +8,7 @@ import os  # <--- Hatanın çözümü: Bu import en üstte olmalı
 from io import BytesIO
 from openpyxl.styles import Font, Alignment, PatternFill
 import os
+import base64  # <--- YENİ EKLENDİ
 from dotenv import load_dotenv
 
 # --- KONFİGÜRASYON ---
@@ -508,5 +509,24 @@ def rapor_analiz():
     dosya_adi = f"Analiz_Raporu_{analiz_turu}_{datetime.now().strftime('%Y-%m-%d_%H%M')}.xlsx"
     return send_file(output, download_name=dosya_adi, as_attachment=True)
 
+@app.route('/kapi-karti/<path:konum_adi>')
+def kapi_karti(konum_adi):
+    # QR Kodun yönleneceği adres (Ofis Detay Sayfası)
+    hedef_url = url_for('ofis_detay', konum_adi=konum_adi, _external=True)
+    
+    # QR Kodu oluştur ve Base64 formatına çevir (Resim dosyası kaydetmeden direkt HTML'e gömmek için)
+    qr = qrcode.QRCode(box_size=10, border=2)
+    qr.add_data(hedef_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Resmi bellekte tut ve HTML'e gönder
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    
+    return render_template('kapi_karti.html', konum=konum_adi, qr_code=qr_base64)
+
 if __name__ == '__main__':
+    # host='0.0.0.0' dışarıdan erişime açar
     app.run(host='0.0.0.0', port=5000, debug=True)

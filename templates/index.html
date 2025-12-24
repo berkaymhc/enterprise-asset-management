@@ -173,7 +173,9 @@
                                         <td>{{ item.adet }}</td>
                                         <td>
                                             <button class="btn btn-warning btn-sm py-0" data-bs-toggle="modal" data-bs-target="#editDemirbas{{ item.id }}"><i class="fas fa-edit"></i></button>
-                                            <a href="/qr-olustur/{{ item.konum }}" target="_blank" class="btn btn-outline-dark btn-sm py-0"><i class="fas fa-qrcode"></i></a>
+                                            <a href="/kapi-karti/{{ item.konum }}" target="_blank" class="btn btn-outline-dark btn-sm py-0" title="Kapı Kartını Yazdır">
+    <i class="fas fa-print"></i>
+</a>
                                             <a href="/sil-demirbas/{{ item.id }}" class="btn btn-outline-danger btn-sm py-0"><i class="fas fa-trash"></i></a>
 
                                             <div class="modal fade" id="editDemirbas{{ item.id }}" tabindex="-1">
