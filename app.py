@@ -11,7 +11,7 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from dotenv import load_dotenv
 
 # --- KONFİGÜRASYON ---
-load_dotenv() # .env dosyasını yükler
+load_dotenv()
 DB_NAME = os.getenv("DB_NAME", "demirbas.db")
 
 app = Flask(__name__)
@@ -43,11 +43,6 @@ def baglanti_kur():
 
 # --- MERKEZİ LOG SİSTEMİ ---
 def log_kaydet(baslik, detay, tur="İşlem"):
-    """
-    Kayıt Türleri (tur):
-    - 'Yükleme': Ana sayfadaki üst bilgi panelinde görünür (Excel/Klasör yüklemeleri).
-    - 'Silme', 'Ekleme', 'Düzenleme', 'Rapor', 'Yazdırma': Sadece Geçmiş Modalında görünür.
-    """
     try:
         conn = baglanti_kur()
         cur = conn.cursor()
@@ -76,7 +71,7 @@ def tablolari_olustur():
     conn.commit()
     conn.close()
 
-tablolari_olustur() # Başlangıçta çalıştır
+tablolari_olustur()
 
 # --- ANA SAYFA ---
 @app.route('/')
@@ -131,8 +126,11 @@ def index():
     p_sql += " ORDER BY ofis ASC LIMIT ? OFFSET ?"; p_p.extend([limit, offset_p])
     cur.execute(p_sql, p_p); personeller = cur.fetchall()
 
-    # 3. İstatistik & Analiz
+    # 3. İstatistik & Analiz (GÜNCELLENEN KISIM)
     analiz_sonuclari = []; analiz_toplam = 0
+    f_labels_1 = []; f_values_1 = []
+    f_labels_2 = []; f_values_2 = []
+
     if aktif_tab == 'istatistik':
         if analiz_turu == 'personel':
             sql = "SELECT * FROM personeller WHERE 1=1"
@@ -145,7 +143,18 @@ def index():
             
             if ist_p_ad or ist_p_birim or (ist_p_kampus and ist_p_kampus != "Tümü") or ist_p_ofis:
                 cur.execute(sql, params); analiz_sonuclari = cur.fetchall(); analiz_toplam = len(analiz_sonuclari)
-        else:
+                
+                # Personel Filtre Grafikleri
+                temp_kampus = {}; temp_unvan = {}
+                for row in analiz_sonuclari:
+                    k = row['kampus'] if row['kampus'] else "Belirtilmedi"
+                    temp_kampus[k] = temp_kampus.get(k, 0) + 1
+                    u = row['unvan'] if row['unvan'] else "Diğer"
+                    temp_unvan[u] = temp_unvan.get(u, 0) + 1
+                f_labels_1 = list(temp_kampus.keys()); f_values_1 = list(temp_kampus.values())
+                f_labels_2 = list(temp_unvan.keys()); f_values_2 = list(temp_unvan.values())
+
+        else: # Demirbaş
             sql = "SELECT ad, kampus, konum, SUM(adet) as toplam_adet FROM demirbaslar WHERE 1=1"
             params = []
             if ist_malzeme: sql += " AND NORMALIZE(ad) LIKE ?"; params.append(f"%{turkce_normalize(ist_malzeme)}%")
@@ -156,17 +165,56 @@ def index():
             if ist_malzeme or (ist_kampus and ist_kampus != "Tümü") or ist_konum:
                 cur.execute(sql, params); analiz_sonuclari = cur.fetchall()
                 for row in analiz_sonuclari: analiz_toplam += row['toplam_adet']
+                
+                # Demirbaş Filtre Grafikleri
+                temp_kampus = {}; temp_konum = {}
+                for row in analiz_sonuclari:
+                    k = row['kampus']
+                    temp_kampus[k] = temp_kampus.get(k, 0) + row['toplam_adet']
+                    try: loc = row['konum'].split('/')[1].strip() 
+                    except: loc = row['konum'][:15]
+                    temp_konum[loc] = temp_konum.get(loc, 0) + row['toplam_adet']
+                f_labels_1 = list(temp_kampus.keys()); f_values_1 = list(temp_kampus.values())
+                sorted_locs = sorted(temp_konum.items(), key=lambda item: item[1], reverse=True)[:8]
+                f_labels_2 = [x[0] for x in sorted_locs]; f_values_2 = [x[1] for x in sorted_locs]
 
     # 4. LOG YÖNETİMİ
-    # Üst Panel: Sadece 'Yükleme' türündeki son işlem
     cur.execute("SELECT * FROM yukleme_gecmisi WHERE tur = 'Yükleme' ORDER BY id DESC LIMIT 1")
     son_yukleme = cur.fetchone()
-
-    # Geçmiş Modalı: Her türden son 100 işlem
     cur.execute("SELECT * FROM yukleme_gecmisi ORDER BY id DESC LIMIT 100")
     tum_gecmis = cur.fetchall()
 
-    conn.close()
+    # 5. GENEL DASHBOARD
+    # Grafik 1: Kampüs
+    cur.execute("SELECT kampus, SUM(adet) FROM demirbaslar GROUP BY kampus")
+    kampus_grafik_veri = cur.fetchall()
+    chart_kampus_labels = [row[0] for row in kampus_grafik_veri if row[0]]
+    chart_kampus_values = [row[1] for row in kampus_grafik_veri if row[1]]
+
+    # Grafik 2: Malzeme (Top 10)
+    cur.execute("SELECT ad, SUM(adet) FROM demirbaslar GROUP BY ad ORDER BY SUM(adet) DESC LIMIT 10")
+    esya_grafik_veri = cur.fetchall()
+    chart_esya_labels = [row[0] for row in esya_grafik_veri if row[0]]
+    chart_esya_values = [row[1] for row in esya_grafik_veri if row[1]]
+
+    # Grafik 3: Personel
+    cur.execute("SELECT birimi, COUNT(*) FROM personeller GROUP BY birimi ORDER BY COUNT(*) DESC LIMIT 8")
+    personel_grafik_veri = cur.fetchall()
+    chart_personel_labels = [row[0] for row in personel_grafik_veri if row[0]]
+    chart_personel_values = [row[1] for row in personel_grafik_veri if row[1]]
+
+    # --- YENİ EKLENEN: Grafik 4: Malzeme Cinsi Dağılımı ---
+    cur.execute("SELECT cinsi, SUM(adet) FROM demirbaslar GROUP BY cinsi")
+    tur_grafik_veri = cur.fetchall()
+    chart_tur_labels = []
+    chart_tur_values = []
+    for row in tur_grafik_veri:
+        tur_adi = row['cinsi'] if row['cinsi'] and row['cinsi'].strip() != "" else "Belirtilmedi"
+        chart_tur_labels.append(tur_adi)
+        chart_tur_values.append(row[1])
+
+    conn.close() 
+
     return render_template('index.html', 
                            demirbaslar=demirbaslar, personeller=personeller, yerleskeler=YERLESKELER,
                            aktif_tab=aktif_tab, sayfa_d=sayfa_d, sayfa_p=sayfa_p,
@@ -175,9 +223,16 @@ def index():
                            analiz_sonuclari=analiz_sonuclari, analiz_toplam=analiz_toplam,
                            analiz_turu=analiz_turu, ist_malzeme=ist_malzeme, ist_kampus=ist_kampus,
                            ist_konum=ist_konum, ist_p_ad=ist_p_ad, ist_p_birim=ist_p_birim,
-                           ist_p_kampus=ist_p_kampus, ist_p_ofis=ist_p_ofis)
+                           ist_p_kampus=ist_p_kampus, ist_p_ofis=ist_p_ofis,
+                           chart_kampus_labels=chart_kampus_labels, chart_kampus_values=chart_kampus_values,
+                           chart_esya_labels=chart_esya_labels, chart_esya_values=chart_esya_values,
+                           chart_personel_labels=chart_personel_labels, chart_personel_values=chart_personel_values,
+                           # YENİ: Cins Grafiği Verileri
+                           chart_tur_labels=chart_tur_labels, chart_tur_values=chart_tur_values,
+                           f_labels_1=f_labels_1, f_values_1=f_values_1,
+                           f_labels_2=f_labels_2, f_values_2=f_values_2)
 
-# --- YÜKLEME İŞLEMLERİ ---
+# --- YÜKLEME VE İŞLEM FONKSİYONLARI ---
 @app.route('/yukle-demirbas', methods=['POST'])
 def yukle_demirbas():
     if 'dosya' not in request.files: return redirect(url_for('index'))
@@ -205,54 +260,121 @@ def yukle_demirbas():
             islem_yapildi = True
         except Exception: pass
     conn.commit(); conn.close()
-    
-    if islem_yapildi:
-        log_kaydet(f"{len(dosyalar)} Dosya Yüklendi", f"{bina_kat}", "Yükleme")
-        
+    if islem_yapildi: log_kaydet(f"{len(dosyalar)} Dosya Yüklendi", f"{bina_kat}", "Yükleme")
     return redirect(url_for('index', tab='demirbas'))
 
+# --- AKILLI KLASÖR YÜKLEME FONKSİYONU ---
 @app.route('/yukle-klasor', methods=['POST'])
 def yukle_klasor():
     if 'dosya' not in request.files: return redirect(url_for('index'))
     dosyalar = request.files.getlist('dosya')
     hedef_kampus = request.form.get('hedef_kampus', 'Merkez')
-    conn = baglanti_kur(); cur = conn.cursor()
-    islem_sayisi = 0; ana_klasor_adi = ""
+    
+    conn = baglanti_kur()
+    cur = conn.cursor()
+    islem_sayisi = 0
+    kaydedilen_yerler = set()
+
+    # --- AKILLI FİLTRE KELİMELERİ ---
+    # Sadece içinde bu kelimeler geçen klasör/dosya isimlerini konuma ekle.
+    ONEMLI_KELIMELER = [
+        "BLOK", "KAT", "ODA", "BİNA", "BINA", "YURT", "OFİS", "OFFICE", 
+        "HALL", "SALON", "LAB", "DEPO", "ZEMİN", "GİRİŞ", "SİSTEM", "KAZAN",
+        "RESTORAN", "YEMEKHANE", "KANTİN", "LOBİ", "MESCİT", "GUVENLIK", "GÜVENLİK"
+    ]
+    
+    # Bunları kesinlikle alma (Yedek temizlik)
+    YASAKLI_KELIMELER = ["DEMİRBAŞ", "DEMIRBAS", "LİSTE", "LISTE", "ENVANTER", "YENİ", "ESKİ", "COPY"]
 
     for dosya in dosyalar:
-        if not dosya.filename.endswith('.xlsx') or '~$' in dosya.filename: continue
-        try:
-            path_parts = dosya.filename.replace('\\', '/').split('/')
-            dosya_adi_temiz = path_parts[-1].rsplit('.', 1)[0].replace('_', ' ').title()
-            klasorler = path_parts[:-1]
+        if not dosya.filename.endswith('.xlsx') or '~$' in dosya.filename:
+            continue
             
-            if klasorler:
-                if not ana_klasor_adi: ana_klasor_adi = klasorler[0].replace('_', ' ').title()
-                yol_bilgisi = " / ".join([k.replace('_', ' ').title() for k in klasorler])
-            else:
-                yol_bilgisi = "Genel"
+        try:
+            full_path = dosya.filename.replace('\\', '/')
+            path_parts = full_path.split('/')
+            
+            dosya_adi_temiz = path_parts[-1].rsplit('.', 1)[0].replace('_', ' ').title()
+            
+            # --- YOLU OLUŞTURMA ---
+            anlamli_yol_parcalari = []
+            
+            # 1. Klasörleri Kontrol Et
+            for parca in path_parts[:-1]:
+                p_upper = parca.upper()
+                # Yasaklı kelime varsa direkt atla
+                if any(y in p_upper for y in YASAKLI_KELIMELER): continue
+                
+                # Önemli kelime varsa veya rakamla bitiyorsa (A1, B2 vb.) al
+                if any(k in p_upper for k in ONEMLI_KELIMELER) or (len(parca) < 5 and any(c.isdigit() for c in parca)):
+                    anlamli_yol_parcalari.append(parca.strip())
+
+            # 2. Dosya İsmini Kontrol Et (DÜZELTİLEN KISIM BURASI)
+            # Eskiden dosya adını direkt ekliyorduk. Şimdi kontrol ediyoruz.
+            # Dosya adı "Yalıncak Demirbaş" ise ve içinde KAT/BLOK yoksa ekleme!
+            d_upper = dosya_adi_temiz.upper()
+            
+            # Dosya adında yasaklı kelime (Demirbaş) yoksa VE (Önemli kelime varsa VEYA Kısa blok isimiyle)
+            if not any(y in d_upper for y in YASAKLI_KELIMELER):
+                if any(k in d_upper for k in ONEMLI_KELIMELER) or (len(dosya_adi_temiz) < 5 and any(c.isdigit() for c in dosya_adi_temiz)):
+                    anlamli_yol_parcalari.append(dosya_adi_temiz)
+
+            # Parçaları birleştir
+            temiz_yol_str = " / ".join(anlamli_yol_parcalari)
 
             wb = openpyxl.load_workbook(dosya)
+            
             for ws in wb.worksheets:
-                tam_konum = f"{yol_bilgisi} / {dosya_adi_temiz} / {ws.title.strip()}"
+                sheet_adi = ws.title.strip()
+                
+                # Sheet adını her zaman al (En detaylı yer orasıdır: "Sistem Odası" vb.)
+                # Ama Sheet1, Sayfa1 gibi anlamsızsa alma
+                if "Sheet" in sheet_adi or "Sayfa" in sheet_adi:
+                    if temiz_yol_str:
+                        tam_konum = temiz_yol_str
+                    else:
+                        tam_konum = "Genel" # Hiçbir şey bulamazsa
+                else:
+                    if temiz_yol_str:
+                        tam_konum = f"{temiz_yol_str} / {sheet_adi}"
+                    else:
+                        tam_konum = sheet_adi # Sadece sheet adı kaldıysa
+
+                # Güvenlik kırpması
+                if len(tam_konum) > 100: tam_konum = tam_konum[:97] + "..."
+                
+                kaydedilen_yerler.add(tam_konum)
+
                 for row in ws.iter_rows(min_row=2, values_only=True):
                     if not row or row[0] is None: continue
-                    ad = row[0]; cinsi = row[1] if len(row)>1 else ""; adet = row[2] if len(row)>2 else 1
+                    
+                    ad = row[0]
+                    cinsi = row[1] if len(row)>1 else ""
+                    adet = row[2] if len(row)>2 else 1
                     try: adet = int(adet)
                     except: adet = 1
+                    
                     cur.execute("SELECT id FROM demirbaslar WHERE ad=? AND konum=?", (ad, tam_konum))
                     if not cur.fetchone():
                         cur.execute("INSERT INTO demirbaslar (ad, cinsi, kampus, konum, adet, tarih) VALUES (?, ?, ?, ?, ?, ?)", 
                                     (ad, cinsi, hedef_kampus, tam_konum, adet, datetime.now().strftime("%Y-%m-%d")))
+            
             islem_sayisi += 1
-        except Exception as e: print(f"Hata: {e}")
-    
-    conn.commit(); conn.close()
+
+        except Exception as e:
+            print(f"Hata ({dosya.filename}): {e}")
 
     if islem_sayisi > 0:
-        konum_ozeti = f"{hedef_kampus} / {ana_klasor_adi}" if ana_klasor_adi else f"{hedef_kampus} / Karışık"
-        log_kaydet(f"Toplu Klasör ({islem_sayisi} dosya)", konum_ozeti, "Yükleme")
-        
+        aciklama = f"Toplu Klasör ({islem_sayisi} dosya)"
+        konum_ozeti = f"{hedef_kampus} - Karışık"
+        if len(kaydedilen_yerler) > 0:
+            ornek = list(kaydedilen_yerler)[0]
+            konum_ozeti = f"{hedef_kampus} / {ornek}"
+            
+        log_kaydet(aciklama, konum_ozeti, "Yükleme")
+
+    conn.commit()
+    conn.close()
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/yukle-personel', methods=['POST'])
@@ -274,7 +396,7 @@ def yukle_personel():
         except Exception: pass
     return redirect(url_for('index', tab='personel'))
 
-# --- CRUD VE SİLME İŞLEMLERİ (Loglu) ---
+# --- CRUD İŞLEMLERİ ---
 @app.route('/ekle-demirbas', methods=['POST'])
 def ekle_demirbas():
     conn = baglanti_kur()
@@ -299,8 +421,7 @@ def sil_demirbas(id):
     cur.execute("SELECT ad, konum FROM demirbaslar WHERE id=?", (id,)); kayit = cur.fetchone()
     if kayit:
         log_kaydet(f"{kayit['ad']} Silindi", f"Eski Konum: {kayit['konum']}", "Silme")
-        cur.execute("DELETE FROM demirbaslar WHERE id=?", (id,))
-        conn.commit()
+        cur.execute("DELETE FROM demirbaslar WHERE id=?", (id,)); conn.commit()
     conn.close()
     return redirect(url_for('index', tab='demirbas'))
 
@@ -325,12 +446,10 @@ def guncelle_personel():
 @app.route('/tasi-personel', methods=['POST'])
 def tasi_personel():
     conn = baglanti_kur(); cur = conn.cursor()
-    cur.execute("SELECT ad_soyad, ofis, kampus FROM personeller WHERE id=?", (request.form['personel_id'],))
-    kisi = cur.fetchone()
+    cur.execute("SELECT ad_soyad, ofis, kampus FROM personeller WHERE id=?", (request.form['personel_id'],)); kisi = cur.fetchone()
     conn.execute("UPDATE personeller SET kampus = ?, ofis = ? WHERE id = ?", (request.form['yeni_kampus'], request.form['yeni_ofis'], request.form['personel_id']))
     conn.commit(); conn.close()
-    if kisi:
-        log_kaydet(f"{kisi['ad_soyad']} Taşındı", f"{kisi['kampus']}/{kisi['ofis']} -> {request.form['yeni_kampus']}/{request.form['yeni_ofis']}", "Taşıma")
+    if kisi: log_kaydet(f"{kisi['ad_soyad']} Taşındı", f"{kisi['kampus']}/{kisi['ofis']} -> {request.form['yeni_kampus']}/{request.form['yeni_ofis']}", "Taşıma")
     return redirect(url_for('index', tab='personel'))
 
 @app.route('/sil-personel/<int:id>')
@@ -339,8 +458,7 @@ def sil_personel(id):
     cur.execute("SELECT ad_soyad, ofis FROM personeller WHERE id=?", (id,)); kayit = cur.fetchone()
     if kayit:
         log_kaydet(f"{kayit['ad_soyad']} Silindi", f"Eski Ofis: {kayit['ofis']}", "Silme")
-        cur.execute("DELETE FROM personeller WHERE id=?", (id,))
-        conn.commit()
+        cur.execute("DELETE FROM personeller WHERE id=?", (id,)); conn.commit()
     conn.close()
     return redirect(url_for('index', tab='personel'))
 
@@ -356,7 +474,7 @@ def sifirla_personel():
     log_kaydet("Tüm Personel Listesi Silindi", "Veritabanı Sıfırlama", "Sıfırlama")
     return redirect(url_for('index', tab='personel'))
 
-# --- DETAY VE DİĞER FONKSİYONLAR ---
+# --- DİĞER FONKSİYONLAR ---
 @app.route('/personel-detay/<int:id>')
 def personel_detay(id):
     conn = baglanti_kur(); cur = conn.cursor()
@@ -416,14 +534,12 @@ def rapor():
     ws1.append(['Sıra No', 'Malzeme Adı', 'Cinsi', 'Kampüs', 'Konum', 'Adet', 'Kayıt Tarihi'])
     header_font = Font(bold=True, color="FFFFFF"); header_fill = PatternFill(start_color="4F81BD", fill_type="solid")
     for cell in ws1[1]: cell.font = header_font; cell.fill = header_fill; cell.alignment = Alignment(horizontal='center')
-    
     for i, row in enumerate(conn.execute("SELECT * FROM demirbaslar").fetchall(), 1):
         ws1.append([i, row['ad'], row['cinsi'], row['kampus'], row['konum'], row['adet'], row['tarih']])
         
     ws2 = wb.create_sheet("Personeller")
     ws2.append(['Sıra No', 'Ad Soyad', 'Ünvan', 'Birimi', 'Kampüs', 'Ofis'])
     for cell in ws2[1]: cell.font = header_font; cell.fill = header_fill; cell.alignment = Alignment(horizontal='center')
-    
     for i, row in enumerate(conn.execute("SELECT * FROM personeller").fetchall(), 1):
         ws2.append([i, row['ad_soyad'], row['unvan'], row['birimi'], row['kampus'], row['ofis']])
 
@@ -434,7 +550,6 @@ def rapor():
 @app.route('/rapor-analiz')
 def rapor_analiz():
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
-    # Filtreler
     ist_malzeme = request.args.get('ist_malzeme', ''); ist_kampus = request.args.get('ist_kampus', ''); ist_konum = request.args.get('ist_konum', '')
     ist_p_ad = request.args.get('ist_p_ad', ''); ist_p_birim = request.args.get('ist_p_birim', '')
     ist_p_kampus = request.args.get('ist_p_kampus', ''); ist_p_ofis = request.args.get('ist_p_ofis', '')
@@ -453,7 +568,6 @@ def rapor_analiz():
         if ist_p_kampus and ist_p_kampus != "Tümü": sql += " AND kampus = ?"; params.append(ist_p_kampus)
         if ist_p_ofis: sql += " AND NORMALIZE(ofis) LIKE ?"; params.append(f"%{turkce_normalize(ist_p_ofis)}%")
         sql += " ORDER BY birimi ASC, ad_soyad ASC"
-        
         for i, row in enumerate(conn.execute(sql, params).fetchall(), 1):
             ws.append([i, row['ad_soyad'], row['unvan'], row['birimi'], row['kampus'], row['ofis']]); genel_toplam += 1
         ws.append(['', '', '', '', 'GENEL TOPLAM:', genel_toplam])
@@ -465,7 +579,6 @@ def rapor_analiz():
         if ist_kampus and ist_kampus != "Tümü": sql += " AND kampus = ?"; params.append(ist_kampus)
         if ist_konum: sql += " AND NORMALIZE(konum) LIKE ?"; params.append(f"%{turkce_normalize(ist_konum)}%")
         sql += " GROUP BY ad, kampus, konum ORDER BY kampus ASC, konum ASC"
-        
         for i, row in enumerate(conn.execute(sql, params).fetchall(), 1):
             ws.append([i, row['ad'], row['kampus'], row['konum'], row['toplam_adet']]); genel_toplam += row['toplam_adet']
         ws.append(['', '', '', 'GENEL TOPLAM:', genel_toplam])
@@ -473,6 +586,148 @@ def rapor_analiz():
     for cell in ws[1]: cell.font = header_font; cell.fill = header_fill; cell.alignment = Alignment(horizontal='center')
     conn.close(); output = io.BytesIO(); wb.save(output); output.seek(0)
     return send_file(output, download_name=f"Analiz_Raporu_{analiz_turu}.xlsx", as_attachment=True)
+
+# --- GRAFİK ÖZET VERİSİNİ İNDİRME (GELİŞTİRİLMİŞ) ---
+@app.route('/rapor-grafik-ozet')
+def rapor_grafik_ozet():
+    analiz_turu = request.args.get('analiz_turu', 'demirbas')
+    
+    # Filtreleri Al
+    ist_malzeme = request.args.get('ist_malzeme', '')
+    ist_kampus = request.args.get('ist_kampus', '')
+    ist_konum = request.args.get('ist_konum', '')
+    ist_p_ad = request.args.get('ist_p_ad', '')
+    ist_p_birim = request.args.get('ist_p_birim', '')
+    ist_p_kampus = request.args.get('ist_p_kampus', '')
+    ist_p_ofis = request.args.get('ist_p_ofis', '')
+
+    conn = baglanti_kur()
+    wb = openpyxl.Workbook()
+    
+    # Stil Tanımları
+    baslik_font = Font(bold=True, size=12, color="000000")
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="198754", fill_type="solid") # Yeşil Başlık
+    bilgi_font = Font(italic=True, color="555555")
+
+    # --- 1. SAYFA: KAMPÜS DAĞILIMI ---
+    ws1 = wb.active
+    ws1.title = "Kampüs Dağılımı"
+
+    # Arama Bilgilerini Yazdır (Raporun Tepesine)
+    ws1.append(['RAPOR BİLGİLERİ'])
+    ws1['A1'].font = baslik_font
+    
+    if analiz_turu == 'personel':
+        bilgiler = [
+            f"Analiz Türü: Personel",
+            f"Aranan İsim/Ünvan: {ist_p_ad if ist_p_ad else 'Tümü'}",
+            f"Birim: {ist_p_birim if ist_p_birim else 'Tümü'}",
+            f"Kampüs: {ist_p_kampus if ist_p_kampus else 'Tümü'}",
+            f"Ofis: {ist_p_ofis if ist_p_ofis else 'Tümü'}"
+        ]
+    else:
+        bilgiler = [
+            f"Analiz Türü: Demirbaş",
+            f"Aranan Malzeme: {ist_malzeme if ist_malzeme else 'Tümü'}",
+            f"Kampüs: {ist_kampus if ist_kampus else 'Tümü'}",
+            f"Konum/Bina: {ist_konum if ist_konum else 'Tümü'}"
+        ]
+
+    for bilgi in bilgiler:
+        ws1.append([bilgi])
+        ws1.cell(row=ws1.max_row, column=1).font = bilgi_font
+
+    ws1.append([]) # Boş satır
+    ws1.append(['Kampüs Adı', 'Sayı (Adet/Kişi)']) # Tablo Başlığı
+    
+    # Başlık Stilini Uygula (Satır sayısı dinamik olduğu için hesaplıyoruz)
+    tablo_baslik_satiri = len(bilgiler) + 3
+    for cell in ws1[tablo_baslik_satiri]:
+        cell.font = header_font
+        cell.fill = header_fill
+
+    # --- 2. SAYFA: DETAY DAĞILIMI ---
+    ws2 = wb.create_sheet("Detay Dağılımı")
+    
+    # Arama Bilgilerini Buraya da Yazalım
+    ws2.append(['RAPOR BİLGİLERİ'])
+    ws2['A1'].font = baslik_font
+    for bilgi in bilgiler:
+        ws2.append([bilgi])
+        ws2.cell(row=ws2.max_row, column=1).font = bilgi_font
+        
+    ws2.append([])
+    ws2.append(['Tam Konum / Birim / Ünvan', 'Sayı'])
+    for cell in ws2[tablo_baslik_satiri]:
+        cell.font = header_font
+        cell.fill = header_fill
+
+    # --- VERİLERİ ÇEK VE İŞLE ---
+    if analiz_turu == 'personel':
+        sql = "SELECT * FROM personeller WHERE 1=1"
+        params = []
+        if ist_p_ad: sql += " AND (NORMALIZE(ad_soyad) LIKE ? OR NORMALIZE(unvan) LIKE ?)"; params.extend([f"%{turkce_normalize(ist_p_ad)}%", f"%{turkce_normalize(ist_p_ad)}%"])
+        if ist_p_birim: sql += " AND NORMALIZE(birimi) LIKE ?"; params.append(f"%{turkce_normalize(ist_p_birim)}%")
+        if ist_p_kampus and ist_p_kampus != "Tümü": sql += " AND kampus = ?"; params.append(ist_p_kampus)
+        if ist_p_ofis: sql += " AND NORMALIZE(ofis) LIKE ?"; params.append(f"%{turkce_normalize(ist_p_ofis)}%")
+        
+        rows = conn.execute(sql, params).fetchall()
+        
+        temp_kampus = {}
+        temp_detay = {} # Ünvanları tutacak
+        
+        for row in rows:
+            k = row['kampus'] if row['kampus'] else "Belirtilmedi"
+            temp_kampus[k] = temp_kampus.get(k, 0) + 1
+            
+            u = row['unvan'] if row['unvan'] else "Diğer"
+            temp_detay[u] = temp_detay.get(u, 0) + 1
+
+    else: # Demirbaş
+        # BURADA DÜZELTME YAPILDI: GROUP BY konum KALDIRILDI.
+        # Çünkü "Yurtlar / A101" ile "Yurtlar / A102" farklıdır, gruplanmamalıdır.
+        # Detaylı listeyi alıp Python'da toplayacağız.
+        
+        sql = "SELECT kampus, konum, adet FROM demirbaslar WHERE 1=1"
+        params = []
+        if ist_malzeme: sql += " AND NORMALIZE(ad) LIKE ?"; params.append(f"%{turkce_normalize(ist_malzeme)}%")
+        if ist_kampus and ist_kampus != "Tümü": sql += " AND kampus = ?"; params.append(ist_kampus)
+        if ist_konum: sql += " AND NORMALIZE(konum) LIKE ?"; params.append(f"%{turkce_normalize(ist_konum)}%")
+        
+        rows = conn.execute(sql, params).fetchall()
+        
+        temp_kampus = {}
+        temp_detay = {} # Tam Konumları tutacak
+        
+        for row in rows:
+            k = row['kampus']
+            adet = row['adet']
+            temp_kampus[k] = temp_kampus.get(k, 0) + adet
+            
+            # BURASI DEĞİŞTİ: Artık konumu kısaltmıyoruz, tam halini alıyoruz.
+            tam_konum = row['konum']
+            temp_detay[tam_konum] = temp_detay.get(tam_konum, 0) + adet
+
+    # Excel'e Yazdırma
+    for k, v in temp_kampus.items(): ws1.append([k, v])
+    
+    # Detayları (Konumları) Alfabetik Sırayla Yazalım
+    for k in sorted(temp_detay.keys()):
+        ws2.append([k, temp_detay[k]])
+
+    # Sütun Genişlikleri
+    ws1.column_dimensions['A'].width = 40
+    ws1.column_dimensions['B'].width = 15
+    ws2.column_dimensions['A'].width = 80 # Konum uzun olabilir, genişlettik
+    ws2.column_dimensions['B'].width = 15
+
+    conn.close()
+    output = io.BytesIO()
+    wb.save(output); output.seek(0)
+    
+    dosya_adi = "Ozet_Rapor_Personel.xlsx" if analiz_turu == 'personel' else "Ozet_Rapor_Demirbas.xlsx"
+    return send_file(output, download_name=dosya_adi, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

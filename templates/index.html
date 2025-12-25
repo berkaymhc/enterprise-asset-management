@@ -6,6 +6,8 @@
     <title>Üniversite Envanter Sistemi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         .nav-tabs .nav-link.active { background-color: #e9ecef; border-bottom-color: transparent; font-weight: bold; color: #0d6efd; }
         .table-hover tbody tr:hover { background-color: #f1f1f1; }
@@ -17,6 +19,19 @@
         .page-input { width: 60px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 4px; font-weight: bold; }
         .table-responsive-custom { max-height: 65vh; overflow-y: auto; border-bottom: 1px solid #dee2e6; }
         .table-responsive-custom thead th { position: sticky; top: 0; background-color: #212529; color: white; z-index: 1; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); }
+        /* Tablo hücrelerinde uzun metinleri alt satıra indir, tabloyu patlatma */
+.table td {
+    white-space: normal !important; /* Metni kaydır */
+    word-wrap: break-word;          /* Uzun kelimeleri böl */
+    max-width: 300px;               /* Konum sütunu en fazla bu kadar geniş olsun */
+    vertical-align: middle;
+}
+
+/* İşlem butonları sütununu sabitle */
+.table td:last-child {
+    white-space: nowrap !important; /* Butonlar yan yana dursun */
+    width: 1px;                     /* İçeriği kadar yer kaplasın */
+}
     </style>
 </head>
 <body class="bg-light">
@@ -26,7 +41,6 @@
     <div class="row align-items-center mb-4">
         <div class="col-md-3 d-flex align-items-center">
             <h2 class="text-primary fw-bold mb-0"><i class="fas fa-university"></i> Kampüs Yönetimi</h2>
-            
             {% if son_yukleme %}
             <button class="btn btn-link text-muted ms-2 p-0" type="button" data-bs-toggle="collapse" data-bs-target="#gecmisPanel" title="Son Yükleme Geçmişini Gör">
                 <i class="fas fa-history"></i>
@@ -51,7 +65,6 @@
             <button class="btn btn-dark text-white me-1" data-bs-toggle="modal" data-bs-target="#gecmisModal" title="Tüm İşlem Kayıtları">
                 <i class="fas fa-clipboard-list"></i> Geçmiş
             </button>
-            
             <button class="btn btn-primary text-white me-1" data-bs-toggle="modal" data-bs-target="#uploadFolderModal" title="İç içe klasörleri yükle">
                 <i class="fas fa-folder-open"></i> Klasör Yükle
             </button>
@@ -114,9 +127,9 @@
                         </form>
                     </div>
                 </div>
-                
                 <div class="col-md-9">
-                    <div class="card p-0 shadow-sm border-0 overflow-hidden"> <div class="table-responsive-custom">
+                    <div class="card p-0 shadow-sm border-0 overflow-hidden"> 
+                        <div class="table-responsive-custom">
                             <table class="table table-hover table-sm align-middle mb-0" id="demirbasTablosu">
                                 <thead class="table-dark">
                                     <tr>
@@ -142,7 +155,6 @@
                                             <button class="btn btn-warning btn-sm py-0" data-bs-toggle="modal" data-bs-target="#editDemirbas{{ item.id }}"><i class="fas fa-edit"></i></button>
                                             <a href="/kapi-karti/{{ item.konum }}" target="_blank" class="btn btn-outline-dark btn-sm py-0" title="Kapı Kartını Yazdır"><i class="fas fa-print"></i></a>
                                             <button onclick="silOnay('{{ item.id }}', 'demirbas')" class="btn btn-outline-danger btn-sm py-0"><i class="fas fa-trash"></i></button>
-
                                             <div class="modal fade" id="editDemirbas{{ item.id }}" tabindex="-1">
                                                 <div class="modal-dialog">
                                                     <div class="modal-content">
@@ -166,7 +178,8 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
-                        </div> {% if toplam_sayfa_demirbas > 1 %}
+                        </div> 
+                        {% if toplam_sayfa_demirbas > 1 %}
                         <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
                             <a href="/?sayfa_d={{ sayfa_d - 1 if sayfa_d > 1 else 1 }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas" class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}"><i class="fas fa-chevron-left"></i> Önceki</a>
                             <span class="small fw-bold text-muted">Sayfa</span>
@@ -225,7 +238,6 @@
                                             <button class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}"><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-sm btn-primary py-0" data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}"><i class="fas fa-exchange-alt"></i></button>
                                             <button onclick="silOnay('{{ p.id }}', 'personel')" class="btn btn-sm btn-danger py-0"><i class="fas fa-trash"></i></button>
-                                            
                                             <div class="modal fade" id="editPersonel{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning"><h6 class="modal-title">Düzenle</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/guncelle-personel" method="POST"><input type="hidden" name="id" value="{{ p.id }}"><label class="small fw-bold">Ad Soyad</label><input type="text" name="ad_soyad" class="form-control mb-2" value="{{ p.ad_soyad }}" required><label class="small fw-bold">Ünvan</label><input type="text" name="unvan" class="form-control mb-2" value="{{ p.unvan }}"><label class="small fw-bold">Birimi</label><input type="text" name="birimi" class="form-control mb-2" value="{{ p.birimi }}"><label class="small fw-bold">Kampüs</label><select name="kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label class="small fw-bold">Ofis</label><input type="text" name="ofis" class="form-control mb-3" value="{{ p.ofis }}" required><button type="submit" class="btn btn-warning w-100">Güncelle</button></form></div></div></div></div>
                                             <div class="modal fade" id="tasiModal{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white"><h6 class="mb-0">Taşı</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/tasi-personel" method="POST"><input type="hidden" name="personel_id" value="{{ p.id }}"><label>Yeni Kampüs</label><select name="yeni_kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label>Yeni Ofis</label><input type="text" name="yeni_ofis" class="form-control mb-3" placeholder="Örn: B-205"><button type="submit" class="btn btn-primary w-100">Güncelle</button></form></div></div></div></div>
                                         </td>
@@ -233,7 +245,8 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
-                        </div> {% if toplam_sayfa_personel > 1 %}
+                        </div> 
+                        {% if toplam_sayfa_personel > 1 %}
                         <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
                             <a href="/?sayfa_p={{ sayfa_p - 1 if sayfa_p > 1 else 1 }}&sayfa_d={{ sayfa_d }}&q={{ arama_terimi }}&tab=personel" class="btn btn-sm btn-outline-secondary {% if sayfa_p == 1 %}disabled{% endif %}"><i class="fas fa-chevron-left"></i> Önceki</a>
                             <span class="small fw-bold text-muted">Sayfa</span>
@@ -249,10 +262,12 @@
         
         <div class="tab-pane fade {% if aktif_tab == 'istatistik' %}show active{% endif %}" id="istatistik">
             <div class="card p-4 shadow-sm border-0">
+                
                 <div class="text-center mb-4">
                     <div class="btn-group" role="group">
                         <input type="radio" class="btn-check" name="analiz_secim" id="radioDemirbas" autocomplete="off" onchange="analizTuruDegis('demirbas')" {% if analiz_turu == 'demirbas' %}checked{% endif %}>
                         <label class="btn btn-outline-warning px-4 fw-bold" for="radioDemirbas">📦 Demirbaş Analizi</label>
+
                         <input type="radio" class="btn-check" name="analiz_secim" id="radioPersonel" autocomplete="off" onchange="analizTuruDegis('personel')" {% if analiz_turu == 'personel' %}checked{% endif %}>
                         <label class="btn btn-outline-info px-4 fw-bold" for="radioPersonel">👥 Personel Analizi</label>
                     </div>
@@ -260,11 +275,11 @@
 
                 <div id="form-demirbas" class="bg-light p-4 rounded border mb-4" {% if analiz_turu == 'personel' %}style="display:none;"{% endif %}>
                     <h6 class="text-warning fw-bold mb-3"><i class="fas fa-boxes"></i> Malzeme Sayım Kriterleri</h6>
-                    <form action="/#analizSonuclari" method="GET">
+                    <form action="/" method="GET">
                         <input type="hidden" name="tab" value="istatistik">
                         <input type="hidden" name="analiz_turu" value="demirbas">
                         <div class="row g-3 align-items-end">
-                            <div class="col-md-4"><label class="form-label small fw-bold">Malzeme Adı</label><input type="text" name="ist_malzeme" class="form-control" placeholder="Örn: Çöp Kutusu" value="{{ ist_malzeme }}"></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold">Malzeme Adı</label><input type="text" name="ist_malzeme" class="form-control" placeholder="Örn: Masa, Sandalye" value="{{ ist_malzeme }}"></div>
                             <div class="col-md-3"><label class="form-label small fw-bold">Kampüs</label><select name="ist_kampus" class="form-select"><option value="Tümü">Tüm Kampüsler</option>{% for yer in yerleskeler %}<option value="{{ yer }}" {% if ist_kampus == yer %}selected{% endif %}>{{ yer }}</option>{% endfor %}</select></div>
                             <div class="col-md-3"><label class="form-label small fw-bold">Bina / Konum</label><input type="text" name="ist_konum" class="form-control" placeholder="Örn: Yurtlar" value="{{ ist_konum }}"></div>
                             <div class="col-md-2"><button type="submit" class="btn btn-warning w-100 fw-bold text-dark">Say</button></div>
@@ -274,7 +289,7 @@
 
                 <div id="form-personel" class="bg-light p-4 rounded border mb-4" {% if analiz_turu == 'demirbas' %}style="display:none;"{% endif %}>
                     <h6 class="text-info fw-bold mb-3"><i class="fas fa-users"></i> Personel Analiz Kriterleri</h6>
-                    <form action="/#analizSonuclari" method="GET">
+                    <form action="/" method="GET">
                         <input type="hidden" name="tab" value="istatistik">
                         <input type="hidden" name="analiz_turu" value="personel">
                         <div class="row g-3 align-items-end">
@@ -287,20 +302,41 @@
                     </form>
                 </div>
 
-                <div id="analizSonuclariContainer">
+                <div id="analizSonuclariContainer" class="mb-5">
                     {% if analiz_sonuclari %}
-                        <div id="analizSonuclari"></div> 
+                        
+                        <div class="card bg-light border-0 mb-4 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                                    <h6 class="text-secondary fw-bold mb-0"><i class="fas fa-chart-bar"></i> Görsel Analiz Sonucu</h6>
+                                    <a href="/rapor-grafik-ozet?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}" class="btn btn-sm btn-outline-success fw-bold">
+                                        <i class="fas fa-file-excel"></i> Grafik Verilerini İndir
+                                    </a>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 border-end">
+                                        <div style="height: 200px;"><canvas id="filterChart1"></canvas></div>
+                                        <div class="text-center small text-muted mt-2">Kampüs Dağılımı</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div style="height: 200px;"><canvas id="filterChart2"></canvas></div>
+                                        <div class="text-center small text-muted mt-2">{{ 'Unvan Dağılımı' if analiz_turu == 'personel' else 'Blok/Konum Yoğunluğu' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="alert alert-success text-center border-0 shadow-sm d-flex justify-content-between align-items-center px-5">
                             <div class="text-start">
                                 <small class="text-muted d-block text-uppercase fw-bold mb-1">Analiz Sonucu</small>
                                 <span class="fs-5"><i class="fas fa-check-circle"></i> Toplam: <span class="fw-bold display-6 mx-2">{{ analiz_toplam }}</span> {{ 'Kişi' if analiz_turu == 'personel' else 'Adet' }} Bulundu</span>
                             </div>
                             <div class="col-md-4 text-end">
-                                <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}" class="btn btn-success fw-bold shadow-sm"><i class="fas fa-file-excel"></i> Bu Tabloyu İndir</a>
+                                <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}" class="btn btn-success fw-bold shadow-sm"><i class="fas fa-file-excel"></i> Tam Listeyi İndir</a>
                             </div>
                         </div>
 
-                        <div class="table-responsive-custom mt-3" style="max-height: 500px;">
+                        <div class="table-responsive-custom mt-3" style="max-height: 400px;">
                             <table class="table table-hover align-middle">
                                 <thead class="bg-dark text-white" style="position: sticky; top: 0;">
                                     <tr>
@@ -327,9 +363,49 @@
                     {% elif (ist_malzeme or ist_p_birim or (ist_kampus and ist_kampus != 'Tümü')) %}
                         <div class="alert alert-warning text-center">Bu kriterlere uygun kayıt bulunamadı.</div>
                     {% else %}
-                        <div class="text-center text-muted py-5"><i class="fas fa-chart-pie fa-4x mb-3 text-black-50"></i><p class="fs-5">Analiz yapmak için yukarıdan tür seçin ve filtreleyin.</p></div>
+                        <div class="text-center text-muted py-4 mb-4 border rounded bg-light">
+                            <i class="fas fa-filter fa-3x mb-2 text-secondary"></i>
+                            <p class="mb-0">Analiz yapmak için yukarıdan tür seçin ve filtreleyin.</p>
+                        </div>
                     {% endif %}
                 </div>
+
+                <div class="border-top pt-4 text-center">
+                    <button class="btn btn-outline-secondary btn-sm mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#genelOzetPanel">
+                        <i class="fas fa-chart-pie"></i> Genel Sistem Özetini Göster / Gizle
+                    </button>
+                    
+                    <div class="collapse" id="genelOzetPanel">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-header bg-white fw-bold text-center small">Kampüs Doluluk</div>
+                                    <div class="card-body" style="position: relative; height: 200px;"><canvas id="campusChart"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-header bg-white fw-bold text-center small">Malzeme Türü (Cinsi)</div>
+                                    <div class="card-body" style="position: relative; height: 200px;"><canvas id="turChart"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-header bg-white fw-bold text-center small">En Çok Malzemeler</div>
+                                    <div class="card-body" style="position: relative; height: 200px;"><canvas id="itemChart"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-header bg-white fw-bold text-center small">Personel Birim</div>
+                                    <div class="card-body" style="position: relative; height: 200px;"><canvas id="personnelChart"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -338,43 +414,20 @@
 <div class="modal fade" id="gecmisModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title"><i class="fas fa-history"></i> İşlem Kütüğü (Son 100 Kayıt)</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-dark text-white"><h5 class="modal-title"><i class="fas fa-history"></i> İşlem Kütüğü</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body p-0">
                 <table class="table table-striped table-hover mb-0" style="font-size: 0.9rem;">
-                    <thead class="table-light sticky-top">
-                        <tr>
-                            <th>Tarih</th>
-                            <th>İşlem Türü</th>
-                            <th>Açıklama</th>
-                            <th>Detay / Konum</th>
-                        </tr>
-                    </thead>
+                    <thead class="table-light sticky-top"><tr><th>Tarih</th><th>İşlem Türü</th><th>Açıklama</th><th>Detay / Konum</th></tr></thead>
                     <tbody>
                         {% for log in tum_gecmis %}
                         <tr>
                             <td class="text-nowrap text-muted small">{{ log.tarih }}</td>
-                            <td>
-                                {% if log.tur == 'Yükleme' %}<span class="badge bg-primary">Yükleme</span>
-                                {% elif log.tur == 'Silme' %}<span class="badge bg-danger">Silme</span>
-                                {% elif log.tur == 'Düzenleme' %}<span class="badge bg-warning text-dark">Düzenleme</span>
-                                {% elif log.tur == 'Ekleme' %}<span class="badge bg-success">Ekleme</span>
-                                {% elif log.tur == 'Rapor' %}<span class="badge bg-secondary">Rapor</span>
-                                {% elif log.tur == 'Yazdırma' %}<span class="badge bg-dark">Yazdırma</span>
-                                {% else %}<span class="badge bg-info text-dark">{{ log.tur }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="fw-bold">{{ log.dosya_adi }}</td>
-                            <td class="small text-muted">{{ log.hedef_konum }}</td>
+                            <td>{% if log.tur == 'Yükleme' %}<span class="badge bg-primary">Yükleme</span>{% elif log.tur == 'Silme' %}<span class="badge bg-danger">Silme</span>{% elif log.tur == 'Düzenleme' %}<span class="badge bg-warning text-dark">Düzenleme</span>{% elif log.tur == 'Ekleme' %}<span class="badge bg-success">Ekleme</span>{% elif log.tur == 'Rapor' %}<span class="badge bg-secondary">Rapor</span>{% elif log.tur == 'Yazdırma' %}<span class="badge bg-dark">Yazdırma</span>{% else %}<span class="badge bg-info text-dark">{{ log.tur }}</span>{% endif %}</td>
+                            <td class="fw-bold">{{ log.dosya_adi }}</td><td class="small text-muted">{{ log.hedef_konum }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-            <div class="modal-footer bg-light py-1">
-                <small class="text-muted ms-auto">Sistemdeki tüm hareketler burada kayıt altına alınır.</small>
             </div>
         </div>
     </div>
@@ -383,22 +436,12 @@
 <div class="modal fade" id="uploadFolderModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">📂 Toplu Klasör Yükle (Yurtlar vb.)</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-primary text-white"><h5 class="modal-title">📂 Toplu Klasör Yükle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="alert alert-primary small border mb-3">
-                    <strong>Nasıl Çalışır?</strong><br>
-                    Bir ana klasör seçin (Örn: 'Yurtlar'). Sistem alt klasörleri (Blok Adı) ve içindeki Excel dosyalarını (Kat Bilgisi) otomatik okur.<br>
-                    <hr class="my-1">
-                    <strong>Konum Formatı:</strong> Blok Adı / Dosya Adı / Sekme Adı
-                </div>
+                <div class="alert alert-primary small border mb-3"><strong>Konum Formatı:</strong> Blok Adı / Dosya Adı / Sekme Adı</div>
                 <form action="/yukle-klasor" method="POST" enctype="multipart/form-data">
-                    <label class="form-label fw-bold small">Yerleşke</label>
-                    <select name="hedef_kampus" class="form-select mb-3">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select>
-                    <label class="form-label fw-bold small">Klasör Seçin</label>
-                    <input type="file" name="dosya" class="form-control mb-3" required webkitdirectory directory multiple>
+                    <label class="form-label fw-bold small">Yerleşke</label><select name="hedef_kampus" class="form-select mb-3">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select>
+                    <label class="form-label fw-bold small">Klasör Seçin</label><input type="file" name="dosya" class="form-control mb-3" required webkitdirectory directory multiple>
                     <button type="submit" class="btn btn-primary w-100 fw-bold">Klasörü Tara ve Yükle</button>
                 </form>
             </div>
@@ -409,15 +452,9 @@
 <div class="modal fade" id="uploadDemirbasModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title">📦 Toplu Demirbaş Yükle</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-warning"><h5 class="modal-title">📦 Toplu Demirbaş Yükle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="d-grid gap-2 mb-3">
-                    <a href="/indir-sablon/demirbas" class="btn btn-outline-success btn-sm fw-bold"><i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir</a>
-                </div>
-                <div class="alert alert-warning small border mb-3"><strong>Format:</strong> Malzeme Adı | Cinsi | Adet<br>Konum, bina bilgisi ve dosya adından otomatik oluşturulur.</div>
+                <div class="d-grid gap-2 mb-3"><a href="/indir-sablon/demirbas" class="btn btn-outline-success btn-sm fw-bold"><i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir</a></div>
                 <form action="/yukle-demirbas" method="POST" enctype="multipart/form-data">
                     <label class="form-label fw-bold small">Yerleşke</label><select name="hedef_kampus" class="form-select mb-3">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select>
                     <label class="form-label fw-bold small">Bina / Blok Bilgisi</label><input type="text" name="bina_kat" class="form-control mb-3" placeholder="Örn: Yurtlar - A Blok" required>
@@ -432,36 +469,109 @@
 <div class="modal fade" id="uploadPersonelModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">👥 Toplu Personel Yükle</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-info text-white"><h5 class="modal-title">👥 Toplu Personel Yükle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <div class="d-grid gap-2 mb-3">
-                    <a href="/indir-sablon/personel" class="btn btn-outline-success btn-sm fw-bold"><i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir</a>
-                </div>
-                <div class="alert alert-info small border mb-3"><strong>Excel Sütun Sırası:</strong><br>Ad Soyad | Ünvan | Birim | Kampüs | Ofis</div>
+                <div class="d-grid gap-2 mb-3"><a href="/indir-sablon/personel" class="btn btn-outline-success btn-sm fw-bold"><i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir</a></div>
                 <form action="/yukle-personel" method="POST" enctype="multipart/form-data">
-                    <label class="form-label fw-bold small">Personel Listesi (Excel)</label>
-                    <input type="file" name="dosya" class="form-control mb-3" required accept=".xlsx">
-                    <button type="submit" class="btn btn-info text-white w-100">Listeyi Yükle</button>
+                    <label class="form-label fw-bold small">Personel Listesi (Excel)</label><input type="file" name="dosya" class="form-control mb-3" required accept=".xlsx"><button type="submit" class="btn btn-info text-white w-100">Listeyi Yükle</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
+<script id="d-kampus-labels" type="application/json">{{ chart_kampus_labels | default([]) | tojson | safe }}</script>
+<script id="d-kampus-values" type="application/json">{{ chart_kampus_values | default([]) | tojson | safe }}</script>
+<script id="d-esya-labels" type="application/json">{{ chart_esya_labels | default([]) | tojson | safe }}</script>
+<script id="d-esya-values" type="application/json">{{ chart_esya_values | default([]) | tojson | safe }}</script>
+<script id="d-personel-labels" type="application/json">{{ chart_personel_labels | default([]) | tojson | safe }}</script>
+<script id="d-personel-values" type="application/json">{{ chart_personel_values | default([]) | tojson | safe }}</script>
+<script id="f-labels-1" type="application/json">{{ f_labels_1 | default([]) | tojson | safe }}</script>
+<script id="f-values-1" type="application/json">{{ f_values_1 | default([]) | tojson | safe }}</script>
+<script id="f-labels-2" type="application/json">{{ f_labels_2 | default([]) | tojson | safe }}</script>
+<script id="f-values-2" type="application/json">{{ f_values_2 | default([]) | tojson | safe }}</script>
+<script id="d-tur-labels" type="application/json">{{ chart_tur_labels | default([]) | tojson | safe }}</script>
+<script id="d-tur-values" type="application/json">{{ chart_tur_values | default([]) | tojson | safe }}</script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         var activeTab = "{{ aktif_tab }}"; 
-        document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('show', 'active'));
+        var tabContents = document.querySelectorAll('.tab-pane');
+        var navLinks = document.querySelectorAll('.nav-link');
+        tabContents.forEach(function(el) { el.classList.remove('show', 'active'); });
+        navLinks.forEach(function(el) { el.classList.remove('active'); });
         var targetPane = document.getElementById(activeTab);
+        var targetLink = document.querySelector('a[href*="tab=' + activeTab + '"]');
         if (targetPane) { targetPane.classList.add('show', 'active'); }
-
+        if (targetLink) { targetLink.classList.add('active'); }
+        if(activeTab === 'istatistik') { setTimeout(çizGrafikleri, 100); }
+        var istatistikLink = document.querySelector('a[href*="tab=istatistik"]');
+        if (istatistikLink) { istatistikLink.addEventListener('click', function() { setTimeout(çizGrafikleri, 200); }); }
         var aramaTerimi = "{{ arama_terimi }}";
         if (aramaTerimi && aramaTerimi.length > 0) { highlightSearchTerm(aramaTerimi); }
     });
+
+    function çizGrafikleri() {
+        if (typeof Chart === 'undefined') return;
+        const renkPaleti = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69', '#f8f9fc', '#6610f2', '#e83e8c', '#fd7e14', '#20c997', '#0d6efd', '#6c757d', '#198754'];
+        
+        // Temizle
+        var c1 = Chart.getChart("campusChart"); if(c1) c1.destroy();
+        var c2 = Chart.getChart("itemChart"); if(c2) c2.destroy();
+        var c3 = Chart.getChart("personnelChart"); if(c3) c3.destroy();
+        var c4 = Chart.getChart("turChart"); if(c4) c4.destroy(); // Yeni
+        var f1 = Chart.getChart("filterChart1"); if(f1) f1.destroy();
+        var f2 = Chart.getChart("filterChart2"); if(f2) f2.destroy();
+
+        function getData(id) { try { return JSON.parse(document.getElementById(id).textContent); } catch(e) { return []; } }
+
+        var k_labels = getData('d-kampus-labels'); var k_values = getData('d-kampus-values');
+        var e_labels = getData('d-esya-labels'); var e_values = getData('d-esya-values');
+        var p_labels = getData('d-personel-labels'); var p_values = getData('d-personel-values');
+        var t_labels = getData('d-tur-labels'); var t_values = getData('d-tur-values'); // Yeni
+        var fl1 = getData('f-labels-1'); var fv1 = getData('f-values-1');
+        var fl2 = getData('f-labels-2'); var fv2 = getData('f-values-2');
+
+        // GENEL GRAFİKLER
+        // 1. Kampüs
+        if (k_labels.length > 0) {
+            new Chart(document.getElementById('campusChart'), { type: 'doughnut', data: { labels: k_labels, datasets: [{ data: k_values, backgroundColor: renkPaleti, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: {size: 10} } } } } });
+        }
+        // 2. YENİ: Malzeme Cinsi (Pasta Grafik)
+        if (t_labels.length > 0) {
+            new Chart(document.getElementById('turChart'), { type: 'pie', data: { labels: t_labels, datasets: [{ data: t_values, backgroundColor: renkPaleti, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: {size: 10} } } } } });
+        }
+        // 3. Eşya
+        if (e_labels.length > 0) {
+            new Chart(document.getElementById('itemChart'), { type: 'bar', data: { labels: e_labels, datasets: [{ label: 'Adet', data: e_values, backgroundColor: '#f6c23e', borderColor: '#dda20a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
+        }
+        // 4. Personel
+        if (p_labels.length > 0) {
+            new Chart(document.getElementById('personnelChart'), { type: 'bar', data: { labels: p_labels, datasets: [{ label: 'Kişi', data: p_values, backgroundColor: renkPaleti, borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, maxBarThickness: 30, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
+        }
+
+        // FİLTRELİ GRAFİKLER (Aynen kaldı)
+        var ctxF1 = document.getElementById('filterChart1');
+        var ctxF2 = document.getElementById('filterChart2');
+        if (ctxF1 && fl1.length > 0) {
+            new Chart(ctxF1, { type: 'pie', data: { labels: fl1, datasets: [{ data: fv1, backgroundColor: renkPaleti }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+        }
+        if (ctxF2 && fl2.length > 0) {
+            new Chart(ctxF2, { type: 'bar', data: { labels: fl2, datasets: [{ label: 'Sayı', data: fv2, backgroundColor: '#1cc88a', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+        }
+    }
+
+    function analizTuruDegis(tur) {
+        var formDemirbas = document.getElementById('form-demirbas');
+        var formPersonel = document.getElementById('form-personel');
+        var sonuclar = document.getElementById('analizSonuclariContainer');
+        if (sonuclar) { sonuclar.style.display = 'none'; }
+        if (tur === 'personel') { if(formDemirbas) formDemirbas.style.display = 'none'; if(formPersonel) formPersonel.style.display = 'block'; } 
+        else { if(formPersonel) formPersonel.style.display = 'none'; if(formDemirbas) formDemirbas.style.display = 'block'; }
+    }
 
     function sayfayaGit(tur, hedefSayfa, digerSayfa, arama) {
         var url = "/?q=" + arama + "&tab=" + tur;
@@ -476,17 +586,8 @@
         var regex = new RegExp("(" + regexStr + ")", "gi");
         document.querySelectorAll("table tbody tr td").forEach(function(td) {
             if (td.querySelector('.btn') || td.querySelector('input') || td.querySelector('.fa-qrcode') || td.querySelector('.fa-trash')) return;
-            safeHighlight(td, regex);
+            if (td.childNodes.length === 1 && td.childNodes[0].nodeType === 3) { var match = td.innerText.match(regex); if (match) td.innerHTML = td.innerText.replace(regex, '<span class="highlight">$1</span>'); }
         });
-    }
-
-    function safeHighlight(node, regex) {
-        if (node.nodeType === 3) {
-            var match = node.data.match(regex);
-            if (match) { var span = document.createElement('span'); span.innerHTML = node.data.replace(regex, '<span class="highlight">$1</span>'); node.parentNode.replaceChild(span, node); }
-        } else if (node.nodeType === 1 && node.childNodes && !/(script|style|textarea)/i.test(node.tagName)) {
-            for (var i = 0; i < node.childNodes.length; i++) safeHighlight(node.childNodes[i], regex);
-        }
     }
 
     function tabloyuSirala(n) {
@@ -506,21 +607,10 @@
             else { if (switchcount == 0 && dir == "asc") { dir = "desc"; switching = true; } }
         }
     }
-    
-    function analizTuruDegis(tur) {
-        var formDemirbas = document.getElementById('form-demirbas');
-        var formPersonel = document.getElementById('form-personel');
-        var sonuclar = document.getElementById('analizSonuclariContainer');
-        if (sonuclar) { sonuclar.style.display = 'none'; }
-        if (tur === 'personel') { formDemirbas.style.display = 'none'; formPersonel.style.display = 'block'; } 
-        else { formPersonel.style.display = 'none'; formDemirbas.style.display = 'block'; }
-    }
-</script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
+
     function silOnay(id, tur) {
         Swal.fire({
-            title: 'Silmek istediğine emin misin?', text: "Bu işlem geri alınamaz! Kayıt kalıcı olarak silinecek.", icon: 'warning',
+            title: 'Silmek istediğine emin misin?', text: "Bu işlem geri alınamaz!", icon: 'warning',
             showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Evet, Sil!', cancelButtonText: 'Vazgeç'
         }).then((result) => { if (result.isConfirmed) { window.location.href = `/sil-${tur}/${id}`; } })
     }
