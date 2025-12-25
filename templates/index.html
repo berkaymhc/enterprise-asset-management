@@ -180,7 +180,9 @@
                                             <a href="/kapi-karti/{{ item.konum }}" target="_blank" class="btn btn-outline-dark btn-sm py-0" title="Kapı Kartını Yazdır">
     <i class="fas fa-print"></i>
 </a>
-                                            <a href="/sil-demirbas/{{ item.id }}" class="btn btn-outline-danger btn-sm py-0"><i class="fas fa-trash"></i></a>
+                                            <button onclick="silOnay('{{ item.id }}', 'demirbas')" class="btn btn-outline-danger btn-sm py-0">
+    <i class="fas fa-trash"></i>
+</button>
 
                                             <div class="modal fade" id="editDemirbas{{ item.id }}" tabindex="-1">
                                                 <div class="modal-dialog">
@@ -289,7 +291,9 @@
                                         <td>
                                             <button class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}"><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-sm btn-primary py-0" data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}"><i class="fas fa-exchange-alt"></i></button>
-                                            <a href="/sil-personel/{{ p.id }}" class="btn btn-sm btn-danger py-0"><i class="fas fa-trash"></i></a>
+                                            <button onclick="silOnay('{{ p.id }}', 'personel')" class="btn btn-sm btn-danger py-0">
+    <i class="fas fa-trash"></i>
+</button>
                                             <div class="modal fade" id="editPersonel{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning"><h6 class="modal-title">Düzenle</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/guncelle-personel" method="POST"><input type="hidden" name="id" value="{{ p.id }}"><label class="small fw-bold">Ad Soyad</label><input type="text" name="ad_soyad" class="form-control mb-2" value="{{ p.ad_soyad }}" required><label class="small fw-bold">Ünvan</label><input type="text" name="unvan" class="form-control mb-2" value="{{ p.unvan }}"><label class="small fw-bold">Birimi</label><input type="text" name="birimi" class="form-control mb-2" value="{{ p.birimi }}"><label class="small fw-bold">Kampüs</label><select name="kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label class="small fw-bold">Ofis</label><input type="text" name="ofis" class="form-control mb-3" value="{{ p.ofis }}" required><button type="submit" class="btn btn-warning w-100">Güncelle</button></form></div></div></div></div>
                                             <div class="modal fade" id="tasiModal{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white"><h6 class="mb-0">Taşı</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/tasi-personel" method="POST"><input type="hidden" name="personel_id" value="{{ p.id }}"><label>Yeni Kampüs</label><select name="yeni_kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label>Yeni Ofis</label><input type="text" name="yeni_ofis" class="form-control mb-3" placeholder="Örn: B-205"><button type="submit" class="btn btn-primary w-100">Güncelle</button></form></div></div></div></div>
                                         </td>
@@ -467,6 +471,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                
+                <div class="d-grid gap-2 mb-3">
+                    <a href="/indir-sablon/demirbas" class="btn btn-outline-success btn-sm fw-bold">
+                        <i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir
+                    </a>
+                </div>
+
                 <div class="alert alert-warning small border mb-3">
                     <strong>Format:</strong> Malzeme Adı | Cinsi | Adet<br>
                     Konum, yazdığınız bina bilgisi ve dosya adından otomatik oluşturulur.
@@ -490,6 +501,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                
+                <div class="d-grid gap-2 mb-3">
+                    <a href="/indir-sablon/personel" class="btn btn-outline-success btn-sm fw-bold">
+                        <i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir
+                    </a>
+                </div>
+
                 <div class="alert alert-info small border mb-3">
                     <strong>Excel Sütun Sırası:</strong><br>
                     Ad Soyad | Ünvan | Birim | Kampüs | Ofis
@@ -602,6 +620,31 @@
             formDemirbas.style.display = 'block';
         }
     }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Silme Onay Fonksiyonu
+    function silOnay(id, tur) {
+        Swal.fire({
+            title: 'Silmek istediğine emin misin?',
+            text: "Bu işlem geri alınamaz! Kayıt kalıcı olarak silinecek.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33', // Sil butonu kırmızı
+            cancelButtonColor: '#3085d6', // Vazgeç butonu mavi
+            confirmButtonText: 'Evet, Sil!',
+            cancelButtonText: 'Vazgeç'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Kullanıcı Evet derse, ilgili silme linkine git
+                window.location.href = `/sil-${tur}/${id}`;
+            }
+        })
+    }
+
+    // Mevcut diğer scriptlerin burada devam ediyor...
+    // ...
 </script>
 </body>
 </html>

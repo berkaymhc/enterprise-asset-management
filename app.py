@@ -527,6 +527,54 @@ def kapi_karti(konum_adi):
     
     return render_template('kapi_karti.html', konum=konum_adi, qr_code=qr_base64)
 
+# --- ŞABLON İNDİRME FONKSİYONU ---
+@app.route('/indir-sablon/<tur>')
+def indir_sablon(tur):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    
+    # Başlık Stili (Kalın Yazı)
+    header_font = Font(bold=True)
+    
+    if tur == 'personel':
+        # Başlıklar
+        ws.append(['Ad Soyad', 'Ünvan', 'Birim', 'Kampüs', 'Ofis'])
+        # Örnek Veri (Kullanıcı ne yazacağını anlasın diye)
+        ws.append(['Ahmet Yılmaz', 'Memur', 'Öğrenci İşleri', 'Merkez', 'Z-10'])
+        ws.title = "Personel Listesi"
+        filename = "sablon_personel_listesi.xlsx"
+        
+        # Sütun Genişlikleri
+        ws.column_dimensions['A'].width = 25
+        ws.column_dimensions['B'].width = 15
+        ws.column_dimensions['C'].width = 20
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 10
+
+    else: # Demirbaş
+        # Başlıklar
+        ws.append(['Malzeme Adı', 'Cinsi', 'Adet'])
+        # Örnek Veri
+        ws.append(['Çalışma Masası', 'Ahşap', '1'])
+        ws.title = "Demirbaş Listesi"
+        filename = "sablon_demirbas_listesi.xlsx"
+        
+        # Sütun Genişlikleri
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 15
+        ws.column_dimensions['C'].width = 10
+
+    # Başlıkları Kalın Yap
+    for cell in ws[1]:
+        cell.font = header_font
+
+    # Dosyayı Belleğe Kaydet ve Gönder
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return send_file(output, download_name=filename, as_attachment=True)
+
 if __name__ == '__main__':
     # host='0.0.0.0' dışarıdan erişime açar
     app.run(host='0.0.0.0', port=5000, debug=True)
