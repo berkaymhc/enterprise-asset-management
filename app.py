@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, session, flash
 import sqlite3
 from datetime import datetime
 import openpyxl
@@ -9,6 +9,8 @@ import base64
 from io import BytesIO
 from openpyxl.styles import Font, Alignment, PatternFill
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 # --- KONFİGÜRASYON ---
 load_dotenv()
@@ -16,6 +18,16 @@ DB_NAME = os.getenv("DB_NAME", "demirbas.db")
 
 app = Flask(__name__)
 app.secret_key = 'universite_gizli_anahtar'
+
+# --- LOGIN KONTROL DECORATOR ---
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Eğer oturumda 'logged_in' anahtarı yoksa
+        if 'logged_in' not in session:
+            return redirect(url_for('login')) # Login'e gönder
+        return f(*args, **kwargs) # Varsa geçmesine izin ver
+    return decorated_function
 
 YERLESKELER = [
     "Pelitli Yerleşkesi", "Ömer Yıldız Yerleşkesi", "Yomra Yerleşkesi", 
@@ -57,19 +69,23 @@ def log_kaydet(baslik, detay, tur="İşlem"):
 # --- VERİTABANI KURULUMU ---
 def tablolari_olustur():
     conn = baglanti_kur()
+    
+    # 1. Demirbaşlar Tablosu
     conn.execute('''CREATE TABLE IF NOT EXISTS demirbaslar (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, ad TEXT NOT NULL, cinsi TEXT, kampus TEXT, 
                     konum TEXT NOT NULL, adet INTEGER NOT NULL, tarih TEXT NOT NULL)''')
     
+    # 2. Personeller Tablosu
     conn.execute('''CREATE TABLE IF NOT EXISTS personeller (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, ad_soyad TEXT NOT NULL, unvan TEXT, 
                     birimi TEXT, kampus TEXT, ofis TEXT NOT NULL)''')
     
+    # 3. Log Geçmişi Tablosu
     conn.execute('''CREATE TABLE IF NOT EXISTS yukleme_gecmisi (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, dosya_adi TEXT, hedef_konum TEXT, 
                     tur TEXT, tarih TEXT)''')
     
-    # --- YENİ EKLENEN: ARIZALAR TABLOSU ---
+    # 4. Arızalar Tablosu
     conn.execute('''CREATE TABLE IF NOT EXISTS arizalar (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     konum TEXT NOT NULL,
@@ -79,14 +95,63 @@ def tablolari_olustur():
                     durum TEXT DEFAULT 'Bekliyor',
                     oncelik TEXT DEFAULT 'Normal',
                     tarih TEXT)''')
+
+    # 5. Kullanıcılar Tablosu
+    conn.execute('''CREATE TABLE IF NOT EXISTS kullanicilar (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    kullanici_adi TEXT NOT NULL UNIQUE,
+                    sifre_hash TEXT NOT NULL,
+                    rol TEXT DEFAULT 'personel',
+                    ad_soyad TEXT)''')
+    
+    # --- VARSAYILAN ADMİN OLUŞTURMA ---
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM kullanicilar WHERE kullanici_adi = 'admin'")
+    if not cur.fetchone():
+        hashed_pw = generate_password_hash("admin123") 
+        cur.execute("INSERT INTO kullanicilar (kullanici_adi, sifre_hash, rol, ad_soyad) VALUES (?, ?, ?, ?)",
+                    ('admin', hashed_pw, 'admin', 'Sistem Yöneticisi'))
+        print(">>> SİSTEM MESAJI: Varsayılan admin oluşturuldu (admin / admin123)")
     
     conn.commit()
     conn.close()
 
+# Fonksiyonu çağırmayı unutma (app.py açılınca çalışır)
 tablolari_olustur()
+
+# --- LOGIN / LOGOUT ROTALARI ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        kadi = request.form.get('kullanici_adi')
+        sifre = request.form.get('sifre')
+        
+        conn = baglanti_kur()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM kullanicilar WHERE kullanici_adi = ?", (kadi,))
+        user = cur.fetchone()
+        conn.close()
+        
+        if user and check_password_hash(user['sifre_hash'], sifre):
+            session['logged_in'] = True
+            session['kullanici_adi'] = user['kullanici_adi']
+            session['rol'] = user['rol']
+            session['ad_soyad'] = user['ad_soyad']
+            return redirect(url_for('index'))
+        else:
+            flash('Hatalı kullanıcı adı veya şifre!')
+            return redirect(url_for('login'))
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 # --- ANA SAYFA ---
 @app.route('/')
+@login_required
 def index():
     aktif_tab = request.args.get('tab', 'demirbas')
     arama_terimi = request.args.get('q', '') 
@@ -230,6 +295,12 @@ def index():
     cur.execute("SELECT COUNT(*) FROM arizalar WHERE durum='Bekliyor'")
     bekleyen_ariza_sayisi = cur.fetchone()[0]
 
+    # --- YENİ: KULLANICILARI ÇEK (Sadece Admin Görecek Şekilde) ---
+    kullanicilar_listesi = []
+    if session.get('rol') == 'admin':
+        cur.execute("SELECT * FROM kullanicilar ORDER BY id ASC")
+        kullanicilar_listesi = cur.fetchall()
+
     conn.close() 
 
     return render_template('index.html', 
@@ -248,10 +319,12 @@ def index():
                            f_labels_1=f_labels_1, f_values_1=f_values_1,
                            f_labels_2=f_labels_2, f_values_2=f_values_2,
                            # YENİLER
-                           arizalar=arizalar, bekleyen_ariza_sayisi=bekleyen_ariza_sayisi)
+                           arizalar=arizalar, bekleyen_ariza_sayisi=bekleyen_ariza_sayisi,
+                           kullanicilar_listesi=kullanicilar_listesi)
 
 # --- YÜKLEME VE İŞLEM FONKSİYONLARI ---
 @app.route('/yukle-demirbas', methods=['POST'])
+@login_required
 def yukle_demirbas():
     if 'dosya' not in request.files: return redirect(url_for('index'))
     dosyalar = request.files.getlist('dosya')
@@ -283,6 +356,7 @@ def yukle_demirbas():
 
 # --- AKILLI KLASÖR YÜKLEME FONKSİYONU ---
 @app.route('/yukle-klasor', methods=['POST'])
+@login_required
 def yukle_klasor():
     if 'dosya' not in request.files: return redirect(url_for('index'))
     dosyalar = request.files.getlist('dosya')
@@ -409,6 +483,7 @@ def yukle_klasor():
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/yukle-personel', methods=['POST'])
+@login_required
 def yukle_personel():
     if 'dosya' not in request.files: return redirect(url_for('index'))
     dosya = request.files['dosya']
@@ -429,6 +504,7 @@ def yukle_personel():
 
 # --- CRUD İŞLEMLERİ ---
 @app.route('/ekle-demirbas', methods=['POST'])
+@login_required
 def ekle_demirbas():
     conn = baglanti_kur()
     conn.execute("INSERT INTO demirbaslar (ad, cinsi, kampus, konum, adet, tarih) VALUES (?, ?, ?, ?, ?, ?)", 
@@ -438,6 +514,7 @@ def ekle_demirbas():
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/guncelle-demirbas', methods=['POST'])
+@login_required
 def guncelle_demirbas():
     conn = baglanti_kur()
     conn.execute("UPDATE demirbaslar SET ad=?, cinsi=?, kampus=?, konum=?, adet=? WHERE id=?", 
@@ -447,6 +524,7 @@ def guncelle_demirbas():
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/sil-demirbas/<int:id>')
+@login_required
 def sil_demirbas(id):
     conn = baglanti_kur(); cur = conn.cursor()
     cur.execute("SELECT ad, konum FROM demirbaslar WHERE id=?", (id,)); kayit = cur.fetchone()
@@ -457,6 +535,7 @@ def sil_demirbas(id):
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/ekle-personel', methods=['POST'])
+@login_required
 def ekle_personel():
     conn = baglanti_kur()
     conn.execute("INSERT INTO personeller (ad_soyad, unvan, birimi, kampus, ofis) VALUES (?, ?, ?, ?, ?)", 
@@ -466,6 +545,7 @@ def ekle_personel():
     return redirect(url_for('index', tab='personel'))
 
 @app.route('/guncelle-personel', methods=['POST'])
+@login_required
 def guncelle_personel():
     conn = baglanti_kur()
     conn.execute("UPDATE personeller SET ad_soyad=?, unvan=?, birimi=?, kampus=?, ofis=? WHERE id=?", 
@@ -475,6 +555,7 @@ def guncelle_personel():
     return redirect(url_for('index', tab='personel'))
 
 @app.route('/tasi-personel', methods=['POST'])
+@login_required
 def tasi_personel():
     conn = baglanti_kur(); cur = conn.cursor()
     cur.execute("SELECT ad_soyad, ofis, kampus FROM personeller WHERE id=?", (request.form['personel_id'],)); kisi = cur.fetchone()
@@ -484,6 +565,7 @@ def tasi_personel():
     return redirect(url_for('index', tab='personel'))
 
 @app.route('/sil-personel/<int:id>')
+@login_required
 def sil_personel(id):
     conn = baglanti_kur(); cur = conn.cursor()
     cur.execute("SELECT ad_soyad, ofis FROM personeller WHERE id=?", (id,)); kayit = cur.fetchone()
@@ -494,12 +576,14 @@ def sil_personel(id):
     return redirect(url_for('index', tab='personel'))
 
 @app.route('/sifirla-demirbas')
+@login_required
 def sifirla_demirbas():
     conn = baglanti_kur(); conn.execute("DELETE FROM demirbaslar"); conn.commit(); conn.close()
     log_kaydet("Tüm Demirbaş Listesi Silindi", "Veritabanı Sıfırlama", "Sıfırlama")
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/sifirla-personel')
+@login_required
 def sifirla_personel():
     conn = baglanti_kur(); conn.execute("DELETE FROM personeller"); conn.commit(); conn.close()
     log_kaydet("Tüm Personel Listesi Silindi", "Veritabanı Sıfırlama", "Sıfırlama")
@@ -544,6 +628,7 @@ def kapi_karti(konum_adi):
     return render_template('kapi_karti.html', konum=konum_adi, qr_code=qr_base64)
 
 @app.route('/indir-sablon/<tur>')
+@login_required
 def indir_sablon(tur):
     wb = openpyxl.Workbook(); ws = wb.active; header_font = Font(bold=True)
     if tur == 'personel':
@@ -559,6 +644,7 @@ def indir_sablon(tur):
     return send_file(output, download_name=filename, as_attachment=True)
 
 @app.route('/rapor')
+@login_required
 def rapor():
     conn = baglanti_kur()
     wb = openpyxl.Workbook(); ws1 = wb.active; ws1.title = "Demirbaşlar"
@@ -579,6 +665,7 @@ def rapor():
     return send_file(output, download_name=f"Envanter_Rapor_{datetime.now().strftime('%Y-%m-%d')}.xlsx", as_attachment=True)
 
 @app.route('/rapor-analiz')
+@login_required
 def rapor_analiz():
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
     ist_malzeme = request.args.get('ist_malzeme', ''); ist_kampus = request.args.get('ist_kampus', ''); ist_konum = request.args.get('ist_konum', '')
@@ -619,6 +706,7 @@ def rapor_analiz():
     return send_file(output, download_name=f"Analiz_Raporu_{analiz_turu}.xlsx", as_attachment=True)
 
 @app.route('/rapor-grafik-ozet')
+@login_required
 def rapor_grafik_ozet():
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
     
@@ -754,6 +842,7 @@ def rapor_grafik_ozet():
     return send_file(output, download_name=dosya_adi, as_attachment=True)
 
 @app.route('/toplu-tasi-demirbas', methods=['POST'])
+@login_required
 def toplu_tasi_demirbas():
     secilenler = request.form.getlist('secilen_ids')
     yeni_kampus = request.form.get('yeni_kampus')
@@ -773,6 +862,7 @@ def toplu_tasi_demirbas():
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/toplu-sil-demirbas', methods=['GET', 'POST'])
+@login_required
 def toplu_sil_demirbas():
     secilenler = []
     
@@ -800,6 +890,7 @@ def toplu_sil_demirbas():
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/toplu-yazdir-demirbas', methods=['GET', 'POST'])
+@login_required
 def toplu_yazdir_demirbas():
     if request.method == 'POST':
         secilenler = request.form.getlist('secilen_ids')
@@ -831,6 +922,7 @@ def toplu_yazdir_demirbas():
     return render_template('toplu_yazdir.html', qr_listesi=qr_listesi)
 
 @app.route('/get-all-ids')
+@login_required
 def get_all_ids():
     tab = request.args.get('tab', 'demirbas')
     q = request.args.get('q', '').strip()
@@ -860,6 +952,7 @@ def get_all_ids():
 # ---------------------------------------------------
 
 @app.route('/ekle-ariza', methods=['POST'])
+@login_required
 def ekle_ariza():
     conn = baglanti_kur()
     konum = request.form.get('konum')
@@ -878,10 +971,10 @@ def ekle_ariza():
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/guncelle-ariza-durum/<int:id>/<yeni_durum>')
+@login_required
 def guncelle_ariza_durum(id, yeni_durum):
     conn = baglanti_kur()
     cur = conn.cursor()
-    # Önce kaydı çekelim (log için)
     cur.execute("SELECT baslik, konum, durum FROM arizalar WHERE id=?", (id,))
     ariza = cur.fetchone()
     
@@ -894,6 +987,7 @@ def guncelle_ariza_durum(id, yeni_durum):
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/sil-ariza/<int:id>')
+@login_required
 def sil_ariza(id):
     conn = baglanti_kur()
     cur = conn.cursor()
@@ -908,6 +1002,46 @@ def sil_ariza(id):
     conn.close()
     return redirect(request.referrer or url_for('index'))
 
+# --- KULLANICI YÖNETİMİ (SADECE ADMIN) ---
+@app.route('/ekle-kullanici', methods=['POST'])
+@login_required
+def ekle_kullanici():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('index')) 
+        
+    kadi = request.form.get('kullanici_adi')
+    sifre = request.form.get('sifre')
+    ad_soyad = request.form.get('ad_soyad')
+    rol = request.form.get('rol')
+    
+    sifre_hash = generate_password_hash(sifre)
+    
+    conn = baglanti_kur()
+    try:
+        conn.execute("INSERT INTO kullanicilar (kullanici_adi, sifre_hash, ad_soyad, rol) VALUES (?, ?, ?, ?)",
+                     (kadi, sifre_hash, ad_soyad, rol))
+        conn.commit()
+        log_kaydet("Yeni Kullanıcı Eklendi", f"{kadi} ({rol})", "Ekleme")
+    except sqlite3.IntegrityError:
+        flash("Bu kullanıcı adı zaten kullanılıyor!")
+    finally:
+        conn.close()
+        
+    return redirect(url_for('index'))
+
+@app.route('/sil-kullanici/<int:id>')
+@login_required
+def sil_kullanici(id):
+    if session.get('rol') != 'admin':
+        return redirect(url_for('index'))
+
+    conn = baglanti_kur()
+    conn.execute("DELETE FROM kullanicilar WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    log_kaydet("Kullanıcı Silindi", f"ID: {id}", "Silme")
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

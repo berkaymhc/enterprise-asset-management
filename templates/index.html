@@ -88,37 +88,69 @@
 
 <div class="container-fluid px-5 mt-4">
     
-    <div class="row align-items-center mb-4">
-       <div class="col-md-3 d-flex align-items-center">
+    <div class="row align-items-center mb-4 border-bottom pb-3">
+       <div class="col-md-4 d-flex align-items-center">
             <a href="/" onclick="tamamenSifirla()" class="text-decoration-none d-flex align-items-center">
-                <h2 class="text-primary fw-bold mb-0"><i class="fas fa-university"></i> Kampüs Yönetimi</h2>
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="fas fa-university fa-lg"></i>
+                </div>
+                <div>
+                    <h4 class="text-primary fw-bold mb-0">Envanter Pro</h4>
+                    <small class="text-muted" style="font-size: 0.8rem;">Üniversite Yönetim Sistemi v11</small>
+                </div>
             </a>
-            {% if son_yukleme %}
-            <button class="btn btn-link text-muted ms-2 p-0" type="button" data-bs-toggle="collapse" data-bs-target="#gecmisPanel">
-                <i class="fas fa-history"></i>
-            </button>
-            {% endif %}
         </div>
 
         <div class="col-md-4">
             {% if aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
-            <form action="/" method="GET" class="d-flex" id="searchForm">
+            <form action="/" method="GET" class="d-flex shadow-sm rounded-pill overflow-hidden" id="searchForm">
                 <input type="hidden" name="tab" id="activeTabInput" value="{{ aktif_tab }}">
-                <input class="form-control me-2" type="search" name="q" placeholder="Detaylı arama..." value="{{ arama_terimi if arama_terimi else '' }}">
-                <button class="btn btn-outline-primary" type="submit"><i class="fas fa-search"></i></button>
+                <input class="form-control border-0 ps-4" type="search" name="q" placeholder="Detaylı arama yap..." value="{{ arama_terimi if arama_terimi else '' }}">
+                <button class="btn btn-white border-start px-3" type="submit"><i class="fas fa-search text-primary"></i></button>
                 {% if arama_terimi %}
-                    <a href="/?tab={{ aktif_tab }}" class="btn btn-outline-secondary ms-2"><i class="fas fa-times"></i></a>
+                    <a href="/?tab={{ aktif_tab }}" class="btn btn-white border-start px-3 text-danger"><i class="fas fa-times"></i></a>
                 {% endif %}
             </form>
             {% endif %}
         </div>
 
-        <div class="col-md-5 text-end">
-            <button class="btn btn-dark text-white me-1" data-bs-toggle="modal" data-bs-target="#gecmisModal"><i class="fas fa-clipboard-list"></i> Geçmiş</button>
-            <button class="btn btn-primary text-white me-1" data-bs-toggle="modal" data-bs-target="#uploadFolderModal"><i class="fas fa-folder-open"></i> Klasör Yükle</button>
-            <button class="btn btn-info text-white me-1" data-bs-toggle="modal" data-bs-target="#uploadPersonelModal"><i class="fas fa-users"></i> Personel Yükle</button>
-            <button class="btn btn-warning me-1" data-bs-toggle="modal" data-bs-target="#uploadDemirbasModal"><i class="fas fa-boxes"></i> Demirbaş Yükle</button>
-            <a href="/rapor" class="btn btn-success"><i class="fas fa-file-excel"></i> Rapor</a>
+        <div class="col-md-4 text-end">
+            <div class="d-flex align-items-center justify-content-end gap-3">
+                <div class="text-end lh-1">
+                    <div class="fw-bold text-dark">{{ session['ad_soyad'] }}</div>
+                    <span class="badge bg-{{ 'danger' if session['rol'] == 'admin' else 'info' }} rounded-pill" style="font-size: 0.7rem;">
+                        {{ session['rol'] | upper }}
+                    </span>
+                </div>
+                
+                <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold">
+                    <i class="fas fa-sign-out-alt"></i> Çıkış
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            {% if son_yukleme %}
+            <button class="btn btn-link text-muted p-0 text-decoration-none small" type="button" data-bs-toggle="collapse" data-bs-target="#gecmisPanel">
+                <i class="fas fa-history"></i> Son İşlem: <strong>{{ son_yukleme.hedef_konum }}</strong> ({{ son_yukleme.tarih }})
+            </button>
+            {% endif %}
+        </div>
+        <div>
+            <button class="btn btn-dark text-white btn-sm me-1" data-bs-toggle="modal" data-bs-target="#gecmisModal"><i class="fas fa-clipboard-list"></i> Geçmiş</button>
+            
+            {% if session['rol'] == 'admin' %}
+            <button class="btn btn-primary text-white btn-sm me-1" data-bs-toggle="modal" data-bs-target="#uploadFolderModal"><i class="fas fa-folder-open"></i> Klasör Yükle</button>
+            <button class="btn btn-info text-white btn-sm me-1" data-bs-toggle="modal" data-bs-target="#uploadPersonelModal"><i class="fas fa-users"></i> Personel Yükle</button>
+            <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal" data-bs-target="#uploadDemirbasModal"><i class="fas fa-boxes"></i> Demirbaş Yükle</button>
+            <button class="btn btn-secondary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#userModal">
+                <i class="fas fa-users-cog"></i> Kullanıcılar
+            </button>
+            {% endif %}
+            
+            <a href="/rapor" class="btn btn-success btn-sm"><i class="fas fa-file-excel"></i> Rapor</a>
         </div>
     </div>
 
@@ -160,8 +192,7 @@
                     <div class="btn-group me-2">
                         <button type="button" onclick="topluIslemGonder('tasi')" class="btn btn-primary btn-sm">Taşı</button>
                         <button type="button" onclick="topluIslemGonder('yazdir')" class="btn btn-dark btn-sm">Yazdır</button>
-                        <button type="button" onclick="topluIslemGonder('sil')" class="btn btn-danger btn-sm">Sil</button>
-                    </div>
+admin                    </div>
                     <button type="button" onclick="sepetiSifirla()" class="btn btn-link btn-sm text-danger p-0 border-0"><i class="fas fa-times"></i></button>
                 </div>
                 <button type="button" onclick="listeyiSifirlaOnay('demirbas')" class="btn btn-outline-danger btn-sm fw-bold"><i class="fas fa-trash-alt"></i> Listeyi Temizle</button>
@@ -204,8 +235,9 @@
                                             <td>
                                                 <button type="button" class="btn btn-warning btn-sm py-0" data-bs-toggle="modal" data-bs-target="#editDemirbas{{ item.id }}"><i class="fas fa-edit"></i></button>
                                                 <a href="/kapi-karti/{{ item.konum }}" target="_blank" class="btn btn-outline-dark btn-sm py-0"><i class="fas fa-print"></i></a>
-                                                <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')" class="btn btn-outline-danger btn-sm py-0"><i class="fas fa-trash"></i></button>
-                                                <div class="modal fade" id="editDemirbas{{ item.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning"><h6 class="modal-title">Düzenle</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/guncelle-demirbas" method="POST"><input type="hidden" name="id" value="{{ item.id }}"><input type="text" name="ad" class="form-control mb-2" value="{{ item.ad }}" required><input type="text" name="cinsi" class="form-control mb-2" value="{{ item.cinsi }}"><select name="kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}" {% if item.kampus == yer %}selected{% endif %}>{{ yer }}</option>{% endfor %}</select><input type="text" name="konum" class="form-control mb-2" value="{{ item.konum }}" required><input type="number" name="adet" class="form-control mb-3" value="{{ item.adet }}" required><button type="submit" class="btn btn-warning w-100">Güncelle</button></form></div></div></div></div>
+{% if session['rol'] == 'admin' %}
+<button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')" class="btn btn-outline-danger btn-sm py-0"><i class="fas fa-trash"></i></button>
+{% endif %}                                                <div class="modal fade" id="editDemirbas{{ item.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning"><h6 class="modal-title">Düzenle</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/guncelle-demirbas" method="POST"><input type="hidden" name="id" value="{{ item.id }}"><input type="text" name="ad" class="form-control mb-2" value="{{ item.ad }}" required><input type="text" name="cinsi" class="form-control mb-2" value="{{ item.cinsi }}"><select name="kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}" {% if item.kampus == yer %}selected{% endif %}>{{ yer }}</option>{% endfor %}</select><input type="text" name="konum" class="form-control mb-2" value="{{ item.konum }}" required><input type="number" name="adet" class="form-control mb-3" value="{{ item.adet }}" required><button type="submit" class="btn btn-warning w-100">Güncelle</button></form></div></div></div></div>
                                             </td>
                                         </tr>
                                         {% else %}
@@ -266,8 +298,9 @@
                                         <td>
                                             <button class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}"><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-sm btn-primary py-0" data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}"><i class="fas fa-exchange-alt"></i></button>
-                                            <button onclick="silOnay('{{ p.id }}', 'personel')" class="btn btn-sm btn-danger py-0"><i class="fas fa-trash"></i></button>
-                                            
+{% if session['rol'] == 'admin' %}
+<button onclick="silOnay('{{ p.id }}', 'personel')" class="btn btn-sm btn-danger py-0"><i class="fas fa-trash"></i></button>
+{% endif %}                                            
                                             <div class="modal fade" id="editPersonel{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning"><h6 class="modal-title">Düzenle</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/guncelle-personel" method="POST"><input type="hidden" name="id" value="{{ p.id }}"><label class="small fw-bold">Ad Soyad</label><input type="text" name="ad_soyad" class="form-control mb-2" value="{{ p.ad_soyad }}" required><label class="small fw-bold">Ünvan</label><input type="text" name="unvan" class="form-control mb-2" value="{{ p.unvan }}"><label class="small fw-bold">Birimi</label><input type="text" name="birimi" class="form-control mb-2" value="{{ p.birimi }}"><label class="small fw-bold">Kampüs</label><select name="kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label class="small fw-bold">Ofis</label><input type="text" name="ofis" class="form-control mb-3" value="{{ p.ofis }}" required><button type="submit" class="btn btn-warning w-100">Güncelle</button></form></div></div></div></div>
                                             <div class="modal fade" id="tasiModal{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white"><h6 class="mb-0">Taşı</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/tasi-personel" method="POST"><input type="hidden" name="personel_id" value="{{ p.id }}"><label>Yeni Kampüs</label><select name="yeni_kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label>Yeni Ofis</label><input type="text" name="yeni_ofis" class="form-control mb-3" placeholder="Örn: B-205"><button type="submit" class="btn btn-primary w-100">Güncelle</button></form></div></div></div></div>
                                         </td>
@@ -619,6 +652,82 @@
                     
                     <button type="submit" class="btn btn-danger w-100 fw-bold">Kaydı Oluştur</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title"><i class="fas fa-users-cog"></i> Kullanıcı Yönetimi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                
+                <div class="card card-body bg-light mb-4 border-0">
+                    <h6 class="text-secondary fw-bold mb-3">Yeni Kullanıcı Oluştur</h6>
+                    <form action="/ekle-kullanici" method="POST" class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Kullanıcı Adı</label>
+                            <input type="text" name="kullanici_adi" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Ad Soyad</label>
+                            <input type="text" name="ad_soyad" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small fw-bold">Şifre</label>
+                            <input type="text" name="sifre" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small fw-bold">Rol</label>
+                            <select name="rol" class="form-select form-select-sm">
+                                <option value="personel">Personel</option>
+                                <option value="teknik">Teknik Servis</option>
+                                <option value="admin">Yönetici</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-secondary btn-sm w-100 fw-bold">Ekle</button>
+                        </div>
+                    </form>
+                </div>
+
+                <h6 class="text-dark fw-bold">Mevcut Kullanıcılar</h6>
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ad Soyad</th>
+                            <th>Kullanıcı Adı</th>
+                            <th>Rol</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in kullanicilar_listesi %}
+                        <tr>
+                            <td class="fw-bold">{{ u.ad_soyad }}</td>
+                            <td>{{ u.kullanici_adi }}</td>
+                            <td>
+                                {% if u.rol == 'admin' %}<span class="badge bg-danger">Yönetici</span>
+                                {% elif u.rol == 'teknik' %}<span class="badge bg-warning text-dark">Teknik</span>
+                                {% else %}<span class="badge bg-info text-dark">Personel</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.kullanici_adi != 'admin' and u.kullanici_adi != session['kullanici_adi'] %}
+                                <a href="/sil-kullanici/{{ u.id }}" class="btn btn-outline-danger btn-sm py-0" onclick="return confirm('Bu kullanıcıyı silmek istediğine emin misin?')"><i class="fas fa-trash"></i></a>
+                                {% else %}
+                                <span class="text-muted small"><i class="fas fa-lock"></i></span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
             </div>
         </div>
     </div>
@@ -1044,6 +1153,7 @@ function arizaSilOnay(id) {
             });
         });
     });
+    
 </script>
 
 </body>
