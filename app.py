@@ -9,6 +9,7 @@ import base64
 from io import BytesIO
 from openpyxl.styles import Font, Alignment, PatternFill
 from dotenv import load_dotenv
+from flask import jsonify # Eğer yukarıda yoksa ekle
 
 # --- KONFİGÜRASYON ---
 load_dotenv()
@@ -275,16 +276,43 @@ def yukle_klasor():
     islem_sayisi = 0
     kaydedilen_yerler = set()
 
-    # --- AKILLI FİLTRE KELİMELERİ ---
-    # Sadece içinde bu kelimeler geçen klasör/dosya isimlerini konuma ekle.
+    # --- YARDIMCI: TÜRKÇE BÜYÜTME VE BAŞLIKLANDIRMA ---
+    def tr_upper(text):
+        # i -> İ, ı -> I dönüşümünü manuel yap
+        return text.replace('i', 'İ').replace('ı', 'I').upper()
+
+    def tr_title(text):
+        # UPPER gelen metni (ÖR: LABORATUVARI) -> Laboratuvarı yapar
+        kelimeler = text.split()
+        yeni_kelimeler = []
+        for kelime in kelimeler:
+            if not kelime: continue
+            # İlk harf (Zaten büyük)
+            ilk = kelime[0]
+            # Geri kalan harfler (I -> ı, İ -> i dönüşümü yaparak küçült)
+            kalan = kelime[1:].replace('I', 'ı').replace('İ', 'i').lower()
+            yeni_kelimeler.append(ilk + kalan)
+        return " ".join(yeni_kelimeler)
+
+    # 1. YASAKLI KELİMELER
+    SILINECEK_KELIMELER = [
+        "LİSTESİ", "LISTESI", "LİSTE", "LISTE", 
+        "DEMİRBAŞLARI", "DEMİRBAŞ", "DEMIRBAS", "ENVANTER", "SAYIM",
+        "SİSTEMİ", "SISTEMI", "YAPILDI", "YAPILAN", "YENİ", "ESKİ", 
+        "COPY", "KOPYA", "YEDEK", "REVİZE", "REVIZE",
+        "DÜZENLEME", "DÜZENLENEN", "KONTROL", "TASLAK", "SON", "FİNAL", "FINAL",
+        "MASAÜSTÜ", "DOWNLOADS", "BELGELERİM", "TABLO", "TÜMÜ", "TUMU",
+        "YALINCAK", "PELİTLİ", "KANUNİ", "MERKEZ", "YERLEŞKESİ", "YERLESKESI"
+    ]
+
+    # 2. KABUL EDİLECEK ANAHTAR KELİMELER
     ONEMLI_KELIMELER = [
         "BLOK", "KAT", "ODA", "BİNA", "BINA", "YURT", "OFİS", "OFFICE", 
         "HALL", "SALON", "LAB", "DEPO", "ZEMİN", "GİRİŞ", "SİSTEM", "KAZAN",
-        "RESTORAN", "YEMEKHANE", "KANTİN", "LOBİ", "MESCİT", "GUVENLIK", "GÜVENLİK"
+        "RESTORAN", "YEMEKHANE", "KANTİN", "LOBİ", "MESCİT", "GUVENLIK", "GÜVENLİK",
+        "AMBAR", "ATÖLYE", "ARŞİV", "LİSE", "FAKÜLTE", "MYO", "MEMUR", "PERSONEL",
+        "PATOLOJİ", "KLİNİK", "POLİKLİNİK", "SERVİS", "BÖLÜM", "BOLUM", "BİRİM", "LABORATUVAR"
     ]
-    
-    # Bunları kesinlikle alma (Yedek temizlik)
-    YASAKLI_KELIMELER = ["DEMİRBAŞ", "DEMIRBAS", "LİSTE", "LISTE", "ENVANTER", "YENİ", "ESKİ", "COPY"]
 
     for dosya in dosyalar:
         if not dosya.filename.endswith('.xlsx') or '~$' in dosya.filename:
@@ -294,32 +322,42 @@ def yukle_klasor():
             full_path = dosya.filename.replace('\\', '/')
             path_parts = full_path.split('/')
             
-            dosya_adi_temiz = path_parts[-1].rsplit('.', 1)[0].replace('_', ' ').title()
+            dosya_adi_ham = path_parts[-1].rsplit('.', 1)[0]
+            tum_parcalar = path_parts[:-1] + [dosya_adi_ham]
             
-            # --- YOLU OLUŞTURMA ---
             anlamli_yol_parcalari = []
-            
-            # 1. Klasörleri Kontrol Et
-            for parca in path_parts[:-1]:
-                p_upper = parca.upper()
-                # Yasaklı kelime varsa direkt atla
-                if any(y in p_upper for y in YASAKLI_KELIMELER): continue
+
+            for parca in tum_parcalar:
+                # Özel Türkçe Upper Fonksiyonunu Kullan
+                temiz_parca = tr_upper(parca)
                 
-                # Önemli kelime varsa veya rakamla bitiyorsa (A1, B2 vb.) al
-                if any(k in p_upper for k in ONEMLI_KELIMELER) or (len(parca) < 5 and any(c.isdigit() for c in parca)):
-                    anlamli_yol_parcalari.append(parca.strip())
+                # Temizlik
+                for yasakli in SILINECEK_KELIMELER:
+                    temiz_parca = temiz_parca.replace(yasakli, "")
+                
+                temiz_parca = temiz_parca.replace("_", " ").replace("-", " ").strip()
+                
+                # Kısa/Anlamsız kontrolü
+                if len(temiz_parca) < 3 and not any(c.isdigit() for c in temiz_parca):
+                    continue
 
-            # 2. Dosya İsmini Kontrol Et (DÜZELTİLEN KISIM BURASI)
-            # Eskiden dosya adını direkt ekliyorduk. Şimdi kontrol ediyoruz.
-            # Dosya adı "Yalıncak Demirbaş" ise ve içinde KAT/BLOK yoksa ekleme!
-            d_upper = dosya_adi_temiz.upper()
-            
-            # Dosya adında yasaklı kelime (Demirbaş) yoksa VE (Önemli kelime varsa VEYA Kısa blok isimiyle)
-            if not any(y in d_upper for y in YASAKLI_KELIMELER):
-                if any(k in d_upper for k in ONEMLI_KELIMELER) or (len(dosya_adi_temiz) < 5 and any(c.isdigit() for c in dosya_adi_temiz)):
-                    anlamli_yol_parcalari.append(dosya_adi_temiz)
+                is_onemli = any(k in temiz_parca for k in ONEMLI_KELIMELER)
+                is_blok_kodu = (len(temiz_parca) > 0 and len(temiz_parca) < 6 and any(c.isdigit() for c in temiz_parca))
+                
+                if (is_onemli or is_blok_kodu or len(temiz_parca) > 3):
+                    # BURASI ÖNEMLİ: Özel Türkçe Title Fonksiyonunu Kullan
+                    temiz_parca_title = tr_title(temiz_parca)
+                    
+                    # Tekrar Kontrolü
+                    if anlamli_yol_parcalari:
+                        son_eklenen = anlamli_yol_parcalari[-1]
+                        if temiz_parca_title in son_eklenen or son_eklenen in temiz_parca_title:
+                            if len(temiz_parca_title) > len(son_eklenen):
+                                anlamli_yol_parcalari[-1] = temiz_parca_title
+                            continue 
+                    
+                    anlamli_yol_parcalari.append(temiz_parca_title)
 
-            # Parçaları birleştir
             temiz_yol_str = " / ".join(anlamli_yol_parcalari)
 
             wb = openpyxl.load_workbook(dosya)
@@ -327,33 +365,25 @@ def yukle_klasor():
             for ws in wb.worksheets:
                 sheet_adi = ws.title.strip()
                 
-                # Sheet adını her zaman al (En detaylı yer orasıdır: "Sistem Odası" vb.)
-                # Ama Sheet1, Sayfa1 gibi anlamsızsa alma
                 if "Sheet" in sheet_adi or "Sayfa" in sheet_adi:
-                    if temiz_yol_str:
-                        tam_konum = temiz_yol_str
-                    else:
-                        tam_konum = "Genel" # Hiçbir şey bulamazsa
+                    tam_konum = temiz_yol_str if temiz_yol_str else "Genel"
                 else:
                     if temiz_yol_str:
-                        tam_konum = f"{temiz_yol_str} / {sheet_adi}"
+                        if sheet_adi in temiz_yol_str:
+                            tam_konum = temiz_yol_str
+                        else:
+                            tam_konum = f"{temiz_yol_str} / {sheet_adi}"
                     else:
-                        tam_konum = sheet_adi # Sadece sheet adı kaldıysa
+                        tam_konum = sheet_adi 
 
-                # Güvenlik kırpması
-                if len(tam_konum) > 100: tam_konum = tam_konum[:97] + "..."
-                
+                if len(tam_konum) > 150: tam_konum = tam_konum[:147] + "..."
                 kaydedilen_yerler.add(tam_konum)
 
                 for row in ws.iter_rows(min_row=2, values_only=True):
                     if not row or row[0] is None: continue
-                    
-                    ad = row[0]
-                    cinsi = row[1] if len(row)>1 else ""
-                    adet = row[2] if len(row)>2 else 1
+                    ad = row[0]; cinsi = row[1] if len(row)>1 else ""; adet = row[2] if len(row)>2 else 1
                     try: adet = int(adet)
                     except: adet = 1
-                    
                     cur.execute("SELECT id FROM demirbaslar WHERE ad=? AND konum=?", (ad, tam_konum))
                     if not cur.fetchone():
                         cur.execute("INSERT INTO demirbaslar (ad, cinsi, kampus, konum, adet, tarih) VALUES (?, ?, ?, ?, ?, ?)", 
@@ -370,7 +400,6 @@ def yukle_klasor():
         if len(kaydedilen_yerler) > 0:
             ornek = list(kaydedilen_yerler)[0]
             konum_ozeti = f"{hedef_kampus} / {ornek}"
-            
         log_kaydet(aciklama, konum_ozeti, "Yükleme")
 
     conn.commit()
@@ -728,6 +757,120 @@ def rapor_grafik_ozet():
     
     dosya_adi = "Ozet_Rapor_Personel.xlsx" if analiz_turu == 'personel' else "Ozet_Rapor_Demirbas.xlsx"
     return send_file(output, download_name=dosya_adi, as_attachment=True)
+
+# --- TOPLU İŞLEMLER ---
+@app.route('/toplu-tasi-demirbas', methods=['POST'])
+def toplu_tasi_demirbas():
+    secilenler = request.form.getlist('secilen_ids')
+    yeni_kampus = request.form.get('yeni_kampus')
+    yeni_konum = request.form.get('yeni_konum')
+    
+    if not secilenler or not yeni_konum:
+        return redirect(url_for('index', tab='demirbas'))
+    
+    conn = baglanti_kur()
+    placeholders = ', '.join('?' for _ in secilenler)
+    params = [yeni_kampus, yeni_konum] + secilenler
+    conn.execute(f"UPDATE demirbaslar SET kampus=?, konum=? WHERE id IN ({placeholders})", params)
+    conn.commit()
+    conn.close()
+    
+    log_kaydet(f"{len(secilenler)} Kayıt Taşındı", f"Yeni: {yeni_kampus}/{yeni_konum}", "Taşıma")
+    return redirect(url_for('index', tab='demirbas'))
+
+@app.route('/toplu-sil-demirbas', methods=['GET', 'POST'])
+def toplu_sil_demirbas():
+    secilenler = []
+    
+    if request.method == 'POST':
+        # Form üzerinden (POST) gelen ID listesi
+        secilenler = request.form.getlist('secilen_ids')
+    else:
+        # URL üzerinden (GET) gelen ID listesi (Hata payını sıfırlamak için)
+        ids_param = request.args.get('ids', '')
+        if ids_param:
+            secilenler = ids_param.split(',')
+
+    # Eğer hala liste boşsa (Hiçbir şey seçilmemişse)
+    if not secilenler or secilenler == ['']:
+        return redirect(url_for('index', tab='demirbas'))
+
+    conn = baglanti_kur()
+    try:
+        # SQL sorgusunu hazırla ve çalıştır
+        placeholders = ', '.join('?' for _ in secilenler)
+        conn.execute(f"DELETE FROM demirbaslar WHERE id IN ({placeholders})", secilenler)
+        conn.commit()
+        log_kaydet(f"{len(secilenler)} Kayıt Silindi", "Toplu İşlem", "Silme")
+    except Exception as e:
+        print(f"Silme hatası: {e}")
+    finally:
+        conn.close()
+
+    return redirect(url_for('index', tab='demirbas'))
+
+# methods kısmına 'GET' eklemeyi unutmayın!
+@app.route('/toplu-yazdir-demirbas', methods=['GET', 'POST'])
+def toplu_yazdir_demirbas():
+    if request.method == 'POST':
+        # Form üzerinden toplu seçim gelirse
+        secilenler = request.form.getlist('secilen_ids')
+    else:
+        # URL üzerinden (GET) ID'ler gelirse (ids=1,2,3 formatında)
+        ids_str = request.args.get('ids', '')
+        secilenler = ids_str.split(',') if ids_str else []
+
+    # Eğer liste boşsa ana sayfaya geri gönder
+    if not secilenler or secilenler == ['']:
+        return redirect(url_for('index', tab='demirbas'))
+    
+    # --- Buradan aşağısı mevcut QR oluşturma kodlarınızla aynı kalacak ---
+    conn = baglanti_kur()
+    placeholders = ', '.join('?' for _ in secilenler)
+    cur = conn.execute(f"SELECT DISTINCT konum FROM demirbaslar WHERE id IN ({placeholders})", secilenler)
+    konumlar = [row[0] for row in cur.fetchall()]
+    conn.close()
+
+    qr_listesi = []
+    for konum in konumlar:
+        hedef_url = url_for('ofis_detay', konum_adi=konum, _external=True)
+        qr = qrcode.QRCode(box_size=10, border=2)
+        qr.add_data(hedef_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        qr_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        qr_listesi.append({'konum': konum, 'qr': qr_base64})
+        
+    return render_template('toplu_yazdir.html', qr_listesi=qr_listesi)
+
+@app.route('/get-all-ids')
+def get_all_ids():
+    tab = request.args.get('tab', 'demirbas')
+    q = request.args.get('q', '').strip() # Arama terimini alıyoruz
+    
+    conn = baglanti_kur()
+    if tab == 'demirbas':
+        if q:
+            # Arama terimi varsa sadece uyanları seç
+            query = "SELECT id FROM demirbaslar WHERE ad LIKE ? OR cinsi LIKE ? OR konum LIKE ?"
+            params = (f'%{q}%', f'%{q}%', f'%{q}%')
+            cur = conn.execute(query, params)
+        else:
+            cur = conn.execute("SELECT id FROM demirbaslar")
+    else: # personel tabı için
+        if q:
+            query = "SELECT id FROM personeller WHERE ad_soyad LIKE ? OR unvan LIKE ? OR birimi LIKE ?"
+            params = (f'%{q}%', f'%{q}%', f'%{q}%')
+            cur = conn.execute(query, params)
+        else:
+            cur = conn.execute("SELECT id FROM personeller")
+            
+    ids = [str(row[0]) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(ids)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
