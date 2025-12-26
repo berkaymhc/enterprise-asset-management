@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify
 import sqlite3
 from datetime import datetime
 import openpyxl
@@ -9,7 +9,6 @@ import base64
 from io import BytesIO
 from openpyxl.styles import Font, Alignment, PatternFill
 from dotenv import load_dotenv
-from flask import jsonify # Eğer yukarıda yoksa ekle
 
 # --- KONFİGÜRASYON ---
 load_dotenv()
@@ -69,6 +68,18 @@ def tablolari_olustur():
     conn.execute('''CREATE TABLE IF NOT EXISTS yukleme_gecmisi (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, dosya_adi TEXT, hedef_konum TEXT, 
                     tur TEXT, tarih TEXT)''')
+    
+    # --- YENİ EKLENEN: ARIZALAR TABLOSU ---
+    conn.execute('''CREATE TABLE IF NOT EXISTS arizalar (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    konum TEXT NOT NULL,
+                    baslik TEXT NOT NULL,
+                    aciklama TEXT,
+                    bildiren TEXT,
+                    durum TEXT DEFAULT 'Bekliyor',
+                    oncelik TEXT DEFAULT 'Normal',
+                    tarih TEXT)''')
+    
     conn.commit()
     conn.close()
 
@@ -127,7 +138,7 @@ def index():
     p_sql += " ORDER BY ofis ASC LIMIT ? OFFSET ?"; p_p.extend([limit, offset_p])
     cur.execute(p_sql, p_p); personeller = cur.fetchall()
 
-    # 3. İstatistik & Analiz (GÜNCELLENEN KISIM)
+    # 3. İstatistik & Analiz
     analiz_sonuclari = []; analiz_toplam = 0
     f_labels_1 = []; f_values_1 = []
     f_labels_2 = []; f_values_2 = []
@@ -145,7 +156,6 @@ def index():
             if ist_p_ad or ist_p_birim or (ist_p_kampus and ist_p_kampus != "Tümü") or ist_p_ofis:
                 cur.execute(sql, params); analiz_sonuclari = cur.fetchall(); analiz_toplam = len(analiz_sonuclari)
                 
-                # Personel Filtre Grafikleri
                 temp_kampus = {}; temp_unvan = {}
                 for row in analiz_sonuclari:
                     k = row['kampus'] if row['kampus'] else "Belirtilmedi"
@@ -167,7 +177,6 @@ def index():
                 cur.execute(sql, params); analiz_sonuclari = cur.fetchall()
                 for row in analiz_sonuclari: analiz_toplam += row['toplam_adet']
                 
-                # Demirbaş Filtre Grafikleri
                 temp_kampus = {}; temp_konum = {}
                 for row in analiz_sonuclari:
                     k = row['kampus']
@@ -204,7 +213,7 @@ def index():
     chart_personel_labels = [row[0] for row in personel_grafik_veri if row[0]]
     chart_personel_values = [row[1] for row in personel_grafik_veri if row[1]]
 
-    # --- YENİ EKLENEN: Grafik 4: Malzeme Cinsi Dağılımı ---
+    # Grafik 4: Malzeme Cinsi
     cur.execute("SELECT cinsi, SUM(adet) FROM demirbaslar GROUP BY cinsi")
     tur_grafik_veri = cur.fetchall()
     chart_tur_labels = []
@@ -213,6 +222,13 @@ def index():
         tur_adi = row['cinsi'] if row['cinsi'] and row['cinsi'].strip() != "" else "Belirtilmedi"
         chart_tur_labels.append(tur_adi)
         chart_tur_values.append(row[1])
+
+    # --- YENİ EKLENEN: ARIZA VERİLERİNİ ÇEK ---
+    cur.execute("SELECT * FROM arizalar ORDER BY id DESC")
+    arizalar = cur.fetchall()
+    
+    cur.execute("SELECT COUNT(*) FROM arizalar WHERE durum='Bekliyor'")
+    bekleyen_ariza_sayisi = cur.fetchone()[0]
 
     conn.close() 
 
@@ -228,10 +244,11 @@ def index():
                            chart_kampus_labels=chart_kampus_labels, chart_kampus_values=chart_kampus_values,
                            chart_esya_labels=chart_esya_labels, chart_esya_values=chart_esya_values,
                            chart_personel_labels=chart_personel_labels, chart_personel_values=chart_personel_values,
-                           # YENİ: Cins Grafiği Verileri
                            chart_tur_labels=chart_tur_labels, chart_tur_values=chart_tur_values,
                            f_labels_1=f_labels_1, f_values_1=f_values_1,
-                           f_labels_2=f_labels_2, f_values_2=f_values_2)
+                           f_labels_2=f_labels_2, f_values_2=f_values_2,
+                           # YENİLER
+                           arizalar=arizalar, bekleyen_ariza_sayisi=bekleyen_ariza_sayisi)
 
 # --- YÜKLEME VE İŞLEM FONKSİYONLARI ---
 @app.route('/yukle-demirbas', methods=['POST'])
@@ -278,23 +295,18 @@ def yukle_klasor():
 
     # --- YARDIMCI: TÜRKÇE BÜYÜTME VE BAŞLIKLANDIRMA ---
     def tr_upper(text):
-        # i -> İ, ı -> I dönüşümünü manuel yap
         return text.replace('i', 'İ').replace('ı', 'I').upper()
 
     def tr_title(text):
-        # UPPER gelen metni (ÖR: LABORATUVARI) -> Laboratuvarı yapar
         kelimeler = text.split()
         yeni_kelimeler = []
         for kelime in kelimeler:
             if not kelime: continue
-            # İlk harf (Zaten büyük)
             ilk = kelime[0]
-            # Geri kalan harfler (I -> ı, İ -> i dönüşümü yaparak küçült)
             kalan = kelime[1:].replace('I', 'ı').replace('İ', 'i').lower()
             yeni_kelimeler.append(ilk + kalan)
         return " ".join(yeni_kelimeler)
 
-    # 1. YASAKLI KELİMELER
     SILINECEK_KELIMELER = [
         "LİSTESİ", "LISTESI", "LİSTE", "LISTE", 
         "DEMİRBAŞLARI", "DEMİRBAŞ", "DEMIRBAS", "ENVANTER", "SAYIM",
@@ -305,7 +317,6 @@ def yukle_klasor():
         "YALINCAK", "PELİTLİ", "KANUNİ", "MERKEZ", "YERLEŞKESİ", "YERLESKESI"
     ]
 
-    # 2. KABUL EDİLECEK ANAHTAR KELİMELER
     ONEMLI_KELIMELER = [
         "BLOK", "KAT", "ODA", "BİNA", "BINA", "YURT", "OFİS", "OFFICE", 
         "HALL", "SALON", "LAB", "DEPO", "ZEMİN", "GİRİŞ", "SİSTEM", "KAZAN",
@@ -328,16 +339,11 @@ def yukle_klasor():
             anlamli_yol_parcalari = []
 
             for parca in tum_parcalar:
-                # Özel Türkçe Upper Fonksiyonunu Kullan
                 temiz_parca = tr_upper(parca)
-                
-                # Temizlik
                 for yasakli in SILINECEK_KELIMELER:
                     temiz_parca = temiz_parca.replace(yasakli, "")
                 
                 temiz_parca = temiz_parca.replace("_", " ").replace("-", " ").strip()
-                
-                # Kısa/Anlamsız kontrolü
                 if len(temiz_parca) < 3 and not any(c.isdigit() for c in temiz_parca):
                     continue
 
@@ -345,10 +351,7 @@ def yukle_klasor():
                 is_blok_kodu = (len(temiz_parca) > 0 and len(temiz_parca) < 6 and any(c.isdigit() for c in temiz_parca))
                 
                 if (is_onemli or is_blok_kodu or len(temiz_parca) > 3):
-                    # BURASI ÖNEMLİ: Özel Türkçe Title Fonksiyonunu Kullan
                     temiz_parca_title = tr_title(temiz_parca)
-                    
-                    # Tekrar Kontrolü
                     if anlamli_yol_parcalari:
                         son_eklenen = anlamli_yol_parcalari[-1]
                         if temiz_parca_title in son_eklenen or son_eklenen in temiz_parca_title:
@@ -364,7 +367,6 @@ def yukle_klasor():
             
             for ws in wb.worksheets:
                 sheet_adi = ws.title.strip()
-                
                 if "Sheet" in sheet_adi or "Sayfa" in sheet_adi:
                     tam_konum = temiz_yol_str if temiz_yol_str else "Genel"
                 else:
@@ -616,7 +618,6 @@ def rapor_analiz():
     conn.close(); output = io.BytesIO(); wb.save(output); output.seek(0)
     return send_file(output, download_name=f"Analiz_Raporu_{analiz_turu}.xlsx", as_attachment=True)
 
-# --- GRAFİK ÖZET VERİSİNİ İNDİRME (GELİŞTİRİLMİŞ) ---
 @app.route('/rapor-grafik-ozet')
 def rapor_grafik_ozet():
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
@@ -714,10 +715,6 @@ def rapor_grafik_ozet():
             temp_detay[u] = temp_detay.get(u, 0) + 1
 
     else: # Demirbaş
-        # BURADA DÜZELTME YAPILDI: GROUP BY konum KALDIRILDI.
-        # Çünkü "Yurtlar / A101" ile "Yurtlar / A102" farklıdır, gruplanmamalıdır.
-        # Detaylı listeyi alıp Python'da toplayacağız.
-        
         sql = "SELECT kampus, konum, adet FROM demirbaslar WHERE 1=1"
         params = []
         if ist_malzeme: sql += " AND NORMALIZE(ad) LIKE ?"; params.append(f"%{turkce_normalize(ist_malzeme)}%")
@@ -733,22 +730,20 @@ def rapor_grafik_ozet():
             k = row['kampus']
             adet = row['adet']
             temp_kampus[k] = temp_kampus.get(k, 0) + adet
-            
-            # BURASI DEĞİŞTİ: Artık konumu kısaltmıyoruz, tam halini alıyoruz.
             tam_konum = row['konum']
             temp_detay[tam_konum] = temp_detay.get(tam_konum, 0) + adet
 
     # Excel'e Yazdırma
     for k, v in temp_kampus.items(): ws1.append([k, v])
     
-    # Detayları (Konumları) Alfabetik Sırayla Yazalım
+    # Detayları Alfabetik Sırayla Yazalım
     for k in sorted(temp_detay.keys()):
         ws2.append([k, temp_detay[k]])
 
     # Sütun Genişlikleri
     ws1.column_dimensions['A'].width = 40
     ws1.column_dimensions['B'].width = 15
-    ws2.column_dimensions['A'].width = 80 # Konum uzun olabilir, genişlettik
+    ws2.column_dimensions['A'].width = 80
     ws2.column_dimensions['B'].width = 15
 
     conn.close()
@@ -758,7 +753,6 @@ def rapor_grafik_ozet():
     dosya_adi = "Ozet_Rapor_Personel.xlsx" if analiz_turu == 'personel' else "Ozet_Rapor_Demirbas.xlsx"
     return send_file(output, download_name=dosya_adi, as_attachment=True)
 
-# --- TOPLU İŞLEMLER ---
 @app.route('/toplu-tasi-demirbas', methods=['POST'])
 def toplu_tasi_demirbas():
     secilenler = request.form.getlist('secilen_ids')
@@ -783,21 +777,17 @@ def toplu_sil_demirbas():
     secilenler = []
     
     if request.method == 'POST':
-        # Form üzerinden (POST) gelen ID listesi
         secilenler = request.form.getlist('secilen_ids')
     else:
-        # URL üzerinden (GET) gelen ID listesi (Hata payını sıfırlamak için)
         ids_param = request.args.get('ids', '')
         if ids_param:
             secilenler = ids_param.split(',')
 
-    # Eğer hala liste boşsa (Hiçbir şey seçilmemişse)
     if not secilenler or secilenler == ['']:
         return redirect(url_for('index', tab='demirbas'))
 
     conn = baglanti_kur()
     try:
-        # SQL sorgusunu hazırla ve çalıştır
         placeholders = ', '.join('?' for _ in secilenler)
         conn.execute(f"DELETE FROM demirbaslar WHERE id IN ({placeholders})", secilenler)
         conn.commit()
@@ -809,22 +799,17 @@ def toplu_sil_demirbas():
 
     return redirect(url_for('index', tab='demirbas'))
 
-# methods kısmına 'GET' eklemeyi unutmayın!
 @app.route('/toplu-yazdir-demirbas', methods=['GET', 'POST'])
 def toplu_yazdir_demirbas():
     if request.method == 'POST':
-        # Form üzerinden toplu seçim gelirse
         secilenler = request.form.getlist('secilen_ids')
     else:
-        # URL üzerinden (GET) ID'ler gelirse (ids=1,2,3 formatında)
         ids_str = request.args.get('ids', '')
         secilenler = ids_str.split(',') if ids_str else []
 
-    # Eğer liste boşsa ana sayfaya geri gönder
     if not secilenler or secilenler == ['']:
         return redirect(url_for('index', tab='demirbas'))
     
-    # --- Buradan aşağısı mevcut QR oluşturma kodlarınızla aynı kalacak ---
     conn = baglanti_kur()
     placeholders = ', '.join('?' for _ in secilenler)
     cur = conn.execute(f"SELECT DISTINCT konum FROM demirbaslar WHERE id IN ({placeholders})", secilenler)
@@ -848,18 +833,17 @@ def toplu_yazdir_demirbas():
 @app.route('/get-all-ids')
 def get_all_ids():
     tab = request.args.get('tab', 'demirbas')
-    q = request.args.get('q', '').strip() # Arama terimini alıyoruz
+    q = request.args.get('q', '').strip()
     
     conn = baglanti_kur()
     if tab == 'demirbas':
         if q:
-            # Arama terimi varsa sadece uyanları seç
             query = "SELECT id FROM demirbaslar WHERE ad LIKE ? OR cinsi LIKE ? OR konum LIKE ?"
             params = (f'%{q}%', f'%{q}%', f'%{q}%')
             cur = conn.execute(query, params)
         else:
             cur = conn.execute("SELECT id FROM demirbaslar")
-    else: # personel tabı için
+    else: 
         if q:
             query = "SELECT id FROM personeller WHERE ad_soyad LIKE ? OR unvan LIKE ? OR birimi LIKE ?"
             params = (f'%{q}%', f'%{q}%', f'%{q}%')
@@ -870,6 +854,59 @@ def get_all_ids():
     ids = [str(row[0]) for row in cur.fetchall()]
     conn.close()
     return jsonify(ids)
+
+# ---------------------------------------------------
+# ARIZA / TALEP YÖNETİM ROTALARI (YENİ EKLENEN KISIM)
+# ---------------------------------------------------
+
+@app.route('/ekle-ariza', methods=['POST'])
+def ekle_ariza():
+    conn = baglanti_kur()
+    konum = request.form.get('konum')
+    baslik = request.form.get('baslik')
+    aciklama = request.form.get('aciklama', '')
+    bildiren = request.form.get('bildiren', '')
+    oncelik = request.form.get('oncelik', 'Normal')
+    tarih = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    conn.execute("INSERT INTO arizalar (konum, baslik, aciklama, bildiren, oncelik, durum, tarih) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                 (konum, baslik, aciklama, bildiren, oncelik, 'Bekliyor', tarih))
+    conn.commit()
+    conn.close()
+    
+    log_kaydet("Arıza Bildirimi", f"{konum} - {baslik}", "Arıza")
+    return redirect(request.referrer or url_for('index'))
+
+@app.route('/guncelle-ariza-durum/<int:id>/<yeni_durum>')
+def guncelle_ariza_durum(id, yeni_durum):
+    conn = baglanti_kur()
+    cur = conn.cursor()
+    # Önce kaydı çekelim (log için)
+    cur.execute("SELECT baslik, konum, durum FROM arizalar WHERE id=?", (id,))
+    ariza = cur.fetchone()
+    
+    if ariza:
+        cur.execute("UPDATE arizalar SET durum=? WHERE id=?", (yeni_durum, id))
+        conn.commit()
+        log_kaydet(f"Arıza Güncelleme ({yeni_durum})", f"{ariza['konum']} - {ariza['baslik']}", "Arıza")
+    
+    conn.close()
+    return redirect(request.referrer or url_for('index'))
+
+@app.route('/sil-ariza/<int:id>')
+def sil_ariza(id):
+    conn = baglanti_kur()
+    cur = conn.cursor()
+    cur.execute("SELECT baslik, konum FROM arizalar WHERE id=?", (id,))
+    ariza = cur.fetchone()
+    
+    if ariza:
+        cur.execute("DELETE FROM arizalar WHERE id=?", (id,))
+        conn.commit()
+        log_kaydet("Arıza Silindi", f"{ariza['konum']} - {ariza['baslik']}", "Silme")
+    
+    conn.close()
+    return redirect(request.referrer or url_for('index'))
 
 
 if __name__ == '__main__':
