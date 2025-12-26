@@ -4,16 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Üniversite Envanter Sistemi</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel='stylesheet' href='https://unpkg.com/nprogress@0.2.0/nprogress.css'/>
+    
+    <script src='https://unpkg.com/nprogress@0.2.0/nprogress.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* TAB VE GENEL STİLLER */
-        .nav-tabs .nav-link.active { background-color: #e9ecef; border-bottom-color: transparent; font-weight: bold; color: #0d6efd; }
-        .table-hover tbody tr:hover { background-color: #f1f1f1; }
+        /* --- 1. GÖRSEL İYİLEŞTİRMELER & LOADING BAR --- */
+        #nprogress .bar { background: #0d6efd !important; height: 4px !important; }
         
-        /* MAVİ HOVER EFEKTİ (İstediğin Özellik) */
+        .nav-tabs .nav-link.active { background-color: #e9ecef; border-bottom-color: transparent; font-weight: bold; color: #0d6efd; }
+        
+        /* Tablo Satır Efektleri */
+        .table-hover tbody tr { transition: background-color 0.2s ease-in-out; }
+        .table-hover tbody tr:hover { background-color: #f0f7ff !important; }
+        .table td, .table th { padding: 12px 10px !important; }
+        
+        /* Mavi Başlık Sıralama Efekti */
         th.sortable { cursor: pointer; transition: all 0.2s ease-in-out; user-select: none; }
         th.sortable:hover { background-color: #0a58ca !important; color: #ffffff !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
         th.sortable i { color: #adb5bd; }
@@ -22,77 +32,73 @@
         .highlight { background-color: #d1ecf1; color: #0c5460; font-weight: bold; border-radius: 3px; padding: 0 2px; }
         .page-input { width: 60px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 4px; font-weight: bold; }
         
-        /* TABLO DÜZENLEMELERİ */
-        .table-responsive-custom { max-height: 65vh; overflow-y: auto; border-bottom: 1px solid #dee2e6 ; min-height: 65vh; /* EKLENEN SATIR: Tablo hep aynı boyda kalır, zıplamaz */ }
+        /* --- 2. TABLO DÜZENLEMELERİ (Sabit Yükseklik) --- */
+        .table-responsive-custom { 
+            max-height: 65vh; 
+            overflow-y: auto; 
+            border-bottom: 1px solid #dee2e6; 
+            min-height: 65vh; /* Tablo boyu sabit kalsın, zıplamasın */
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
         .table-responsive-custom thead th { position: sticky; top: 0; background-color: #212529; color: white; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); }
         
-        /* Uzun metinleri kaydır */
-        .table td {
-            white-space: normal !important;
-            word-wrap: break-word;
-            max-width: 300px;
-            vertical-align: middle;
-        }
-
-        /* İşlem butonları sütunu */
-        .table td:last-child {
-            white-space: nowrap !important;
-            width: 1px;
-        }
-        
-        /* Checkbox ortalama */
+        /* Tablo Hücre Ayarları */
+        .table td { white-space: normal !important; word-wrap: break-word; max-width: 300px; vertical-align: middle; }
+        .table td:last-child { white-space: nowrap !important; width: 1px; }
         .check-center { display: flex; justify-content: center; align-items: center; height: 100%; }
 
-        /* Sayfa geçişlerinde ve panel açıldığında tablonun oynamaması için */
-/* --- KONTROL SATIRI (Kapsayıcı) --- */
-    .kontrol-satiri {
-        position: relative; /* İçindeki paneli buna göre hizalayacağız */
-        
-        /* İŞTE SİHİRLİ DOKUNUŞ: SABİT YÜKSEKLİK */
-        height: 60px; /* Bu satırın boyu asla değişmesin */
-        
-        display: flex;
-        justify-content: flex-end; /* Temizle butonunu en sağa atar */
-        align-items: center;
-        margin-bottom: 0; /* Alt boşluğu sıfırladık, yükseklikten kurtarır */
-    }
+        /* --- 3. EMPTY STATE (SONUÇ BULUNAMADI TASARIMI) --- */
+        .empty-state {
+            text-align: center; padding: 50px 20px;
+            background-color: #fff; border-radius: 10px;
+            border: 2px dashed #dee2e6; color: #6c757d; margin-top: 20px;
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 15px; color: #adb5bd; }
+        .empty-state h5 { font-weight: bold; color: #343a40; }
 
-    /* --- 2. PANELİ "HAYALET" GİBİ YAP (Yer Kaplamasın) --- */
-    #topluIslemPaneli {
-        display: none; /* Başlangıçta gizli */
-        
-        /* Akıştan çıkar, havada asılı tut */
-        position: absolute; 
-        left: 0; /* En sola yasla */
-        top: 50%; /* Dikeyde ortala */
-        transform: translateY(-50%); /* Tam merkeze oturt */
-        
-        /* Görünüm */
-        background-color: #fff;
-        border: 2px solid #0d6efd;
-        border-radius: 50px;
-        padding: 5px 20px;
-        height: 45px; /* Yüksekliği sabitledik */
-        
-        /* İçerik */
-        align-items: center;
-        gap: 15px;
-        z-index: 100; /* Butonların üstünde kalsın */
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        white-space: nowrap;
-    }
+        /* --- 4. TOPLU İŞLEM PANELİ & KONTROL SATIRI --- */
+        .kontrol-satiri {
+            position: relative;
+            height: 60px; /* Sabit yükseklik: Tabloyu itmesin */
+            display: flex;
+            justify-content: flex-end; /* Temizle butonu sağa */
+            align-items: center;
+            margin-bottom: 0;
+        }
 
-    /* GÖRÜNÜR OLMA ANİMASYONU */
-    #topluIslemPaneli.active {
-        display: flex !important;
-        animation: slideInLeft 0.3s ease-out;
-    }
+        #topluIslemPaneli {
+            display: none; /* Başlangıçta gizli */
+            position: absolute; 
+            left: 0; /* En sola yasla */
+            top: 50%; 
+            transform: translateY(-50%); /* Dikey ortala */
+            
+            background-color: #fff;
+            border: 2px solid #0d6efd;
+            border-radius: 50px;
+            padding: 5px 20px;
+            height: 45px;
+            align-items: center;
+            gap: 15px;
+            z-index: 100;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
 
-    /* SOLDAN KAYARAK GELME EFEKTİ */
-    @keyframes slideInLeft {
-        from { opacity: 0; transform: translate(-20px, -50%); } /* -50% Y ekseni ortalaması için şart */
-        to { opacity: 1; transform: translate(0, -50%); }
-    }
+        #topluIslemPaneli.active {
+            display: flex !important;
+        }
+
+        /* Sadece JS ile tetiklendiğinde çalışacak animasyon sınıfı */
+        .panel-animasyon {
+            animation: slideInLeft 0.3s ease-out;
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translate(-20px, -50%); }
+            to { opacity: 1; transform: translate(0, -50%); }
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -101,18 +107,18 @@
     
     <div class="row align-items-center mb-4">
        <div class="col-md-3 d-flex align-items-center">
-    <a href="/" onclick="tamamenSifirla()" class="text-decoration-none d-flex align-items-center">
-        <h2 class="text-primary fw-bold mb-0">
-            <i class="fas fa-university"></i> Kampüs Yönetimi
-        </h2>
-    </a>
-    
-    {% if son_yukleme %}
-    <button class="btn btn-link text-muted ms-2 p-0" type="button" data-bs-toggle="collapse" data-bs-target="#gecmisPanel" title="Son Yükleme Geçmişini Gör">
-        <i class="fas fa-history"></i>
-    </button>
-    {% endif %}
-</div>
+            <a href="/" onclick="tamamenSifirla()" class="text-decoration-none d-flex align-items-center">
+                <h2 class="text-primary fw-bold mb-0">
+                    <i class="fas fa-university"></i> Kampüs Yönetimi
+                </h2>
+            </a>
+            
+            {% if son_yukleme %}
+            <button class="btn btn-link text-muted ms-2 p-0" type="button" data-bs-toggle="collapse" data-bs-target="#gecmisPanel" title="Son Yükleme Geçmişini Gör">
+                <i class="fas fa-history"></i>
+            </button>
+            {% endif %}
+        </div>
 
         <div class="col-md-4">
             {% if aktif_tab != 'istatistik' %}
@@ -175,25 +181,24 @@
     <div class="tab-content" id="myTabContent">
         
         <div class="tab-pane fade {% if aktif_tab == 'demirbas' %}show active{% endif %}" id="demirbas">
+            
             <div class="kontrol-satiri">
-    <div id="topluIslemPaneli" class="alert alert-info py-1">
-        <div class="d-flex align-items-center me-3">
-            <span id="secilenSayisi" class="fw-bold me-1">0</span> <small>seçildi</small>
-        </div>
-        <div class="btn-group me-2">
-            <button type="button" onclick="topluIslemGonder('tasi')" class="btn btn-primary btn-sm">Taşı</button>
-            <button type="button" onclick="topluIslemGonder('yazdir')" class="btn btn-dark btn-sm">Yazdır</button>
-            <button type="button" onclick="topluIslemGonder('sil')" class="btn btn-danger btn-sm">Sil</button>
-        </div>
-        <button type="button" onclick="sepetiSifirla()" class="btn btn-link btn-sm text-danger p-0 border-0"><i class="fas fa-times"></i></button>
-    </div>
+                <div id="topluIslemPaneli" class="alert alert-info py-1">
+                    <div class="d-flex align-items-center me-3">
+                        <span id="secilenSayisi" class="fw-bold me-1">0</span> <small>seçildi</small>
+                    </div>
+                    <div class="btn-group me-2">
+                        <button type="button" onclick="topluIslemGonder('tasi')" class="btn btn-primary btn-sm">Taşı</button>
+                        <button type="button" onclick="topluIslemGonder('yazdir')" class="btn btn-dark btn-sm">Yazdır</button>
+                        <button type="button" onclick="topluIslemGonder('sil')" class="btn btn-danger btn-sm">Sil</button>
+                    </div>
+                    <button type="button" onclick="sepetiSifirla()" class="btn btn-link btn-sm text-danger p-0 border-0"><i class="fas fa-times"></i></button>
+                </div>
 
-    <div></div>
-
-    <button type="button" onclick="listeyiSifirlaOnay('demirbas')" class="btn btn-outline-danger btn-sm fw-bold">
-    <i class="fas fa-trash-alt"></i> Listeyi Temizle
-</button>
-</div>
+                <button type="button" onclick="listeyiSifirlaOnay('demirbas')" class="btn btn-outline-danger btn-sm fw-bold">
+                    <i class="fas fa-trash-alt"></i> Listeyi Temizle
+                </button>
+            </div>
 
             <div class="row">
                 <div class="col-md-3">
@@ -211,25 +216,7 @@
                 </div>
                 
                 <div class="col-md-9">
-                    
-                    <div id="topluIslemPaneli" class="shadow-lg">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-check-circle text-primary fa-lg me-3"></i> 
-        <span id="secilenSayisi" class="fw-bold fs-5 me-2">0</span> 
-        <span class="me-3 text-dark">kayıt seçildi</span>
-        <button type="button" onclick="sepetiSifirla()" class="btn btn-outline-danger btn-sm fw-bold border-0">
-            <i class="fas fa-times-circle"></i> Seçimleri Temizle
-        </button>
-    </div>
-    <div class="ms-4 border-start ps-3">
-        <button type="button" onclick="topluIslemGonder('tasi')" class="btn btn-primary btn-sm px-3 shadow-sm">Taşı</button>
-        <button type="button" onclick="topluIslemGonder('yazdir')" class="btn btn-dark btn-sm px-3 shadow-sm">Yazdır</button>
-        <button type="button" onclick="topluIslemGonder('sil')" class="btn btn-danger btn-sm px-3 shadow-sm">Sil</button>
-    </div>
-</div>
-
                     <form id="topluIslemFormu" method="POST" action="">
-                        
                         <div class="modal fade" id="topluTasiModal" tabindex="-1">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -305,6 +292,19 @@
                                                 </div>
                                             </td>
                                         </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="8">
+                                                <div class="empty-state">
+                                                    <i class="fas fa-box-open"></i>
+                                                    <h5>Kayıt Bulunamadı</h5>
+                                                    <p class="mb-0">Aradığınız kriterlere uygun demirbaş eşleşmedi.</p>
+                                                    {% if arama_terimi %}
+                                                    <a href="/?tab=demirbas" class="btn btn-sm btn-outline-primary mt-3">Filtreleri Temizle</a>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
@@ -314,7 +314,9 @@
                             <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
                                 <a href="/?sayfa_d={{ sayfa_d - 1 if sayfa_d > 1 else 1 }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas" class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}"><i class="fas fa-chevron-left"></i> Önceki</a>
                                 <span class="small fw-bold text-muted">Sayfa</span>
-                                <input type="number" class="page-input" value="{{ sayfa_d }}" min="1" max="{{ toplam_sayfa_demirbas }}" onchange="sayfayaGit('demirbas', this.value, '{{ sayfa_p }}', '{{ arama_terimi }}')">
+                                <input type="number" class="page-input" value="{{ sayfa_d }}" min="1" max="{{ toplam_sayfa_demirbas }}" 
+                                       onkeydown="if(event.key === 'Enter'){ event.preventDefault(); sayfayaGit('demirbas', this.value, '{{ sayfa_p }}', '{{ arama_terimi }}'); }"
+                                       onchange="sayfayaGit('demirbas', this.value, '{{ sayfa_p }}', '{{ arama_terimi }}')">
                                 <span class="small fw-bold text-muted">/ {{ toplam_sayfa_demirbas }}</span>
                                 <a href="/?sayfa_d={{ sayfa_d + 1 if sayfa_d < toplam_sayfa_demirbas else toplam_sayfa_demirbas }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas" class="btn btn-sm btn-outline-secondary {% if sayfa_d == toplam_sayfa_demirbas %}disabled{% endif %}">Sonraki <i class="fas fa-chevron-right"></i></a>
                             </div>
@@ -327,12 +329,10 @@
 
         <div class="tab-pane fade {% if aktif_tab == 'personel' %}show active{% endif %}" id="personel">
             <div class="kontrol-satiri">
-    <div></div> 
-
-    <button type="button" onclick="listeyiSifirlaOnay('personel')" class="btn btn-outline-danger btn-sm fw-bold">
-    <i class="fas fa-trash-alt"></i> Listeyi Temizle
-</button>
-</div>
+                <div></div> <button type="button" onclick="listeyiSifirlaOnay('personel')" class="btn btn-outline-danger btn-sm fw-bold">
+                    <i class="fas fa-trash-alt"></i> Listeyi Temizle
+                </button>
+            </div>
 
             <div class="row">
                 <div class="col-md-3">
@@ -374,8 +374,22 @@
                                             <button class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}"><i class="fas fa-edit"></i></button>
                                             <button class="btn btn-sm btn-primary py-0" data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}"><i class="fas fa-exchange-alt"></i></button>
                                             <button onclick="silOnay('{{ p.id }}', 'personel')" class="btn btn-sm btn-danger py-0"><i class="fas fa-trash"></i></button>
+                                            
                                             <div class="modal fade" id="editPersonel{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning"><h6 class="modal-title">Düzenle</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/guncelle-personel" method="POST"><input type="hidden" name="id" value="{{ p.id }}"><label class="small fw-bold">Ad Soyad</label><input type="text" name="ad_soyad" class="form-control mb-2" value="{{ p.ad_soyad }}" required><label class="small fw-bold">Ünvan</label><input type="text" name="unvan" class="form-control mb-2" value="{{ p.unvan }}"><label class="small fw-bold">Birimi</label><input type="text" name="birimi" class="form-control mb-2" value="{{ p.birimi }}"><label class="small fw-bold">Kampüs</label><select name="kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label class="small fw-bold">Ofis</label><input type="text" name="ofis" class="form-control mb-3" value="{{ p.ofis }}" required><button type="submit" class="btn btn-warning w-100">Güncelle</button></form></div></div></div></div>
                                             <div class="modal fade" id="tasiModal{{ p.id }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white"><h6 class="mb-0">Taşı</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form action="/tasi-personel" method="POST"><input type="hidden" name="personel_id" value="{{ p.id }}"><label>Yeni Kampüs</label><select name="yeni_kampus" class="form-select mb-2">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label>Yeni Ofis</label><input type="text" name="yeni_ofis" class="form-control mb-3" placeholder="Örn: B-205"><button type="submit" class="btn btn-primary w-100">Güncelle</button></form></div></div></div></div>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7">
+                                            <div class="empty-state">
+                                                <i class="fas fa-user-slash"></i>
+                                                <h5>Personel Bulunamadı</h5>
+                                                <p class="mb-0">Aradığınız kriterlere uygun personel kaydı yok.</p>
+                                                {% if arama_terimi %}
+                                                <a href="/?tab=personel" class="btn btn-sm btn-outline-primary mt-3">Filtreleri Temizle</a>
+                                                {% endif %}
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -386,7 +400,9 @@
                         <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
                             <a href="/?sayfa_p={{ sayfa_p - 1 if sayfa_p > 1 else 1 }}&sayfa_d={{ sayfa_d }}&q={{ arama_terimi }}&tab=personel" class="btn btn-sm btn-outline-secondary {% if sayfa_p == 1 %}disabled{% endif %}"><i class="fas fa-chevron-left"></i> Önceki</a>
                             <span class="small fw-bold text-muted">Sayfa</span>
-                            <input type="number" class="page-input" value="{{ sayfa_p }}" min="1" max="{{ toplam_sayfa_personel }}" onchange="sayfayaGit('personel', this.value, '{{ sayfa_d }}', '{{ arama_terimi }}')">
+                            <input type="number" class="page-input" value="{{ sayfa_p }}" min="1" max="{{ toplam_sayfa_personel }}" 
+                                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); sayfayaGit('personel', this.value, '{{ sayfa_d }}', '{{ arama_terimi }}'); }"
+                                   onchange="sayfayaGit('personel', this.value, '{{ sayfa_d }}', '{{ arama_terimi }}')">
                             <span class="small fw-bold text-muted">/ {{ toplam_sayfa_personel }}</span>
                             <a href="/?sayfa_p={{ sayfa_p + 1 if sayfa_p < toplam_sayfa_personel else toplam_sayfa_personel }}&sayfa_d={{ sayfa_d }}&q={{ arama_terimi }}&tab=personel" class="btn btn-sm btn-outline-secondary {% if sayfa_p == toplam_sayfa_personel %}disabled{% endif %}">Sonraki <i class="fas fa-chevron-right"></i></a>
                         </div>
@@ -640,8 +656,6 @@
         if(activeTab === 'istatistik') { setTimeout(çizGrafikleri, 100); }
         var istatistikLink = document.querySelector('a[href*="tab=istatistik"]');
         if (istatistikLink) { istatistikLink.addEventListener('click', function() { setTimeout(çizGrafikleri, 200); }); }
-        var aramaTerimi = "{{ arama_terimi }}";
-        if (aramaTerimi && aramaTerimi.length > 0) { highlightSearchTerm(aramaTerimi); }
     });
 
     function çizGrafikleri() {
@@ -686,13 +700,6 @@
         else { if(formPersonel) formPersonel.style.display = 'none'; if(formDemirbas) formDemirbas.style.display = 'block'; }
     }
 
-    function sayfayaGit(tur, hedefSayfa, digerSayfa, arama) {
-        var url = "/?q=" + arama + "&tab=" + tur;
-        if (tur === 'demirbas') { url += "&sayfa_d=" + hedefSayfa + "&sayfa_p=" + digerSayfa; } 
-        else { url += "&sayfa_p=" + hedefSayfa + "&sayfa_d=" + digerSayfa; }
-        window.location.href = url;
-    }
-
     function highlightSearchTerm(term) {
         var charMap = { 'c':'[cçÇC]', 'ç':'[cçÇC]', 'o':'[oöÖO]', 'ö':'[oöÖO]', 'u':'[uüÜU]', 'ü':'[uüÜU]', 'i':'[iıİI]', 'ı':'[iıİI]', 's':'[sşŞS]', 'ş':'[sşŞS]', 'g':'[gğĞG]', 'ğ':'[gğĞG]' };
         var regexStr = ""; for (var i = 0; i < term.length; i++) { var char = term[i].toLowerCase(); regexStr += charMap[char] || char; }
@@ -720,317 +727,308 @@
             else { if (switchcount == 0 && dir == "asc") { dir = "desc"; switching = true; } }
         }
     }
+</script>
 
-    function silOnay(id, tur) {
-    Swal.fire({
-        title: 'Silmek istediğine emin misin?',
-        text: "Bu işlem geri alınamaz!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Evet, Sil!',
-        cancelButtonText: 'Vazgeç'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // ÇAKIŞMAYI ÖNLEYEN KRİTİK ADIM:
-            // Tekil silme yaparken toplu işlem sepetini boşaltıyoruz
-            sepetiSifirla(); 
-            
-            // Ardından silme işlemini gerçekleştiriyoruz
-            window.location.href = `/sil-${tur}/${id}`;
-        }
-    });
-}
-// --- GLOBAL DEĞİŞKENLER ---
-let secilenSepeti = [];
+<script>
+    // --- GLOBAL DEĞİŞKENLER ---
+    let secilenSepeti = [];
 
-document.addEventListener("DOMContentLoaded", function() {
-    // 1. HAFIZAYI VE SCROLL KONUMUNU KONTROL ET
-    baslatSistemVeScroll();
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. HAFIZAYI VE SCROLL KONUMUNU KONTROL ET
+        baslatSistemVeScroll();
 
-    // 2. Sekme Değişikliği (Sıfırlama Mantığı)
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', function() {
-            const targetTab = new URL(this.href).searchParams.get('tab');
-            const currentTab = new URL(window.location.href).searchParams.get('tab') || 'demirbas';
-            
-            // Sekme değişirse her şeyi sil
-            if (targetTab && targetTab !== currentTab) {
-                localStorage.removeItem('envanter_sepeti');
-                sessionStorage.removeItem('kayitli_scroll');
-            }
+        // 2. Sekme Değişikliği (Sıfırlama Mantığı)
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function() {
+                const targetTab = new URL(this.href).searchParams.get('tab');
+                const currentTab = new URL(window.location.href).searchParams.get('tab') || 'demirbas';
+                
+                // Sekme değişirse her şeyi sil
+                if (targetTab && targetTab !== currentTab) {
+                    localStorage.removeItem('envanter_sepeti');
+                    sessionStorage.removeItem('kayitli_scroll');
+                }
+            });
         });
+
+        // 3. Arama terimi vurgulama
+        var aramaTerimi = "{{ arama_terimi }}";
+        if (aramaTerimi && aramaTerimi.length > 0) { highlightSearchTerm(aramaTerimi); }
     });
 
-    // 3. Arama terimi vurgulama
-    var aramaTerimi = "{{ arama_terimi }}";
-    if (aramaTerimi && aramaTerimi.length > 0) { highlightSearchTerm(aramaTerimi); }
-});
+    function baslatSistemVeScroll() {
+        // A) SAYFA GEÇİŞ TÜRÜNÜ ALGILA
+        const entries = performance.getEntriesByType("navigation");
+        let navigationType = entries.length > 0 ? entries[0].type : "navigate";
 
-function baslatSistemVeScroll() {
-    // A) SAYFA GEÇİŞ TÜRÜNÜ ALGILA
-    const entries = performance.getEntriesByType("navigation");
-    let navigationType = entries.length > 0 ? entries[0].type : "navigate";
+        if (navigationType === 'reload') {
+            // F5 yapıldıysa -> SIFIRLA (En tepeye git, seçimleri sil)
+            localStorage.removeItem('envanter_sepeti');
+            sessionStorage.removeItem('kayitli_scroll');
+            secilenSepeti = [];
+        } else {
+            // Sayfalama (Gezinme) yapıldıysa -> KORU
+            
+            // 1. Seçimleri Geri Yükle
+            const hafiza = localStorage.getItem('envanter_sepeti');
+            secilenSepeti = hafiza ? JSON.parse(hafiza) : [];
 
-    if (navigationType === 'reload') {
-        // F5 yapıldıysa -> SIFIRLA (En tepeye git, seçimleri sil)
+            // 2. Scroll (Kaydırma) Konumunu Geri Yükle
+            const scrollKonumu = sessionStorage.getItem('kayitli_scroll');
+            if (scrollKonumu) {
+                // Tarayıcıyı kaydettiğimiz yere ışınla
+                window.scrollTo(0, parseInt(scrollKonumu));
+                // İşimiz bitti, hafızadan sil (tek kullanımlık)
+                sessionStorage.removeItem('kayitli_scroll'); 
+            }
+        }
+
+        sepetiTabloyaUygula();
+        panelGuncelle();
+        baglaDinleyiciler();
+    }
+
+    // --- LOGOYA TIKLAYINCA SIFIRLAMA ---
+    function tamamenSifirla() {
         localStorage.removeItem('envanter_sepeti');
         sessionStorage.removeItem('kayitli_scroll');
         secilenSepeti = [];
-    } else {
-        // Sayfalama (Gezinme) yapıldıysa -> KORU
-        
-        // 1. Seçimleri Geri Yükle
-        const hafiza = localStorage.getItem('envanter_sepeti');
-        secilenSepeti = hafiza ? JSON.parse(hafiza) : [];
+    }
 
-        // 2. Scroll (Kaydırma) Konumunu Geri Yükle
-        const scrollKonumu = sessionStorage.getItem('kayitli_scroll');
-        if (scrollKonumu) {
-            // Tarayıcıyı kaydettiğimiz yere ışınla
-            window.scrollTo(0, parseInt(scrollKonumu));
-            // İşimiz bitti, hafızadan sil (tek kullanımlık)
-            sessionStorage.removeItem('kayitli_scroll'); 
+    // --- CORE FONKSİYONLAR ---
+
+    function baglaDinleyiciler() {
+        // Checkboxlar
+        document.querySelectorAll('.secim-kutusu').forEach(cb => {
+            cb.onclick = function() {
+                sepetiGuncelle(this.value, this.checked);
+                panelGuncelle(true); // Tıklayınca animasyonlu aç
+            };
+        });
+
+        // Tümünü Seç
+        const tBtn = document.getElementById('tumunuSec');
+        if(tBtn) {
+            tBtn.onclick = function() {
+                const durum = this.checked;
+                const aktifTab = "{{ aktif_tab }}";
+                const urlParams = new URLSearchParams(window.location.search);
+                const aramaTerimi = urlParams.get('q') || "";
+
+                if (durum) {
+                    fetch(`/get-all-ids?tab=${aktifTab}&q=${encodeURIComponent(aramaTerimi)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            secilenSepeti = data;
+                            localStorage.setItem('envanter_sepeti', JSON.stringify(secilenSepeti));
+                            document.querySelectorAll('.secim-kutusu').forEach(cb => cb.checked = true);
+                            panelGuncelle(true); // Tıklayınca animasyonlu aç
+                        });
+                } else {
+                    sepetiSifirla();
+                }
+            };
         }
     }
 
-    sepetiTabloyaUygula();
-    panelGuncelle();
-    baglaDinleyiciler();
-}
+    function sepetiGuncelle(id, ekle) {
+        let idStr = id.toString();
+        if (ekle) {
+            if (!secilenSepeti.includes(idStr)) secilenSepeti.push(idStr);
+        } else {
+            secilenSepeti = secilenSepeti.filter(item => item !== idStr);
+        }
+        localStorage.setItem('envanter_sepeti', JSON.stringify(secilenSepeti));
+    }
 
-// --- LOGOYA TIKLAYINCA SIFIRLAMA ---
-function tamamenSifirla() {
-    localStorage.removeItem('envanter_sepeti');
-    sessionStorage.removeItem('kayitli_scroll');
-    secilenSepeti = [];
-}
-
-// --- CORE FONKSİYONLAR ---
-
-function baglaDinleyiciler() {
-    // Checkboxlar
-    document.querySelectorAll('.secim-kutusu').forEach(cb => {
-        cb.onclick = function() {
-            sepetiGuncelle(this.value, this.checked);
-            panelGuncelle();
-        };
-    });
-
-    // Tümünü Seç
-    const tBtn = document.getElementById('tumunuSec');
-    if(tBtn) {
-        tBtn.onclick = function() {
-            const durum = this.checked;
-            const aktifTab = "{{ aktif_tab }}";
-            const urlParams = new URLSearchParams(window.location.search);
-            const aramaTerimi = urlParams.get('q') || "";
-
-            if (durum) {
-                fetch(`/get-all-ids?tab=${aktifTab}&q=${encodeURIComponent(aramaTerimi)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        secilenSepeti = data;
-                        localStorage.setItem('envanter_sepeti', JSON.stringify(secilenSepeti));
-                        document.querySelectorAll('.secim-kutusu').forEach(cb => cb.checked = true);
-                        panelGuncelle();
-                    });
-            } else {
-                sepetiSifirla();
+    function sepetiTabloyaUygula() {
+        document.querySelectorAll('.secim-kutusu').forEach(cb => {
+            if (secilenSepeti.includes(cb.value.toString())) {
+                cb.checked = true;
             }
-        };
+        });
     }
-}
 
-function sepetiGuncelle(id, ekle) {
-    let idStr = id.toString();
-    if (ekle) {
-        if (!secilenSepeti.includes(idStr)) secilenSepeti.push(idStr);
-    } else {
-        secilenSepeti = secilenSepeti.filter(item => item !== idStr);
-    }
-    localStorage.setItem('envanter_sepeti', JSON.stringify(secilenSepeti));
-}
+    // --- GÜNCELLENMİŞ PANEL FONKSİYONU ---
+    function panelGuncelle(animasyonOlsunMu = false) { // Varsayılan: Animasyon YOK
+        const panel = document.getElementById('topluIslemPaneli');
+        const sayiSpan = document.getElementById('secilenSayisi');
+        if(!panel) return;
 
-function sepetiTabloyaUygula() {
-    document.querySelectorAll('.secim-kutusu').forEach(cb => {
-        if (secilenSepeti.includes(cb.value.toString())) {
-            cb.checked = true;
+        const sayi = secilenSepeti.length;
+        if(sayiSpan) sayiSpan.innerText = sayi;
+        
+        if (sayi > 0) {
+            // Eğer panel zaten açık değilse ve animasyon istendiyse
+            if (!panel.classList.contains('active') && animasyonOlsunMu) {
+                panel.classList.add('panel-animasyon');
+            }
+            panel.classList.add('active'); // Görünür yap
+        } else {
+            panel.classList.remove('active');
+            panel.classList.remove('panel-animasyon'); // Animasyonu temizle
         }
-    });
-}
 
-function panelGuncelle() {
-    const panel = document.getElementById('topluIslemPaneli');
-    const sayiSpan = document.getElementById('secilenSayisi');
-    if(!panel) return;
-
-    const sayi = secilenSepeti.length;
-    if(sayiSpan) sayiSpan.innerText = sayi;
-    
-    if (sayi > 0) panel.classList.add('active');
-    else panel.classList.remove('active');
-
-    const tumKutular = document.querySelectorAll('.secim-kutusu');
-    const tBtn = document.getElementById('tumunuSec');
-    if (tBtn && tumKutular.length > 0) {
-        const sayfadakiSecili = Array.from(tumKutular).filter(cb => cb.checked).length;
-        tBtn.checked = (sayfadakiSecili === tumKutular.length);
+        // Checkbox durumlarını güncelle
+        const tumKutular = document.querySelectorAll('.secim-kutusu');
+        const tBtn = document.getElementById('tumunuSec');
+        if (tBtn && tumKutular.length > 0) {
+            const sayfadakiSecili = Array.from(tumKutular).filter(cb => cb.checked).length;
+            tBtn.checked = (sayfadakiSecili === tumKutular.length);
+        }
     }
-}
 
-function sepetiSifirla() {
-    secilenSepeti = [];
-    localStorage.removeItem('envanter_sepeti');
-    document.querySelectorAll('.secim-kutusu').forEach(cb => cb.checked = false);
-    const t = document.getElementById('tumunuSec');
-    if(t) t.checked = false;
-    panelGuncelle();
-}
-
-// --- YARDIMCI: SCROLL KAYDETME ---
-// Sayfa değiştiren herhangi bir linke tıklayınca çalışır
-function sayfayaGit(tur, hedefSayfa, digerSayfa, arama) {
-    // 1. Şu anki ekran konumunu (Y ekseni) kaydet
-    sessionStorage.setItem('kayitli_scroll', window.scrollY);
-    
-    // 2. Sayfaya Git
-    var url = "/?q=" + arama + "&tab=" + tur;
-    if (tur === 'demirbas') { url += "&sayfa_d=" + hedefSayfa + "&sayfa_p=" + digerSayfa; } 
-    else { url += "&sayfa_p=" + hedefSayfa + "&sayfa_d=" + digerSayfa; }
-    window.location.href = url;
-}
-
-// --- DİĞER İŞLEMLER ---
-function topluIslemGonder(tur) {
-    if (secilenSepeti.length === 0) {
-        Swal.fire({ icon: 'info', title: 'Seçim Yapılmadı', text: 'Lütfen işlem yapmak için en az bir öğe seçin!', confirmButtonColor: '#0d6efd' });
-        return;
+    function sepetiSifirla() {
+        secilenSepeti = [];
+        localStorage.removeItem('envanter_sepeti');
+        document.querySelectorAll('.secim-kutusu').forEach(cb => cb.checked = false);
+        const t = document.getElementById('tumunuSec');
+        if(t) t.checked = false;
+        panelGuncelle();
     }
-    if (tur === 'yazdir') {
-        const ids = secilenSepeti.join(',');
-        window.open('/toplu-yazdir-demirbas?ids=' + ids, '_blank');
-    } else if (tur === 'sil') {
+
+    // --- YARDIMCI: SCROLL KAYDETME ---
+    // Sayfa değiştiren herhangi bir linke tıklayınca çalışır
+    function sayfayaGit(tur, hedefSayfa, digerSayfa, arama) {
+        // 1. Şu anki ekran konumunu (Y ekseni) kaydet
+        sessionStorage.setItem('kayitli_scroll', window.scrollY);
+        
+        // 2. Sayfaya Git
+        var url = "/?q=" + arama + "&tab=" + tur;
+        if (tur === 'demirbas') { url += "&sayfa_d=" + hedefSayfa + "&sayfa_p=" + digerSayfa; } 
+        else { url += "&sayfa_p=" + hedefSayfa + "&sayfa_d=" + digerSayfa; }
+        window.location.href = url;
+    }
+
+    // --- DİĞER İŞLEMLER ---
+    function topluIslemGonder(tur) {
+        if (secilenSepeti.length === 0) {
+            Swal.fire({ icon: 'info', title: 'Seçim Yapılmadı', text: 'Lütfen işlem yapmak için en az bir öğe seçin!', confirmButtonColor: '#0d6efd' });
+            return;
+        }
+        if (tur === 'yazdir') {
+            const ids = secilenSepeti.join(',');
+            window.open('/toplu-yazdir-demirbas?ids=' + ids, '_blank');
+        } else if (tur === 'sil') {
+            Swal.fire({
+                title: 'Toplu Silme Onayı',
+                text: `${secilenSepeti.length} adet kayıt silinecek. Emin misiniz?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/toplu-sil-demirbas';
+                    secilenSepeti.forEach(id => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'secilen_ids';
+                        input.value = id;
+                        form.appendChild(input);
+                    });
+                    document.body.appendChild(form);
+                    localStorage.removeItem('envanter_sepeti');
+                    form.submit();
+                }
+            });
+        } else if (tur === 'tasi') {
+            const tasiModal = new bootstrap.Modal(document.getElementById('topluTasiModal'));
+            tasiModal.show();
+        }
+    }
+
+    function formuSubmitEt() {
+        const kampüsSecim = document.querySelector('select[name="yeni_kampus"]');
+        const konumInput = document.querySelector('input[name="yeni_konum"]');
+        if (!kampüsSecim.value || !konumInput.value) {
+            Swal.fire({ icon: 'warning', title: 'Eksik Bilgi', text: 'Lütfen alanları doldurun!' });
+            return;
+        }
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/toplu-tasi-demirbas';
+        const kInp = document.createElement('input'); kInp.type = 'hidden'; kInp.name = 'yeni_kampus'; kInp.value = kampüsSecim.value;
+        const oInp = document.createElement('input'); oInp.type = 'hidden'; oInp.name = 'yeni_konum'; oInp.value = konumInput.value;
+        form.appendChild(kInp);
+        form.appendChild(oInp);
+        secilenSepeti.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'secilen_ids';
+            input.value = id;
+            form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        localStorage.removeItem('envanter_sepeti');
+        form.submit();
+    }
+
+    function silOnay(id, tur) {
         Swal.fire({
-            title: 'Toplu Silme Onayı',
-            text: `${secilenSepeti.length} adet kayıt silinecek. Emin misiniz?`,
+            title: 'Emin misiniz?',
+            text: "Bu işlem geri alınamaz!",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            confirmButtonText: 'Evet, Sil',
-            cancelButtonText: 'Vazgeç'
+            confirmButtonText: 'Sil'
         }).then((result) => {
             if (result.isConfirmed) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/toplu-sil-demirbas';
-                secilenSepeti.forEach(id => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'secilen_ids';
-                    input.value = id;
-                    form.appendChild(input);
-                });
-                document.body.appendChild(form);
                 localStorage.removeItem('envanter_sepeti');
-                form.submit();
+                window.location.href = `/sil-${tur}/${id}`;
             }
         });
-    } else if (tur === 'tasi') {
-        const tasiModal = new bootstrap.Modal(document.getElementById('topluTasiModal'));
-        tasiModal.show();
     }
-}
 
-function formuSubmitEt() {
-    const kampüsSecim = document.querySelector('select[name="yeni_kampus"]');
-    const konumInput = document.querySelector('input[name="yeni_konum"]');
-    if (!kampüsSecim.value || !konumInput.value) {
-        Swal.fire({ icon: 'warning', title: 'Eksik Bilgi', text: 'Lütfen alanları doldurun!' });
-        return;
+    function listeyiSifirlaOnay(tur) {
+        let mesaj = tur === 'demirbas' ? "Tüm DEMİRBAŞ kayıtları silinecek!" : "Tüm PERSONEL listesi silinecek!";
+        Swal.fire({
+            title: 'TÜM VERİLER SİLİNECEK!',
+            text: mesaj,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Evet, Listeyi Temizle',
+            focusCancel: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                localStorage.removeItem('envanter_sepeti');
+                window.location.href = '/sifirla-' + tur;
+            }
+        });
     }
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/toplu-tasi-demirbas';
-    const kInp = document.createElement('input'); kInp.type = 'hidden'; kInp.name = 'yeni_kampus'; kInp.value = kampüsSecim.value;
-    const oInp = document.createElement('input'); oInp.type = 'hidden'; oInp.name = 'yeni_konum'; oInp.value = konumInput.value;
-    form.appendChild(kInp);
-    form.appendChild(oInp);
-    secilenSepeti.forEach(id => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'secilen_ids';
-        input.value = id;
-        form.appendChild(input);
-    });
-    document.body.appendChild(form);
-    localStorage.removeItem('envanter_sepeti');
-    form.submit();
-}
-
-function silOnay(id, tur) {
-    Swal.fire({
-        title: 'Emin misiniz?',
-        text: "Bu işlem geri alınamaz!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        confirmButtonText: 'Sil'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            localStorage.removeItem('envanter_sepeti');
-            window.location.href = `/sil-${tur}/${id}`;
-        }
-    });
-}
-
-function listeyiSifirlaOnay(tur) {
-    let mesaj = tur === 'demirbas' ? "Tüm DEMİRBAŞ kayıtları silinecek!" : "Tüm PERSONEL listesi silinecek!";
-    Swal.fire({
-        title: 'TÜM VERİLER SİLİNECEK!',
-        text: mesaj,
-        icon: 'error',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Evet, Listeyi Temizle',
-        focusCancel: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            localStorage.removeItem('envanter_sepeti');
-            window.location.href = '/sifirla-' + tur;
-        }
-    });
-}
-
-function highlightSearchTerm(term) {
-    var charMap = { 'c':'[cçÇC]', 'ç':'[cçÇC]', 'o':'[oöÖO]', 'ö':'[oöÖO]', 'u':'[uüÜU]', 'ü':'[uüÜU]', 'i':'[iıİI]', 'ı':'[iıİI]', 's':'[sşŞS]', 'ş':'[sşŞS]', 'g':'[gğĞG]', 'ğ':'[gğĞG]' };
-    var regexStr = ""; for (var i = 0; i < term.length; i++) { var char = term[i].toLowerCase(); regexStr += charMap[char] || char; }
-    var regex = new RegExp("(" + regexStr + ")", "gi");
-    document.querySelectorAll("table tbody tr td").forEach(function(td) {
-        if (td.querySelector('.btn') || td.querySelector('input') || td.querySelector('.fa-qrcode') || td.querySelector('.fa-trash')) return;
-        if (td.childNodes.length === 1 && td.childNodes[0].nodeType === 3) { var match = td.innerText.match(regex); if (match) td.innerHTML = td.innerText.replace(regex, '<span class="highlight">$1</span>'); }
-    });
-}
-
-function tabloyuSirala(n) {
-    var table = document.querySelector('.tab-pane.active table'); if (!table) return;
-    var rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0; switching = true; dir = "asc";
-    while (switching) {
-        switching = false; rows = table.rows;
-        for (i = 1; i < (rows.length - 1); i++) {
-            shouldSwitch = false; x = rows[i].getElementsByTagName("TD")[n]; y = rows[i + 1].getElementsByTagName("TD")[n];
-            var xContent = x.innerText.toLowerCase(); var yContent = y.innerText.toLowerCase();
-            var isNumber = !isNaN(parseFloat(xContent)) && isFinite(xContent);
-            if (isNumber) { xContent = parseFloat(xContent); yContent = parseFloat(yContent); }
-            if (dir == "asc") { if (isNumber ? (xContent > yContent) : (xContent.localeCompare(yContent, 'tr') > 0)) { shouldSwitch = true; break; } } 
-            else if (dir == "desc") { if (isNumber ? (xContent < yContent) : (xContent.localeCompare(yContent, 'tr') < 0)) { shouldSwitch = true; break; } }
-        }
-        if (shouldSwitch) { rows[i].parentNode.insertBefore(rows[i + 1], rows[i]); switching = true; switchcount++; } 
-        else { if (switchcount == 0 && dir == "asc") { dir = "desc"; switching = true; } }
-    }
-}
 </script>
+
+<script>
+    // Sayfa tamamen yüklendiğinde barı bitir
+    window.addEventListener('load', () => {
+        if (typeof NProgress !== 'undefined') NProgress.done();
+    });
+
+    // Sayfa DOM'u hazır olduğunda dinleyicileri ekle
+    document.addEventListener("DOMContentLoaded", function() {
+        // Form gönderilirken barı başlat
+        document.querySelectorAll('form').forEach(frm => {
+            frm.addEventListener('submit', function() {
+                if (typeof NProgress !== 'undefined') NProgress.start();
+            });
+        });
+
+        // Linklere tıklanınca barı başlat (Modal açanlar ve # linkler hariç)
+        document.querySelectorAll('a:not([href="#"]):not([target="_blank"])').forEach(el => {
+            el.addEventListener('click', function() {
+                // Eğer buton modal açıyorsa (veri-bs-toggle varsa) barı başlatma
+                if(!this.getAttribute('data-bs-toggle') && !this.getAttribute('onclick')) {
+                    if (typeof NProgress !== 'undefined') NProgress.start();
+                }
+            });
+        });
+    });
+</script>
+
 </body>
 </html>
