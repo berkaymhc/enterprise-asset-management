@@ -470,16 +470,23 @@ def yukle_klasor():
         except Exception as e:
             print(f"Hata ({dosya.filename}): {e}")
 
+    # ÖNCE ANA İŞLEMİ KAYDET VE BİTİR
+    conn.commit() 
+    
+    # --- LOGLAMA ŞİMDİ GÜVENLİ ---
     if islem_sayisi > 0:
         aciklama = f"Toplu Klasör ({islem_sayisi} dosya)"
-        konum_ozeti = f"{hedef_kampus} - Karışık"
+        konum_ozeti = f"{hedef_kampus}"
+        
         if len(kaydedilen_yerler) > 0:
+            # Set'ten bir örnek alırken hata almamak için listeye çevirip alıyoruz
             ornek = list(kaydedilen_yerler)[0]
             konum_ozeti = f"{hedef_kampus} / {ornek}"
+        
+        # Logu burada çağırıyoruz
         log_kaydet(aciklama, konum_ozeti, "Yükleme")
 
-    conn.commit()
-    conn.close()
+    conn.close() # En son kapat
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/yukle-personel', methods=['POST'])
@@ -521,6 +528,27 @@ def guncelle_demirbas():
                  (request.form['ad'], request.form['cinsi'], request.form['kampus'], request.form['konum'], request.form['adet'], request.form['id']))
     conn.commit(); conn.close()
     log_kaydet(f"{request.form['ad']} Güncellendi", f"Yeni Konum: {request.form['konum']}", "Düzenleme")
+    return redirect(url_for('index', tab='demirbas'))
+
+@app.route('/tasi-demirbas', methods=['POST'])
+@login_required
+def tasi_demirbas():
+    d_id = request.form.get('id')
+    yeni_kampus = request.form.get('kampus')
+    yeni_konum = request.form.get('konum')
+    
+    conn = baglanti_kur()
+    cur = conn.cursor()
+    # Log için eski bilgileri alalım
+    cur.execute("SELECT ad, kampus, konum FROM demirbaslar WHERE id=?", (d_id,))
+    eski = cur.fetchone()
+    
+    if eski:
+        cur.execute("UPDATE demirbaslar SET kampus=?, konum=? WHERE id=?", (yeni_kampus, yeni_konum, d_id))
+        conn.commit()
+        log_kaydet(f"{eski['ad']} Taşındı", f"{eski['kampus']}/{eski['konum']} -> {yeni_kampus}/{yeni_konum}", "Taşıma")
+    
+    conn.close()
     return redirect(url_for('index', tab='demirbas'))
 
 @app.route('/sil-demirbas/<int:id>')
