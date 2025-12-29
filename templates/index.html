@@ -363,6 +363,7 @@
 
                 <div class="row">
                     <div class="col-md-3">
+                        {% if session['yetki_duzeyi'] >= 1 %}
                         <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px;">
                             <h6 class="text-primary border-bottom pb-2">Yeni Eşya Ekle</h6>
                             <form action="/ekle-demirbas" method="POST">
@@ -378,7 +379,7 @@
                                     required>
                                 <button type="submit" class="btn btn-primary w-100 btn-sm">Kaydet</button>
                             </form>
-                        </div>
+                        </div>{% endif %}
                     </div>
                     <div class="col-md-9">
                         <form id="topluIslemFormu" method="POST" action="">
@@ -438,18 +439,22 @@
                                                 <td class="text-primary">{{ item.konum }}</td>
                                                 <td>{{ item.adet }}</td>
                                                 <td>
+                                                    {% if session['yetki_duzeyi'] >= 1 %}
                                                     <button type="button" class="btn btn-primary btn-sm py-0"
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#editDemirbas{{ item.id }}" title="Taşı">
                                                         <i class="fas fa-exchange-alt"></i>
                                                     </button>
+                                                    {% endif %}
                                                     <a href="/kapi-karti/{{ item.konum }}" target="_blank"
                                                         class="btn btn-outline-dark btn-sm py-0"><i
                                                             class="fas fa-print"></i></a>
                                                     {% if session['rol'] == 'admin' %}
+                                                    {% if session['yetki_duzeyi'] == 2 %}
                                                     <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')"
                                                         class="btn btn-outline-danger btn-sm py-0"><i
                                                             class="fas fa-trash"></i></button>
+                                                    {% endif %}
                                                     {% endif %}
                                                 </td>
                                             </tr>
@@ -1115,81 +1120,124 @@
     </div>
 
     <div class="modal fade" id="userModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-secondary text-white">
-                    <h5 class="modal-title"><i class="fas fa-users-cog"></i> Kullanıcı Yönetimi</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title"><i class="fas fa-users-cog"></i> Kullanıcı Yönetimi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="card card-body bg-light mb-4 border-0 shadow-sm">
+                    <h6 class="text-secondary fw-bold mb-3 border-bottom pb-2">
+                        <i class="fas fa-user-plus"></i> Yeni Kullanıcı Oluştur
+                    </h6>
+                    <form action="/ekle-kullanici" method="POST" class="row g-2">
+                        
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Kullanıcı Adı</label>
+                            <input type="text" name="kullanici_adi" class="form-control form-control-sm" placeholder="Giriş Adı" required>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Ad Soyad</label>
+                            <input type="text" name="ad_soyad" class="form-control form-control-sm" placeholder="Personel Adı" required>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Şifre</label>
+                            <input type="text" name="sifre" class="form-control form-control-sm" required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Rol (Görünen)</label>
+                            <select name="rol" class="form-select form-select-sm">
+                                <option value="personel">Personel</option>
+                                <option value="teknik">Teknik Servis</option>
+                                <option value="admin">Sistem Yöneticisi</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="small fw-bold">Bağlı Olduğu Birim</label>
+                            <select name="birim" class="form-select form-select-sm">
+                                <option value="Genel">Genel (Birim Yok)</option>
+                                {% for b in birimler %}
+                                <option value="{{ b }}">{{ b }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="small fw-bold">Yetki Seviyesi</label>
+                            <select name="yetki_duzeyi" class="form-select form-select-sm">
+                                <option value="0">0 - Standart (Sadece İzleme)</option>
+                                <option value="1">1 - Birim Sorumlusu (İşlem Yapar)</option>
+                                <option value="2">2 - Tam Yetki (Her Şeyi Görür)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-secondary btn-sm w-100 fw-bold">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <div class="modal-body">
 
-                    <div class="card card-body bg-light mb-4 border-0">
-                        <h6 class="text-secondary fw-bold mb-3">Yeni Kullanıcı Oluştur</h6>
-                        <form action="/ekle-kullanici" method="POST" class="row g-2 align-items-end">
-                            <div class="col-md-3">
-                                <label class="small fw-bold">Kullanıcı Adı</label>
-                                <input type="text" name="kullanici_adi" class="form-control form-control-sm" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="small fw-bold">Ad Soyad</label>
-                                <input type="text" name="ad_soyad" class="form-control form-control-sm" required>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="small fw-bold">Şifre</label>
-                                <input type="text" name="sifre" class="form-control form-control-sm" required>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="small fw-bold">Rol</label>
-                                <select name="rol" class="form-select form-select-sm">
-                                    <option value="personel">Personel</option>
-                                    <option value="teknik">Teknik Servis</option>
-                                    <option value="admin">Yönetici</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-secondary btn-sm w-100 fw-bold">Ekle</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <h6 class="text-dark fw-bold">Mevcut Kullanıcılar</h6>
-                    <table class="table table-sm table-hover align-middle">
+                <h6 class="text-dark fw-bold mb-2"><i class="fas fa-list"></i> Mevcut Kullanıcılar</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle border">
                         <thead class="table-light">
                             <tr>
-                                <th>Ad Soyad</th>
-                                <th>Kullanıcı Adı</th>
-                                <th>Rol</th>
-                                <th>İşlem</th>
+                                <th>Ad Soyad / K.Adı</th>
+                                <th>Birim</th>
+                                <th>Yetki</th>
+                                <th class="text-end">İşlem</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for u in kullanicilar_listesi %}
                             <tr>
-                                <td class="fw-bold">{{ u.ad_soyad }}</td>
-                                <td>{{ u.kullanici_adi }}</td>
                                 <td>
-                                    {% if u.rol == 'admin' %}<span class="badge bg-danger">Yönetici</span>
-                                    {% elif u.rol == 'teknik' %}<span class="badge bg-warning text-dark">Teknik</span>
-                                    {% else %}<span class="badge bg-info text-dark">Personel</span>
-                                    {% endif %}
+                                    <div class="fw-bold">{{ u.ad_soyad }}</div>
+                                    <small class="text-muted"><i class="fas fa-user-tag"></i> {{ u.kullanici_adi }}</small>
                                 </td>
                                 <td>
+                                    <span class="badge bg-light text-dark border">
+                                        {{ u.birim if u.birim else '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if u.yetki_duzeyi == 2 %}
+                                        <span class="badge bg-danger">Tam Yetki (2)</span>
+                                    {% elif u.yetki_duzeyi == 1 %}
+                                        <span class="badge bg-primary">Sorumlu (1)</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">İzleyici (0)</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
                                     {% if u.kullanici_adi != 'admin' and u.kullanici_adi != session['kullanici_adi'] %}
                                     <a href="/sil-kullanici/{{ u.id }}" class="btn btn-outline-danger btn-sm py-0"
-                                        onclick="return confirm('Bu kullanıcıyı silmek istediğine emin misin?')"><i
-                                            class="fas fa-trash"></i></a>
+                                       onclick="return confirm('Bu kullanıcıyı silmek istediğine emin misin?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
                                     {% else %}
-                                    <span class="text-muted small"><i class="fas fa-lock"></i></span>
+                                    <i class="fas fa-lock text-muted" title="Silinemez"></i>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-
                 </div>
+
             </div>
         </div>
+    </div>
+</div>
+    </div>
     </div>
 
     <script id="d-kampus-labels"
@@ -1262,7 +1310,8 @@
         }
 
         function analizTuruDegis(tur) {
-            var formDemirbas = document.getElementById('form-demirbas');
+            var form
+             = document.getElementById('form-demirbas');
             var formPersonel = document.getElementById('form-personel');
             var sonuclar = document.getElementById('analizSonuclariContainer');
             if (sonuclar) { sonuclar.style.display = 'none'; }
