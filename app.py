@@ -35,18 +35,33 @@ YERLESKELER = [
     "Yalıncak Yerleşkesi", "Çimenli Yerleşkesi"
 ]
 
+# Üniversite İdari Birimleri Listesi
 BIRIMLER = [
-    "Rektörlük", 
-    "Genel Sekreterlik",
-    "Bilgi İşlem Daire Bşk.", 
-    "Öğrenci İşleri Daire Bşk.", 
-    "Personel Daire Bşk.", 
-    "İdari ve Mali İşler", 
-    "Kütüphane ve Dokümantasyon",
-    "Yapı İşleri ve Teknik",
-    "Sağlık Kültür Spor"
+    "Kurumsal İletişim ve Halkla İlişkiler Daire Başkanlığı",
+    "Bilgi İşlem Daire Başkanlığı",
+    "İdari ve Mali İşler Daire Başkanlığı",
+    "Kütüphane ve Dökümantasyon Daire Başkanlığı",
+    "Öğrenci İşleri Daire Başkanlığı",
+    "Personel Daire Başkanlığı",
+    "Yapı İşleri ve Teknik Daire Başkanlığı",
+    "Yazı İşleri Müdürlüğü",
+    "Sağlık, Kültür ve Spor Daire Başkanlığı"
 ]# --- BİRİM - KAMPÜS EŞLEŞMESİ (YETKİ MATRİSİ) ---
 # Sol taraf: Birim Adı, Sağ Taraf: Bulunduğu Kampüs
+# Üniversite Personel Ünvanları
+UNVANLAR = [
+    "Daire Başkanı",
+    "Şube Müdürü",
+    "Birim Sorumlusu",
+    "Şef",
+    "Memur",
+    "Bilgisayar İşletmeni",
+    "Tekniker",
+    "Teknisyen",
+    "Mühendis",
+    "Sürekli İşçi",
+    "Sözleşmeli Personel"
+]
 BIRIM_KAMPUS_MAP = {
     "Rektörlük": "Pelitli Yerleşkesi",
     "Genel Sekreterlik": "Pelitli Yerleşkesi",
@@ -128,10 +143,21 @@ def tablolari_olustur():
     try:
         conn.execute("ALTER TABLE kullanicilar ADD COLUMN birim TEXT")
     except sqlite3.OperationalError: pass
+    try:
+        conn.execute("ALTER TABLE arizalar ADD COLUMN islem_yapan TEXT")
+    except sqlite3.OperationalError: pass
 
     try:
         conn.execute("ALTER TABLE kullanicilar ADD COLUMN yetki_duzeyi INTEGER DEFAULT 0")
     except sqlite3.OperationalError: pass 
+    try:
+        conn.execute("ALTER TABLE arizalar ADD COLUMN iptal_nedeni TEXT")
+        print(">>> SİSTEM: 'iptal_nedeni' sütunu arizalar tablosuna eklendi.")
+    except sqlite3.OperationalError: pass
+    try:
+        conn.execute("ALTER TABLE kullanicilar ADD COLUMN tarih TEXT")
+        print(">>> SİSTEM: 'tarih' sütunu kullanicilar tablosuna eklendi.")
+    except sqlite3.OperationalError: pass
 
     # --- VARSAYILAN ADMIN KONTROLÜ VE GÜNCELLEMESİ ---
     cur = conn.cursor()
@@ -198,9 +224,15 @@ def index():
     # --- YETKİ VE FİLTRELEME MANTIĞI ---
     kullanici_yetki = int(session.get('yetki_duzeyi', 0))
     kullanici_birim = session.get('birim', 'Genel')
-    
-    # Kullanıcının biriminin hangi kampüste olduğunu bul (Dictionary'den)
+    kullanici_rol = session.get('rol')
     izinli_kampus = BIRIM_KAMPUS_MAP.get(kullanici_birim, None)
+    
+# Otomatik Sekme Yönlendirmesi
+    if not aktif_tab:
+        if kullanici_yetki == 0 or kullanici_rol == 'teknik':
+            aktif_tab = 'ariza'
+        else:
+            aktif_tab = 'demirbas'
 
     # İstatistik Filtreleri
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
@@ -241,85 +273,85 @@ def index():
         d_p.extend([t, t, t])
     
     # Sayfalama Hesapla (Hatasız)
-    d_c_sql = d_sql.replace("SELECT *", "SELECT COUNT(*)")
-    cur.execute(d_c_sql, d_p)
-    total_d = cur.fetchone()[0]
+    cur.execute(d_sql.replace("SELECT *", "SELECT COUNT(*)"), d_p); total_d = cur.fetchone()[0]
     toplam_sayfa_demirbas = math.ceil(total_d / limit) if total_d > 0 else 1
     
     # Veriyi Çek
-    d_sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
-    d_p.extend([limit, offset_d])
-    cur.execute(d_sql, d_p)
-    demirbaslar = cur.fetchall()
+    cur.execute(d_sql + " ORDER BY id DESC LIMIT ? OFFSET ?", d_p + [limit, offset_d]); demirbaslar = cur.fetchall()
     
     # --- 2. PERSONEL LİSTESİ SORGUSU ---
     p_sql = "SELECT * FROM personeller WHERE 1=1"
     p_p = []
-
-    # YETKİ KONTROLÜ: Admin (2) değilse sadece kendi birimini görsün
-    if kullanici_yetki < 2:
-        p_sql += " AND birimi = ?"
-        p_p.append(kullanici_birim)
-
+    if kullanici_yetki < 2: p_sql += " AND birimi = ?"; p_p.append(kullanici_birim)
     if arama_terimi and aktif_tab == 'personel':
         t = f"%{turkce_normalize(arama_terimi)}%"
-        p_sql += " AND (NORMALIZE(ad_soyad) LIKE ? OR NORMALIZE(ofis) LIKE ? OR NORMALIZE(birimi) LIKE ?)"
-        p_p.extend([t, t, t])
-
-    # Sayfalama Hesapla
-    p_c_sql = p_sql.replace("SELECT *", "SELECT COUNT(*)")
-    cur.execute(p_c_sql, p_p)
-    total_p = cur.fetchone()[0]
+        p_sql += " AND (NORMALIZE(ad_soyad) LIKE ? OR NORMALIZE(ofis) LIKE ? OR NORMALIZE(birimi) LIKE ?)"; p_p.extend([t, t, t])
+    cur.execute(p_sql.replace("SELECT *", "SELECT COUNT(*)"), p_p); total_p = cur.fetchone()[0]
     toplam_sayfa_personel = math.ceil(total_p / limit) if total_p > 0 else 1
+    cur.execute(p_sql + " ORDER BY ofis ASC LIMIT ? OFFSET ?", p_p + [limit, offset_p]); personeller = cur.fetchall()
 
-    # Veriyi Çek
-    p_sql += " ORDER BY ofis ASC LIMIT ? OFFSET ?"
-    p_p.extend([limit, offset_p])
-    cur.execute(p_sql, p_p)
-    personeller = cur.fetchall()
+    # Parametreleri de boş geçelim (hata almamak için)
+    ist_malzeme=""; ist_kampus=""; ist_konum=""; ist_p_ad=""; ist_p_birim=""; ist_p_kampus=""; ist_p_ofis=""
 
-    # --- 3. İSTATİSTİK & LOG ---
-    # (Özet tutuyoruz, kod kalabalığı yapmasın)
-    analiz_sonuclari = []; analiz_toplam = 0
-    f_labels_1=[]; f_values_1=[]; f_labels_2=[]; f_values_2=[]
+    # --- 3. ARIZALAR ---
+    a_sql = "SELECT * FROM arizalar"
+    a_params = []
+    mevcut_kisi = session.get('ad_soyad', '')
+
+    if kullanici_rol not in ['admin', 'teknik']:
+        a_sql += " WHERE bildiren = ?"
+        a_params.append(mevcut_kisi)
     
-    # Loglar
-    cur.execute("SELECT * FROM yukleme_gecmisi WHERE tur = 'Yükleme' ORDER BY id DESC LIMIT 1")
-    son_yukleme = cur.fetchone()
-    cur.execute("SELECT * FROM yukleme_gecmisi ORDER BY id DESC LIMIT 100")
-    tum_gecmis = cur.fetchall()
-
-    # Grafikler (Sadece Admin veya Yetki 2 için dolu gelsin, diğerleri boş)
-    chart_kampus_labels=[]; chart_kampus_values=[]
-    chart_esya_labels=[]; chart_esya_values=[]
-    chart_personel_labels=[]; chart_personel_values=[]
-    chart_tur_labels=[]; chart_tur_values=[]
-
+    a_sql += " ORDER BY id DESC"
+    cur.execute(a_sql, a_params)
+    arizalar = cur.fetchall()
+    
+    # --- 4. BİLDİRİM SAYISI HESAPLAMA (ÖNEMLİ) ---
+    bildirim_sayisi = 0
+    if kullanici_rol in ['admin', 'teknik']:
+        # Yönetici/Teknik: Yeni gelen (Bekleyen) işleri say
+        cur.execute("SELECT COUNT(*) FROM arizalar WHERE durum='Bekliyor'")
+        bildirim_sayisi = cur.fetchone()[0]
+    else:
+        # Personel: Sonucu değişmiş (İşlemde/Tamamlandı) olan kendi işlerini say
+        cur.execute("SELECT COUNT(*) FROM arizalar WHERE bildiren=? AND (durum='İşlemde' OR durum='Tamamlandı')", (mevcut_kisi,))
+        bildirim_sayisi = cur.fetchone()[0]
+        
+# --- 5. DİĞER VERİLER ---
+    cur.execute("SELECT * FROM yukleme_gecmisi WHERE tur = 'Yükleme' ORDER BY id DESC LIMIT 1"); son_yukleme = cur.fetchone()
+    cur.execute("SELECT * FROM yukleme_gecmisi ORDER BY id DESC LIMIT 100"); tum_gecmis = cur.fetchall()
+    
+    # Grafikler (Sadece Admin)
+    chart_kampus_labels=[]; chart_kampus_values=[]; chart_esya_labels=[]; chart_esya_values=[]
+    chart_personel_labels=[]; chart_personel_values=[]; chart_tur_labels=[]; chart_tur_values=[]
     if kullanici_yetki == 2:
         cur.execute("SELECT kampus, SUM(adet) FROM demirbaslar GROUP BY kampus"); k_v = cur.fetchall()
         chart_kampus_labels = [r[0] for r in k_v]; chart_kampus_values = [r[1] for r in k_v]
-        # ... Diğer grafik sorguları buraya eklenebilir ...
 
-    # Arızalar
-    cur.execute("SELECT * FROM arizalar ORDER BY id DESC")
-    arizalar = cur.fetchall()
-    cur.execute("SELECT COUNT(*) FROM arizalar WHERE durum='Bekliyor'")
-    bekleyen_ariza_sayisi = cur.fetchone()[0]
-
-    # Kullanıcı Listesi (Sadece Admin)
     kullanicilar_listesi = []
     if session.get('rol') == 'admin':
-        cur.execute("SELECT * FROM kullanicilar ORDER BY id ASC")
-        kullanicilar_listesi = cur.fetchall()
-
+        cur.execute("SELECT * FROM kullanicilar ORDER BY id ASC"); kullanicilar_listesi = cur.fetchall()
+    if session.get('rol') in ['admin', 'teknik']:
+        # Yönetici ve Teknik Servis TÜM bekleyenleri görür
+        cur.execute("SELECT COUNT(*) FROM arizalar WHERE durum='Bekliyor'")
+    else:
+        # Personel sadece KENDİ bekleyenlerini görür
+        mevcut_kisi = session.get('ad_soyad', '')
+        cur.execute("SELECT COUNT(*) FROM arizalar WHERE durum='Bekliyor' AND bildiren=?", (mevcut_kisi,))
+    
+    bekleyen_ariza_sayisi = cur.fetchone()[0]
+    
+    # İstatistik değişkenleri
+    analiz_sonuclari=[]; analiz_toplam=0; f_labels_1=[]; f_values_1=[]; f_labels_2=[]; f_values_2=[]
     conn.close() 
 
+    # --- RENDER (BURADA EKSİK DEĞİŞKEN EKLENDİ) ---
     return render_template('index.html', 
                            aktif_tab=aktif_tab,
                            demirbaslar=demirbaslar,
                            personeller=personeller,
                            arizalar=arizalar,
-                           bekleyen_ariza_sayisi=bekleyen_ariza_sayisi,
+                           bildirim_sayisi=bildirim_sayisi, # <--- İŞTE EKSİK OLAN BUYDU!
                            yerleskeler=YERLESKELER,
                            sayfa_d=sayfa_d,
                            sayfa_p=sayfa_p,
@@ -328,12 +360,10 @@ def index():
                            arama_terimi=arama_terimi,
                            analiz_sonuclari=analiz_sonuclari,
                            analiz_turu=analiz_turu,
-                           # Grafik verileri
                            chart_kampus_labels=chart_kampus_labels, chart_kampus_values=chart_kampus_values,
                            chart_esya_labels=chart_esya_labels, chart_esya_values=chart_esya_values,
                            chart_personel_labels=chart_personel_labels, chart_personel_values=chart_personel_values,
                            chart_tur_labels=chart_tur_labels, chart_tur_values=chart_tur_values,
-                           # Filtre verileri
                            f_labels_1=f_labels_1, f_values_1=f_values_1,
                            f_labels_2=f_labels_2, f_values_2=f_values_2,
                            ist_malzeme=ist_malzeme, ist_kampus=ist_kampus, ist_konum=ist_konum,
@@ -342,7 +372,8 @@ def index():
                            son_yukleme=son_yukleme,
                            tum_gecmis=tum_gecmis,
                            kullanicilar_listesi=kullanicilar_listesi,
-                           birimler=BIRIMLER
+                           birimler=BIRIMLER,
+                           unvanlar=UNVANLAR
                            )
 
 # --- YÜKLEME VE İŞLEM FONKSİYONLARI ---
@@ -694,6 +725,9 @@ def indir_sablon(tur):
 @app.route('/rapor')
 @login_required
 def rapor():
+    # GÜVENLİK KİLİDİ: Seviye 0 ise ana sayfaya at
+    if int(session.get('yetki_duzeyi', 0)) < 1:
+        return redirect(url_for('index'))
     conn = baglanti_kur()
     wb = openpyxl.Workbook(); ws1 = wb.active; ws1.title = "Demirbaşlar"
     ws1.append(['Sıra No', 'Malzeme Adı', 'Cinsi', 'Kampüs', 'Konum', 'Adet', 'Kayıt Tarihi'])
@@ -715,6 +749,9 @@ def rapor():
 @app.route('/rapor-analiz')
 @login_required
 def rapor_analiz():
+    # GÜVENLİK KİLİDİ
+    if int(session.get('yetki_duzeyi', 0)) < 1:
+        return redirect(url_for('index'))
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
     ist_malzeme = request.args.get('ist_malzeme', ''); ist_kampus = request.args.get('ist_kampus', ''); ist_konum = request.args.get('ist_konum', '')
     ist_p_ad = request.args.get('ist_p_ad', ''); ist_p_birim = request.args.get('ist_p_birim', '')
@@ -896,24 +933,59 @@ def sil_kullanici(id):
     conn = baglanti_kur()
     conn.execute("DELETE FROM kullanicilar WHERE id=?", (id,))
     conn.commit(); conn.close()
-    return redirect(url_for('index'))
+    # DEĞİŞTİ: Silince tekrar listeyi aç
+    return redirect(url_for('index', open_modal='userModal'))
 
 @app.route('/ekle-ariza', methods=['POST'])
 @login_required
 def ekle_ariza():
     conn = baglanti_kur()
+    
+    konum = request.form.get('konum')
+    baslik = request.form.get('baslik')
+    aciklama = request.form.get('aciklama')
+    oncelik = request.form.get('oncelik')
+    
+    # DÜZELTME: İsmi formdan değil, doğrudan oturumdan alıyoruz.
+    # Böylece personel listesinde kendi kaydını %100 görür.
+    bildiren = session.get('ad_soyad', 'Bilinmeyen Kullanıcı') 
+    
+    tarih = datetime.now().strftime("%d-%m-%Y %H:%M")
+    
     conn.execute("INSERT INTO arizalar (konum, baslik, aciklama, bildiren, oncelik, durum, tarih) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                 (request.form.get('konum'), request.form.get('baslik'), request.form.get('aciklama'), request.form.get('bildiren'), request.form.get('oncelik'), 'Bekliyor', datetime.now().strftime("%Y-%m-%d %H:%M")))
-    conn.commit(); conn.close()
-    log_kaydet("Arıza Bildirimi", f"{request.form.get('konum')}", "Arıza")
+                 (konum, baslik, aciklama, bildiren, oncelik, 'Bekliyor', tarih))
+    conn.commit()
+    conn.close()
+    
+    log_kaydet("Arıza Bildirimi", f"{konum} - {baslik}", "Arıza")
     return redirect(request.referrer or url_for('index'))
 
-@app.route('/guncelle-ariza-durum/<int:id>/<yeni_durum>')
+@app.route('/guncelle-ariza-durum/<int:id>/<durum_kodu>')
 @login_required
-def guncelle_ariza_durum(id, yeni_durum):
+def guncelle_ariza_durum(id, durum_kodu):
+    # Yetki Kontrolü
+    if session.get('rol') != 'teknik' and session.get('rol') != 'admin':
+        return redirect(url_for('index', tab='ariza'))
+
+    # Kodları Türkçeye Çevir (URL'de Türkçe karakter sorunu olmasın diye)
+    yeni_durum = ""
+    if durum_kodu == 'islem':
+        yeni_durum = "İşlemde"
+    elif durum_kodu == 'tamam':
+        yeni_durum = "Tamamlandı"
+    else:
+        # Tanımsız bir kod geldiyse işlem yapma
+        return redirect(url_for('index', tab='ariza'))
+
+    islem_yapan = session.get('ad_soyad', 'Teknik Servis')
     conn = baglanti_kur()
     conn.execute("UPDATE arizalar SET durum=? WHERE id=?", (yeni_durum, id))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
+    
+    # Loglama yaparken Türkçe halini kullan
+    log_kaydet(f"Arıza Durumu Değişti: {yeni_durum}", f"ID: {id}", "Arıza")
+    
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/sil-ariza/<int:id>')
@@ -922,5 +994,94 @@ def sil_ariza(id):
     conn = baglanti_kur(); conn.execute("DELETE FROM arizalar WHERE id=?", (id,)); conn.commit(); conn.close()
     return redirect(request.referrer or url_for('index'))
 
+@app.route('/iptal-et-ariza', methods=['POST'])
+@login_required
+def iptal_et_ariza():
+    # Sadece Teknik Servis İptal Edebilir
+    if session.get('rol') != 'teknik':
+        return redirect(url_for('index', tab='ariza'))
+        
+    a_id = request.form.get('ariza_id')
+    neden = request.form.get('iptal_nedeni')
+    
+    conn = baglanti_kur()
+    conn.execute("UPDATE arizalar SET durum='İptal Edildi', iptal_nedeni=? WHERE id=?", (neden, a_id))
+    conn.commit()
+    conn.close()
+    
+    log_kaydet(f"Arıza İptal Edildi", f"ID: {a_id} - Neden: {neden}", "Arıza")
+    return redirect(url_for('index', tab='ariza'))
+
+# --- EKSİK OLAN KULLANICI EKLEME FONKSİYONU ---
+@app.route('/ekle-kullanici', methods=['POST'])
+@login_required
+def ekle_kullanici():
+    if session.get('rol') != 'admin': return redirect(url_for('index'))
+        
+    kadi = request.form.get('kullanici_adi')
+    sifre = request.form.get('sifre')
+    ad_soyad = request.form.get('ad_soyad')
+    rol = request.form.get('rol')
+    birim = request.form.get('birim')
+    yetki_duzeyi = request.form.get('yetki_duzeyi')
+    
+    # TARİH BİLGİSİ EKLENDİ
+    tarih = datetime.now().strftime("%d-%m-%Y %H:%M") 
+    
+    sifre_hash = generate_password_hash(sifre)
+    
+    conn = baglanti_kur()
+    try:
+        # SQL Sorgusuna 'tarih' alanını ekledik
+        conn.execute("""INSERT INTO kullanicilar 
+                        (kullanici_adi, sifre_hash, ad_soyad, rol, birim, yetki_duzeyi, tarih) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                     (kadi, sifre_hash, ad_soyad, rol, birim, yetki_duzeyi, tarih))
+        conn.commit()
+        log_kaydet("Kullanıcı Eklendi", f"{kadi} ({birim})", "Ekleme")
+    except sqlite3.IntegrityError: pass
+    finally: conn.close()
+    
+    # DEĞİŞTİ: İşlem bitince kullanıcı modalını tekrar açsın diye parametre ekledik
+    return redirect(url_for('index', open_modal='userModal'))
+
+@app.route('/guncelle-kullanici', methods=['POST'])
+@login_required
+def guncelle_kullanici():
+    # Güvenlik: Sadece admin yapabilir
+    if session.get('rol') != 'admin':
+        return redirect(url_for('index'))
+
+    # Formdan gelen veriler
+    user_id = request.form.get('user_id')
+    ad_soyad = request.form.get('ad_soyad')
+    kadi = request.form.get('kullanici_adi')
+    rol = request.form.get('rol')
+    birim = request.form.get('birim')
+    yetki_duzeyi = request.form.get('yetki_duzeyi')
+    sifre = request.form.get('sifre') # Boş gelebilir
+
+    conn = baglanti_kur()
+    
+    if sifre and sifre.strip() != "":
+        # Şifre girilmişse onu da güncelle (Hashleyerek)
+        sifre_hash = generate_password_hash(sifre)
+        conn.execute("""UPDATE kullanicilar 
+                        SET ad_soyad=?, kullanici_adi=?, rol=?, birim=?, yetki_duzeyi=?, sifre_hash=? 
+                        WHERE id=?""", 
+                     (ad_soyad, kadi, rol, birim, yetki_duzeyi, sifre_hash, user_id))
+        log_kaydet("Kullanıcı Güncellendi (Şifre Dahil)", f"{kadi}", "Düzenleme")
+    else:
+        # Şifre boşsa sadece bilgileri güncelle
+        conn.execute("""UPDATE kullanicilar 
+                        SET ad_soyad=?, kullanici_adi=?, rol=?, birim=?, yetki_duzeyi=? 
+                        WHERE id=?""", 
+                     (ad_soyad, kadi, rol, birim, yetki_duzeyi, user_id))
+        log_kaydet("Kullanıcı Bilgileri Güncellendi", f"{kadi}", "Düzenleme")
+
+    conn.commit()
+    conn.close()
+    # DEĞİŞTİ: Güncelleyince tekrar listeyi aç
+    return redirect(url_for('index', open_modal='userModal'))
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
