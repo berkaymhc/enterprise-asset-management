@@ -30,9 +30,12 @@ def login_required(f):
         return f(*args, **kwargs) # Varsa geçmesine izin ver
     return decorated_function
 
+# Üniversite Yerleşkeleri (RESMİ 4 YERLEŞKE)
 YERLESKELER = [
-    "Pelitli Yerleşkesi", "Ömer Yıldız Yerleşkesi", "Yomra Yerleşkesi", 
-    "Yalıncak Yerleşkesi", "Çimenli Yerleşkesi"
+    "Yalıncak Yerleşkesi",
+    "Pelitli Yerleşkesi",
+    "Kaşüstü (Yomra) Yerleşkesi",
+    "Çimenli Yerleşkesi"
 ]
 
 # Üniversite İdari Birimleri Listesi
@@ -73,6 +76,31 @@ BIRIM_KAMPUS_MAP = {
     "Yapı İşleri ve Teknik": "Pelitli Yerleşkesi", # İdari olduğu için buraya aldım
     "Sağlık Kültür Spor": "Pelitli Yerleşkesi"
 }
+# --- KAMPÜS TESPİT SÖZLÜĞÜ (ÖNCELİK SIRALI) ---
+    # Python 3.7+ sözlüklerde ekleme sırasını korur.
+    # Önce ÖZEL yerleri kontrol et, en sona GENEL (Yalıncak) kalsın.
+KAMPUS_MAP = {
+        # 1. Pelitli (Dosya adında 'Ömer Yıldız Pelitli' geçse bile burayı yakalar)
+        "pelitli": "Pelitli Yerleşkesi",
+
+        # 2. Çimenli
+        "çimenli": "Çimenli Yerleşkesi",
+        "cimenli": "Çimenli Yerleşkesi",
+
+        # 3. Kaşüstü / Yomra
+        "kaşüstü": "Kaşüstü (Yomra) Yerleşkesi",
+        "kasustu": "Kaşüstü (Yomra) Yerleşkesi",
+        "yomra": "Kaşüstü (Yomra) Yerleşkesi",
+
+        # 4. Yalıncak (Ve tek başına 'Ömer Yıldız' geçerse burasıdır)
+        "yalıncak": "Yalıncak Yerleşkesi",
+        "yalincak": "Yalıncak Yerleşkesi",
+        
+        # DİKKAT: Yukarıdakiler bulunamazsa ve sadece 'Ömer Yıldız' yazıyorsa Yalıncak'tır.
+        "ömer yıldız": "Yalıncak Yerleşkesi",
+        "omer yildiz": "Yalıncak Yerleşkesi",
+        "omer yıldız": "Yalıncak Yerleşkesi"
+    }
 
 # --- YARDIMCI FONKSİYONLAR ---
 def turkce_normalize(metin):
@@ -408,13 +436,14 @@ def yukle_demirbas():
     if islem_yapildi: log_kaydet(f"{len(dosyalar)} Dosya Yüklendi", f"{bina_kat}", "Yükleme")
     return redirect(url_for('index', tab='demirbas'))
 
-# --- AKILLI KLASÖR YÜKLEME FONKSİYONU ---
 @app.route('/yukle-klasor', methods=['POST'])
 @login_required
 def yukle_klasor():
     if 'dosya' not in request.files: return redirect(url_for('index'))
     dosyalar = request.files.getlist('dosya')
-    hedef_kampus = request.form.get('hedef_kampus', 'Merkez')
+    
+    # Formdan gelen varsayılan (Eğer dosya isminde hiçbir şey bulamazsa bunu kullanır)
+    varsayilan_kampus = request.form.get('hedef_kampus', 'Merkez (Kanuni) Kampüsü')
     
     conn = baglanti_kur()
     cur = conn.cursor()
@@ -435,14 +464,40 @@ def yukle_klasor():
             yeni_kelimeler.append(ilk + kalan)
         return " ".join(yeni_kelimeler)
 
+    # --- 1. KAMPÜS TESPİT SÖZLÜĞÜ (ÖNCELİK SIRALI) ---
+    # Bu kelimeleri görünce KAMPÜS sütununu otomatik dolduracak.
+    KAMPUS_MAP = {
+        "pelitli": "Pelitli Yerleşkesi",
+        "çimenli": "Çimenli Yerleşkesi",
+        "cimenli": "Çimenli Yerleşkesi",
+        "kaşüstü": "Kaşüstü (Yomra) Yerleşkesi",
+        "kasustu": "Kaşüstü (Yomra) Yerleşkesi",
+        "yomra": "Kaşüstü (Yomra) Yerleşkesi",
+        "yalıncak": "Yalıncak Yerleşkesi",
+        "yalincak": "Yalıncak Yerleşkesi",
+        "ömer yıldız": "Yalıncak Yerleşkesi", # Ömer Yıldız görürse Yalıncak yazar
+        "omer yildiz": "Yalıncak Yerleşkesi"
+    }
+
+    # --- 2. KONUMDAN SİLİNECEK KELİMELER (GÜNCELLENDİ) ---
+    # Bu kelimeler KONUM (Ofis) bilgisinden silinecek.
+    # Böylece "TelefonElektronikYalıncak..." -> "TelefonElektronik" olacak.
     SILINECEK_KELIMELER = [
-        "LİSTESİ", "LISTESI", "LİSTE", "LISTE", 
-        "DEMİRBAŞLARI", "DEMİRBAŞ", "DEMIRBAS", "ENVANTER", "SAYIM",
-        "SİSTEMİ", "SISTEMI", "YAPILDI", "YAPILAN", "YENİ", "ESKİ", 
-        "COPY", "KOPYA", "YEDEK", "REVİZE", "REVIZE",
-        "DÜZENLEME", "DÜZENLENEN", "KONTROL", "TASLAK", "SON", "FİNAL", "FINAL",
-        "MASAÜSTÜ", "DOWNLOADS", "BELGELERİM", "TABLO", "TÜMÜ", "TUMU",
-        "YALINCAK", "PELİTLİ", "KANUNİ", "MERKEZ", "YERLEŞKESİ", "YERLESKESI"
+        # Dosya uzantıları ve gereksizler
+        "LİSTESİ", "LISTESI", "LİSTE", "LISTE", "DEMİRBAŞLARI", "DEMİRBAŞ", "DEMIRBAS", 
+        "ENVANTER", "SAYIM", "SİSTEMİ", "SISTEMI", "YAPILDI", "YAPILAN", "YENİ", "ESKİ", 
+        "COPY", "KOPYA", "YEDEK", "REVİZE", "REVIZE", "DÜZENLEME", "DÜZENLENEN", 
+        "KONTROL", "TASLAK", "SON", "FİNAL", "FINAL", "MASAÜSTÜ", "DOWNLOADS", 
+        "BELGELERİM", "TABLO", "TÜMÜ", "TUMU", "XLSX", "XLS",
+
+        # YERLEŞKE İSİMLERİ (Bunları Konumdan SİLİYORUZ, çünkü zaten Kampüs sütununda var)
+        "YALINCAK", "YALINCAK", "PELİTLİ", "PELITLI", 
+        "ÇİMENLİ", "CIMENLI", "KAŞÜSTÜ", "KASUSTU", "YOMRA",
+        "KANUNİ", "MERKEZ", "KAMPÜSÜ", "KAMPUSU", 
+        "YERLEŞKESİ", "YERLESKESI", "YERLESKESİ",
+        
+        # ÖZEL İSİMLER (Bunları da siliyoruz)
+        "ÖMER YILDIZ", "OMER YILDIZ", "OMER YILDIZ", "ÖMER", "YILDIZ"
     ]
 
     ONEMLI_KELIMELER = [
@@ -454,32 +509,51 @@ def yukle_klasor():
     ]
 
     for dosya in dosyalar:
-        if not dosya.filename.endswith('.xlsx') or '~$' in dosya.filename:
+        if not dosya.filename.endswith('.xlsx') and not dosya.filename.endswith('.xls'):
             continue
+        if '~$' in dosya.filename: continue
             
         try:
             full_path = dosya.filename.replace('\\', '/')
-            path_parts = full_path.split('/')
+            path_lower = full_path.lower()
             
+            # A) Kampüsü Tespit Et
+            aktif_kampus = varsayilan_kampus
+            for anahtar, gercek_ad in KAMPUS_MAP.items():
+                if anahtar in path_lower:
+                    aktif_kampus = gercek_ad
+                    break 
+            
+            # B) Konum İsmini Temizle (Dosya yolundan)
+            path_parts = full_path.split('/')
             dosya_adi_ham = path_parts[-1].rsplit('.', 1)[0]
             tum_parcalar = path_parts[:-1] + [dosya_adi_ham]
             
             anlamli_yol_parcalari = []
 
             for parca in tum_parcalar:
-                temiz_parca = tr_upper(parca)
-                for yasakli in SILINECEK_KELIMELER:
-                    temiz_parca = temiz_parca.replace(yasakli, "")
+                temiz_parca = tr_upper(parca) # Önce BÜYÜK HARF yap
                 
+                # SİLME İŞLEMİ BURADA YAPILIYOR
+                for yasakli in SILINECEK_KELIMELER:
+                    # Kelime içinde geçiyorsa boşlukla değiştir veya sil
+                    if yasakli in temiz_parca:
+                        temiz_parca = temiz_parca.replace(yasakli, "")
+                
+                # Temizlik sonrası kalan karakterleri düzelt
                 temiz_parca = temiz_parca.replace("_", " ").replace("-", " ").strip()
-                if len(temiz_parca) < 3 and not any(c.isdigit() for c in temiz_parca):
+                
+                # Eğer çok kısa kaldıysa (Örn: Sadece sayı kaldıysa veya boşsa)
+                if len(temiz_parca) < 2 and not any(c.isdigit() for c in temiz_parca):
                     continue
 
                 is_onemli = any(k in temiz_parca for k in ONEMLI_KELIMELER)
                 is_blok_kodu = (len(temiz_parca) > 0 and len(temiz_parca) < 6 and any(c.isdigit() for c in temiz_parca))
                 
-                if (is_onemli or is_blok_kodu or len(temiz_parca) > 3):
+                # Eğer anlamlı bir şeyler kaldıysa yola ekle
+                if (is_onemli or is_blok_kodu or len(temiz_parca) > 2):
                     temiz_parca_title = tr_title(temiz_parca)
+                    # Mükerrer eklemeyi önle (Örn: Depo / Depo olmasın)
                     if anlamli_yol_parcalari:
                         son_eklenen = anlamli_yol_parcalari[-1]
                         if temiz_parca_title in son_eklenen or son_eklenen in temiz_parca_title:
@@ -491,12 +565,16 @@ def yukle_klasor():
 
             temiz_yol_str = " / ".join(anlamli_yol_parcalari)
 
+            # C) Excel İçini Oku ve Kaydet
             wb = openpyxl.load_workbook(dosya)
             
             for ws in wb.worksheets:
                 sheet_adi = ws.title.strip()
+                # Sayfa isminde de temizlik yapalım mı? İstersen buraya da eklenebilir.
+                # Şimdilik sadece dosya yolundan temizledik.
+                
                 if "Sheet" in sheet_adi or "Sayfa" in sheet_adi:
-                    tam_konum = temiz_yol_str if temiz_yol_str else "Genel"
+                    tam_konum = temiz_yol_str if temiz_yol_str else "Genel Depo"
                 else:
                     if temiz_yol_str:
                         if sheet_adi in temiz_yol_str:
@@ -514,10 +592,12 @@ def yukle_klasor():
                     ad = row[0]; cinsi = row[1] if len(row)>1 else ""; adet = row[2] if len(row)>2 else 1
                     try: adet = int(adet)
                     except: adet = 1
+                    
+                    # Aynı malzeme, aynı konumda var mı kontrolü
                     cur.execute("SELECT id FROM demirbaslar WHERE ad=? AND konum=?", (ad, tam_konum))
                     if not cur.fetchone():
                         cur.execute("INSERT INTO demirbaslar (ad, cinsi, kampus, konum, adet, tarih) VALUES (?, ?, ?, ?, ?, ?)", 
-                                    (ad, cinsi, hedef_kampus, tam_konum, adet, datetime.now().strftime("%Y-%m-%d")))
+                                    (ad, cinsi, aktif_kampus, tam_konum, adet, datetime.now().strftime("%Y-%m-%d")))
             
             islem_sayisi += 1
 
@@ -527,14 +607,9 @@ def yukle_klasor():
     conn.commit() 
     
     if islem_sayisi > 0:
-        aciklama = f"Toplu Klasör ({islem_sayisi} dosya)"
-        konum_ozeti = f"{hedef_kampus}"
-        
-        if len(kaydedilen_yerler) > 0:
-            ornek = list(kaydedilen_yerler)[0]
-            konum_ozeti = f"{hedef_kampus} / {ornek}"
-        
-        log_kaydet(aciklama, konum_ozeti, "Yükleme")
+        aciklama = f"Akıllı Yükleme ({islem_sayisi} dosya)"
+        ornek_konum = list(kaydedilen_yerler)[0] if len(kaydedilen_yerler) > 0 else ""
+        log_kaydet(aciklama, f"Örn: {ornek_konum}", "Yükleme")
 
     conn.close() 
     return redirect(url_for('index', tab='demirbas'))
@@ -1083,5 +1158,27 @@ def guncelle_kullanici():
     conn.close()
     # DEĞİŞTİ: Güncelleyince tekrar listeyi aç
     return redirect(url_for('index', open_modal='userModal'))
+@app.route('/yerleske-duzelt')
+@login_required
+def yerleske_duzelt():
+    if session.get('rol') != 'admin': return redirect(url_for('index'))
+    
+    conn = baglanti_kur()
+    try:
+        # 1. 'Ömer Yıldız Yerleşkesi' yazanları -> 'Yalıncak Yerleşkesi' yap
+        conn.execute("UPDATE demirbaslar SET kampus='Yalıncak Yerleşkesi' WHERE kampus LIKE '%Ömer Yıldız%'")
+        
+        # 2. Sadece 'Yomra Yerleşkesi' yazanları -> 'Kaşüstü (Yomra) Yerleşkesi' yap
+        conn.execute("UPDATE demirbaslar SET kampus='Kaşüstü (Yomra) Yerleşkesi' WHERE kampus='Yomra Yerleşkesi'")
+        
+        conn.commit()
+        log_kaydet("Sistem Bakımı", "Yerleşke isimleri standartlaştırıldı.", "Düzeltme")
+    except Exception as e:
+        print(f"Hata: {e}")
+    finally:
+        conn.close()
+        
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
