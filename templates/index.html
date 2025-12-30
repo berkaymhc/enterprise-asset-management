@@ -14,6 +14,109 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* --- AVRASYA ÜNİVERSİTESİ RENK PALETİ --- */
+        :root {
+            --uni-blue: #002D5B;
+            /* Kurumsal Lacivert */
+            --uni-orange: #F39C12;
+            /* Kurumsal Turuncu */
+            --uni-light-blue: #EDF2F7;
+            /* Açık Zemin Mavisi */
+        }
+
+        /* 1. PRIMARY (MAVİ) OLAN HER ŞEYİ LACİVERT YAP */
+        .bg-primary {
+            background-color: var(--uni-blue) !important;
+        }
+
+        .text-primary {
+            color: var(--uni-blue) !important;
+        }
+
+        .border-primary {
+            border-color: var(--uni-blue) !important;
+        }
+
+        .btn-primary {
+            background-color: var(--uni-blue) !important;
+            border-color: var(--uni-blue) !important;
+        }
+
+        .btn-primary:hover {
+            background-color: #001f3f !important;
+            /* Daha koyu lacivert */
+            border-color: #001f3f !important;
+        }
+
+        .btn-outline-primary {
+            color: var(--uni-blue) !important;
+            border-color: var(--uni-blue) !important;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--uni-blue) !important;
+            color: #fff !important;
+        }
+
+        /* 2. WARNING (SARI) OLAN HER ŞEYİ KURUMSAL TURUNCU YAP */
+        .bg-warning {
+            background-color: var(--uni-orange) !important;
+            color: #fff !important;
+            /* Yazı rengini beyaz yap */
+        }
+
+        .text-warning {
+            color: var(--uni-orange) !important;
+        }
+
+        .btn-warning {
+            background-color: var(--uni-orange) !important;
+            border-color: var(--uni-orange) !important;
+            color: #fff !important;
+        }
+
+        .btn-warning:hover {
+            background-color: #d35400 !important;
+            /* Daha koyu turuncu */
+            color: #fff !important;
+        }
+
+        /* 3. INFO (AÇIK MAVİ) RENKLERİNİ UYUMLU HALE GETİR */
+        .bg-info {
+            background-color: #3498db !important;
+            /* Biraz daha koyu bir mavi */
+            color: #fff !important;
+        }
+
+        .text-info {
+            color: #3498db !important;
+        }
+
+        .btn-info {
+            background-color: #3498db !important;
+            border-color: #3498db !important;
+            color: #fff !important;
+        }
+
+        /* 4. SEKMELER (TABS) AKTİF RENGİ */
+        .nav-tabs .nav-link.active {
+            color: var(--uni-blue) !important;
+            border-top: 3px solid var(--uni-blue) !important;
+        }
+
+        .nav-link {
+            color: #555;
+        }
+
+        .nav-link:hover {
+            color: var(--uni-blue);
+        }
+
+        /* 5. LOGO ALANI YUVARLAK (SOL ÜST) */
+        .bg-primary.rounded-circle {
+            background: linear-gradient(135deg, var(--uni-blue) 0%, #004080 100%) !important;
+        }
+
         /* --- GEÇMİŞ TABLOSU DÜZENLEME --- */
         #gecmisModal .table {
             table-layout: fixed;
@@ -220,6 +323,49 @@
                 transform: translate(0, -50%);
             }
         }
+
+        /* --- YÜZEN AKSİYON PANELİ STİLİ --- */
+        .yuzen-panel {
+            z-index: 1040 !important;
+            pointer-events: auto;
+            position: absolute;
+            top: -55px;
+            /* Tablonun üstüne, boşluğa yerleşir */
+            left: 12px;
+            /* Bootstrap gutter payı */
+            right: 12px;
+            height: 45px;
+            z-index: 999;
+            /* Her şeyin üstünde */
+            background-color: #fff;
+            border: 2px solid #0d6efd;
+            /* Mavi çerçeve */
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            display: none;
+            /* Varsayılan gizli */
+            align-items: center;
+            padding: 0 15px;
+            /* Animasyon */
+            animation: slideDown 0.3s ease-out;
+        }
+
+        /* Panel Göründüğünde Flex Olsun */
+        .yuzen-panel.active {
+            display: flex !important;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
@@ -242,7 +388,7 @@
             </div>
 
             <div class="col-md-4">
-                {% if aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
+                {% if session['rol'] != 'teknik' and aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
                 <form action="/" method="GET" class="d-flex shadow-sm rounded-pill overflow-hidden" id="searchForm">
                     <input type="hidden" name="tab" id="activeTabInput" value="{{ aktif_tab }}">
                     <input class="form-control border-0 ps-4" type="search" name="q" placeholder="Detaylı arama yap..."
@@ -278,25 +424,24 @@
             <div>
             </div>
             <div>
-                {% if session['yetki_duzeyi'] >= 2 %}
-                <button class="btn btn-dark text-white btn-sm me-1" data-bs-toggle="modal"
-                    data-bs-target="#gecmisModal"><i class="fas fa-clipboard-list"></i> Geçmiş</button>
+                {% if session['yetki_duzeyi'] >= 2 or session['rol'] == 'teknik' %}
+                <button class="btn btn-dark text-white btn-sm me-1 shadow-sm" data-bs-toggle="modal"
+                    data-bs-target="#gecmisModal"><i class="fas fa-clipboard-list"></i> Geçmiş / Loglar</button>
                 {% endif %}
                 {% if session['rol'] == 'admin' %}
-
                 <button class="btn btn-primary text-white btn-sm me-1" data-bs-toggle="modal"
-                    data-bs-target="#uploadFolderModal"><i class="fas fa-folder-open"></i> Klasör Yükle</button>
-                <button class="btn btn-info text-white btn-sm me-1" data-bs-toggle="modal"
-                    data-bs-target="#uploadPersonelModal"><i class="fas fa-users"></i> Personel Yükle</button>
-                <button class="btn btn-warning btn-sm me-1" data-bs-toggle="modal"
-                    data-bs-target="#uploadDemirbasModal"><i class="fas fa-boxes"></i> Demirbaş Yükle</button>
+                    data-bs-target="#uploadFolderModal">
+                    <i class="fas fa-folder-open"></i> Klasör Yükle
+                </button>
                 <button class="btn btn-secondary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#userModal">
                     <i class="fas fa-users-cog"></i> Kullanıcılar
                 </button>
                 {% endif %}
                 {% if session['rol'] == 'admin' %}
-                {% if session['yetki_duzeyi'] >= 1 %} <a href="/rapor" class="btn btn-success btn-sm"><i
-                        class="fas fa-file-excel"></i> Rapor</a>
+                {% if session['yetki_duzeyi'] >= 1 %} <a href="/rapor" class="btn btn-success btn-sm shadow-sm fw-bold"
+                    target="_blank">
+                    <i class="fas fa-file-excel"></i> Rapor
+                </a>
                 {% endif %}
                 {% endif %}
             </div>
@@ -321,16 +466,24 @@
 
         <ul class="nav nav-tabs mb-3" id="myTab">
 
+            {% if session['rol'] != 'teknik' %}
             {% if session['yetki_duzeyi'] >= 1 %}
             <li class="nav-item">
-                <a class="nav-link {% if aktif_tab == 'demirbas' %}active{% endif %}" href="/?tab=demirbas">📦
-                    Demirbaşlar</a>
+                <a class="nav-link {% if aktif_tab == 'demirbas' %}active{% endif %}" href="/?tab=demirbas">
+                    📦 Demirbaşlar
+                </a>
             </li>
+            {% endif %}
+            {% endif %}
 
+            {% if session['rol'] != 'teknik' %}
+            {% if session['yetki_duzeyi'] >= 1 %}
             <li class="nav-item">
-                <a class="nav-link {% if aktif_tab == 'personel' %}active{% endif %}" href="/?tab=personel">👥 Personel
-                    Listesi</a>
+                <a class="nav-link {% if aktif_tab == 'personel' %}active{% endif %}" href="/?tab=personel">
+                    👥 Personel Listesi
+                </a>
             </li>
+            {% endif %}
             {% endif %}
 
             <li class="nav-item">
@@ -344,39 +497,25 @@
                 </a>
             </li>
 
+            {% if session['rol'] != 'teknik' %}
             {% if session['yetki_duzeyi'] >= 1 %}
             <li class="nav-item">
-                <a class="nav-link {% if aktif_tab == 'istatistik' %}active{% endif %}" href="/?tab=istatistik">📊
-                    İstatistik & Analiz</a>
+                <a class="nav-link {% if aktif_tab == 'istatistik' %}active{% endif %}" href="/?tab=istatistik">
+                    📊 İstatistik & Analiz
+                </a>
             </li>
+            {% endif %}
             {% endif %}
         </ul>
 
         <div class="tab-content" id="myTabContent">
-            {% if session['yetki_duzeyi'] >= 1 %}
+            {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
             <div class="tab-pane fade {% if aktif_tab == 'demirbas' %}show active{% endif %}" id="demirbas">
-                <div class="kontrol-satiri">
-                    {% if session['yetki_duzeyi'] >= 1 %}
-                    <div id="topluIslemPaneli" class="alert alert-info py-1">
-                        <div class="d-flex align-items-center me-3"><span id="secilenSayisi"
-                                class="fw-bold me-1">0</span> <small>seçildi</small></div>
-                        <div class="btn-group me-2">
-                            <button type="button" onclick="topluIslemGonder('tasi')"
-                                class="btn btn-primary btn-sm">Taşı</button>
-                            <button type="button" onclick="topluIslemGonder('yazdir')"
-                                class="btn btn-dark btn-sm">Yazdır</button>
-                            {% if session['rol'] == 'admin' %}
-                            <button type="button" onclick="topluIslemGonder('sil')"
-                                class="btn btn-danger btn-sm">Sil</button>
-                            {% endif %}
-                        </div>
-                        <button type="button" onclick="sepetiSifirla()"
-                            class="btn btn-link btn-sm text-danger p-0 border-0"><i class="fas fa-times"></i></button>
-                    </div>
+
+                <div class="d-flex justify-content-end mb-2" style="height: 38px;">
                     {% if session['rol'] == 'admin' %}
-                    {% endif %}
                     <button type="button" onclick="listeyiSifirlaOnay('demirbas')"
-                        class="btn btn-outline-danger btn-sm fw-bold">
+                        class="btn btn-outline-danger btn-sm border-0">
                         <i class="fas fa-trash-alt"></i> Listeyi Temizle
                     </button>
                     {% endif %}
@@ -384,17 +523,25 @@
 
                 <div class="row">
                     <div class="col-md-3">
-                        {% if session['yetki_duzeyi'] >= 1 %}
-                        <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px;">
-                            <h6 class="text-primary border-bottom pb-2">Yeni Eşya Ekle</h6>
+                        <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px; z-index: 5;">
+                            <h6 class="text-primary border-bottom pb-2 fw-bold">
+                                <i class="fas fa-box-open"></i> Yeni Eşya Ekle
+                            </h6>
                             <form action="/ekle-demirbas" method="POST">
                                 <input type="text" name="ad" class="form-control mb-2 form-control-sm"
                                     placeholder="Malzeme Adı" required>
-                                <input type="text" name="cinsi" class="form-control mb-2 form-control-sm"
-                                    placeholder="Cinsi">
+                                <div class="mb-2">
+                                    <select name="cinsi" class="form-select form-select-sm" required>
+                                        <option value="" disabled selected>Cinsi...</option>
+                                        <option value="Elektronik">Elektronik</option>
+                                        <option value="Mobilya">Mobilya</option>
+                                        <option value="Kırtasiye">Kırtasiye</option>
+                                        <option value="Diğer">Diğer</option>
+                                    </select>
+                                </div>
                                 <div class="mb-2">
                                     <select name="kampus" class="form-select form-select-sm" required>
-                                        <option value="" selected disabled>Yerleşke Seçiniz...</option>
+                                        <option value="" disabled selected>Yerleşke...</option>
                                         {% for y in yerleskeler %}
                                         <option value="{{ y }}">{{ y }}</option>
                                         {% endfor %}
@@ -402,50 +549,75 @@
                                 </div>
                                 <input type="text" name="konum" class="form-control mb-2 form-control-sm"
                                     placeholder="Ofis No" required>
-                                <input type="number" name="adet" class="form-control mb-3 form-control-sm" value="1"
-                                    required>
-                                <button type="submit" class="btn btn-primary w-100 btn-sm">Kaydet</button>
+                                <div class="input-group input-group-sm mb-3">
+                                    <span class="input-group-text bg-light text-muted">Adet</span>
+                                    <input type="number" name="adet" class="form-control" value="1" min="1" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary text-white w-100 btn-sm fw-bold">
+                                    <i class="fas fa-plus-circle"></i> Ekle
+                                </button>
                             </form>
-                        </div>{% endif %}
+                            <div class="mt-3 border-top pt-3 text-center">
+                                <button class="btn btn-outline-success btn-sm w-100" data-bs-toggle="modal"
+                                    data-bs-target="#uploadDemirbasModal">
+                                    <i class="fas fa-file-excel"></i> Excel Yükle
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-9">
-                        <form id="topluIslemFormu" method="POST" action="">
-                            <div class="modal fade" id="topluTasiModal" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-primary text-white">
-                                            <h5 class="modal-title">📦 Toplu Taşıma</h5><button type="button"
-                                                class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body"><label>Yeni Kampüs</label><select name="yeni_kampus"
-                                                class="form-select mb-2">{% for yer in yerleskeler %}<option
-                                                    value="{{ yer }}">{{ yer }}</option>{% endfor %}</select><label>Yeni
-                                                Ofis / Konum</label><input type="text" name="yeni_konum"
-                                                class="form-control" placeholder="Örn: Depo, B-101"></div>
-                                        <div class="modal-footer"><button type="button" onclick="formuSubmitEt()"
-                                                class="btn btn-primary w-100">Taşı</button></div>
+
+                    <div class="col-md-9 position-relative">
+                        <form id="topluDemirbasForm" method="POST">
+
+                            <div id="demirbasActionPanel" class="yuzen-panel">
+                                <div class="d-flex align-items-center w-100">
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                        <span class="badge bg-dark me-2"><span id="secilenDemirbasSayisi">0</span>
+                                            Seçili</span>
+                                        <span class="small text-muted fw-bold me-2">İşlemler:</span>
+
+                                        <button type="button" class="btn btn-primary btn-sm"
+                                            onclick="demirbasTasiKontrolluAc()">
+                                            <i class="fas fa-exchange-alt"></i> Taşı
+                                        </button>
+
+                                        <button type="button" onclick="topluIslemGonder('yazdir')"
+                                            class="btn btn-dark btn-sm">
+                                            <i class="fas fa-print"></i> Yazdır
+                                        </button>
+
+                                        {% if session['rol'] == 'admin' %}
+                                        <button type="button" onclick="topluSilBaslat('demirbas')"
+                                            class="btn btn-danger btn-sm">
+                                            <i class="fas fa-trash-alt"></i> Sil
+                                        </button>
+                                        {% endif %}
                                     </div>
+                                    <button type="button" onclick="sepetiSifirla()" class="btn btn-sm text-secondary">
+                                        <i class="fas fa-times fa-lg"></i>
+                                    </button>
                                 </div>
                             </div>
 
                             <div class="card p-0 shadow-sm border-0 overflow-hidden">
                                 <div class="table-responsive-custom">
                                     <table class="table table-hover table-sm align-middle mb-0">
-                                        <thead class="table-dark">
+                                        <thead class="bg-primary text-white"
+                                            style="position: sticky; top: 0; z-index: 10;">
                                             <tr>
-                                                <th style="width: 40px;" class="text-center align-middle">
-                                                    <div class="check-center">{% if session['yetki_duzeyi'] >= 1
-                                                        %}<input type="checkbox" id="tumunuSec" class="form-check-input"
-                                                            style="cursor: pointer;">{% endif %}</div>
+                                                <th class="text-center" style="width: 40px;">
+                                                    <div class="check-center">
+                                                        {% if session['yetki_duzeyi'] >= 1 %}
+                                                        <input type="checkbox" id="selectAllDemirbas"
+                                                            class="form-check-input" style="cursor: pointer;">
+                                                        {% endif %}
+                                                    </div>
                                                 </th>
-                                                <th class="sortable" style="width: 60px;" onclick="tabloyuSirala(1)">No
-                                                    <i class="fas fa-sort small ms-1"></i>
-                                                </th>
-                                                <th class="sortable" onclick="tabloyuSirala(2)">Malzeme</th>
-                                                <th class="sortable" onclick="tabloyuSirala(3)">Cinsi</th>
-                                                <th class="sortable" onclick="tabloyuSirala(4)">Kampüs</th>
-                                                <th class="sortable" onclick="tabloyuSirala(5)">Ofis</th>
-                                                <th class="sortable" onclick="tabloyuSirala(6)">Adet</th>
+                                                <th class="sortable" onclick="tabloyuSirala(1)">Malzeme</th>
+                                                <th class="sortable" onclick="tabloyuSirala(2)">Cinsi</th>
+                                                <th class="sortable" onclick="tabloyuSirala(3)">Kampüs</th>
+                                                <th class="sortable" onclick="tabloyuSirala(4)">Konum</th>
+                                                <th class="sortable" onclick="tabloyuSirala(5)">Adet</th>
                                                 <th>İşlem</th>
                                             </tr>
                                         </thead>
@@ -454,253 +626,333 @@
                                             <tr>
                                                 <td class="text-center align-middle">
                                                     <div class="check-center">
+                                                        {% if session['yetki_duzeyi'] >= 1 %}
                                                         <input type="checkbox" name="secilen_ids" value="{{ item.id }}"
-                                                            class="form-check-input secim-kutusu"
+                                                            class="form-check-input secim-kutusu-demirbas"
                                                             style="cursor: pointer;">
+                                                        {% endif %}
                                                     </div>
                                                 </td>
-                                                <td class="text-muted fw-bold ps-2">{{ loop.index + (sayfa_d - 1) * 20
-                                                    }}</td>
-                                                <td class="fw-bold">{{ item.ad }}</td>
+                                                <td class="fw-bold">
+                                                    <a href="/demirbas-detay/{{ item.id }}"
+                                                        class="text-decoration-none text-dark">
+                                                        <i class="fas fa-box text-primary me-1"></i> {{ item.ad }}
+                                                    </a>
+                                                </td>
                                                 <td class="text-muted small">{{ item.cinsi }}</td>
                                                 <td>{{ item.kampus }}</td>
-                                                <td class="text-primary">{{ item.konum }}</td>
-                                                <td>{{ item.adet }}</td>
+                                                <td><span class="badge bg-primary text-white">{{ item.konum }}</span>
+                                                </td>
+                                                <td><span class="badge bg-light text-dark border">{{ item.adet }}</span>
+                                                </td>
                                                 <td>
                                                     {% if session['yetki_duzeyi'] >= 1 %}
                                                     <button type="button" class="btn btn-primary btn-sm py-0"
                                                         data-bs-toggle="modal"
-                                                        data-bs-target="#editDemirbas{{ item.id }}" title="Taşı">
-                                                        <i class="fas fa-exchange-alt"></i>
+                                                        data-bs-target="#editDemirbas{{ item.id }}">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    {% if session['rol'] == 'admin' %}
+                                                    <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')"
+                                                        class="btn btn-outline-danger btn-sm py-0">
+                                                        <i class="fas fa-trash"></i>
                                                     </button>
                                                     {% endif %}
                                                     <a href="/kapi-karti/{{ item.konum }}" target="_blank"
                                                         class="btn btn-outline-dark btn-sm py-0"><i
                                                             class="fas fa-print"></i></a>
-                                                    {% if session['rol'] == 'admin' %}
-                                                    {% if session['yetki_duzeyi'] == 2 %}
-                                                    <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')"
-                                                        class="btn btn-outline-danger btn-sm py-0"><i
-                                                            class="fas fa-trash"></i></button>
-                                                    {% endif %}
-                                                    {% endif %}
                                                 </td>
+                                            </tr>
+                                            {% else %}
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4 text-muted">Kayıt yok.</td>
                                             </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
                                 </div>
-                                {% if toplam_sayfa_demirbas > 1 %}
-                                <div
-                                    class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
-                                    <a href="/?sayfa_d={{ sayfa_d - 1 if sayfa_d > 1 else 1 }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas"
-                                        class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}"><i
-                                            class="fas fa-chevron-left"></i> Önceki</a>
-                                    <span class="small fw-bold text-muted">Sayfa</span>
-                                    <input type="number" class="page-input" value="{{ sayfa_d }}" min="1"
-                                        max="{{ toplam_sayfa_demirbas }}"
-                                        onkeydown="if(event.key === 'Enter'){ event.preventDefault(); sayfayaGit('demirbas', this.value, '{{ sayfa_p }}', '{{ arama_terimi }}'); }"
-                                        onchange="sayfayaGit('demirbas', this.value, '{{ sayfa_p }}', '{{ arama_terimi }}')">
-                                    <span class="small fw-bold text-muted">/ {{ toplam_sayfa_demirbas }}</span>
-                                    <a href="/?sayfa_d={{ sayfa_d + 1 if sayfa_d < toplam_sayfa_demirbas else toplam_sayfa_demirbas }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas"
-                                        class="btn btn-sm btn-outline-secondary {% if sayfa_d == toplam_sayfa_demirbas %}disabled{% endif %}">Sonraki
-                                        <i class="fas fa-chevron-right"></i></a>
-                                </div>
-                                {% endif %}
                             </div>
+
+                            {% if toplam_sayfa_demirbas > 1 %}
+                            <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
+                                <a href="/?sayfa_d={{ sayfa_d - 1 if sayfa_d > 1 else 1 }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas"
+                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}"><i
+                                        class="fas fa-chevron-left"></i> Önceki</a>
+                                <span class="small fw-bold text-muted">{{ sayfa_d }} / {{ toplam_sayfa_demirbas
+                                    }}</span>
+                                <a href="/?sayfa_d={{ sayfa_d + 1 if sayfa_d < toplam_sayfa_demirbas else toplam_sayfa_demirbas }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas"
+                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == toplam_sayfa_demirbas %}disabled{% endif %}">Sonraki
+                                    <i class="fas fa-chevron-right"></i></a>
+                            </div>
+                            {% endif %}
                         </form>
                     </div>
                 </div>
-            </div> {% endif %}
-            {% if session['yetki_duzeyi'] >= 1 %}
+            </div>
+            {% endif %}
+            {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
             <div class="tab-pane fade {% if aktif_tab == 'personel' %}show active{% endif %}" id="personel">
-                <div class="kontrol-satiri">
-                    <div></div>
+
+                <div class="d-flex justify-content-end mb-2" style="height: 38px;">
                     {% if session['rol'] == 'admin' %}
                     <button type="button" onclick="listeyiSifirlaOnay('personel')"
-                        class="btn btn-outline-danger btn-sm fw-bold">
+                        class="btn btn-outline-danger btn-sm border-0">
                         <i class="fas fa-trash-alt"></i> Listeyi Temizle
                     </button>
                     {% endif %}
                 </div>
-                <div class="row">
-                    <div class="col-md-3">{% if session['yetki_duzeyi'] >= 1 %}
-                        <div class="card p-3 shadow-sm border-0 bg-white">
-                            <h6 class="text-info border-bottom pb-2">Personel Ekle</h6>
-                            <form action="/ekle-personel" method="POST">
-                                <input type="text" name="ad_soyad" class="form-control mb-2 form-control-sm"
-                                    placeholder="Ad Soyad" required>
-                                <div class="mb-2">
 
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px; z-index: 5;">
+                            <h6 class="text-info border-bottom pb-2 fw-bold">
+                                <i class="fas fa-user-plus"></i> Yeni Personel
+                            </h6>
+
+                            <form action="/ekle-personel" method="POST">
+                                <input type="text" name="ad_soyad" id="adSoyadInput"
+                                    class="form-control mb-2 form-control-sm" placeholder="Ad Soyad" required
+                                    autocomplete="off">
+
+                                <div class="mb-2">
                                     <select name="unvan" class="form-select form-select-sm" required>
-                                        <option value="" selected disabled>Ünvan Seçiniz...</option>
+                                        <option value="" disabled selected>Ünvan Seçiniz...</option>
                                         {% for u in unvanlar %}
                                         <option value="{{ u }}">{{ u }}</option>
                                         {% endfor %}
                                         <option value="Diğer">Diğer</option>
                                     </select>
                                 </div>
-                                <div class="mb-2">
 
+                                <div class="mb-2">
                                     <select name="birimi" class="form-select form-select-sm" required>
-                                        <option value="" selected disabled>Birim Seçiniz...</option>
+                                        <option value="" disabled selected>Birim Seçiniz...</option>
                                         {% for b in birimler %}
                                         <option value="{{ b }}">{{ b }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <select name="kampus" class="form-select mb-2 form-control-sm">
-                                    <option value="" selected disabled>Yerleşke Seçiniz...</option>{% for yer in
-                                    yerleskeler
-                                    %}<option value="{{ yer }}">{{ yer }}</option>{% endfor %}
-                                </select>
-                                <input type="text" name="ofis" class="form-control mb-2 form-control-sm"
-                                    placeholder="Ofis No" required>
-                                <button type="submit" class="btn btn-info text-white w-100 btn-sm">Kaydet</button>
-                            </form>
-                        </div>{% endif %}
-                    </div>
-                    <div class="col-md-9">
-                        <div class="card p-0 shadow-sm border-0 overflow-hidden">
-                            <div class="table-responsive-custom">
-                                <table class="table table-hover table-sm align-middle mb-0">
-                                    <thead class="bg-info text-white" style="position: sticky; top: 0; z-index: 1;">
-                                        <tr>
-                                            <th class="sortable" style="width: 60px;" onclick="tabloyuSirala(0)">No</th>
-                                            <th class="sortable" onclick="tabloyuSirala(1)">Ad Soyad</th>
-                                            <th class="sortable" onclick="tabloyuSirala(2)">Ünvan</th>
-                                            <th class="sortable" onclick="tabloyuSirala(3)">Birim</th>
-                                            <th class="sortable" onclick="tabloyuSirala(4)">Kampüs</th>
-                                            <th class="sortable" onclick="tabloyuSirala(5)">Ofis</th>
-                                            <th>İşlem</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for p in personeller %}
-                                        <tr>
-                                            <td class="fw-bold text-muted ps-3">{{ loop.index + (sayfa_p - 1) * 20 }}
-                                            </td>
-                                            <td><a href="/personel-detay/{{ p.id }}"
-                                                    class="text-decoration-none fw-bold text-dark"><i
-                                                        class="fas fa-user-circle text-info"></i> {{ p.ad_soyad }}</a>
-                                            </td>
-                                            <td>{{ p.unvan }}</td>
-                                            <td class="small">{{ p.birimi }}</td>
-                                            <td>{{ p.kampus }}</td>
-                                            <td><span class="badge bg-warning text-dark">{{ p.ofis }}</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-warning py-0" data-bs-toggle="modal"
-                                                    data-bs-target="#editPersonel{{ p.id }}"><i
-                                                        class="fas fa-edit"></i></button>
-                                                <button class="btn btn-sm btn-primary py-0" data-bs-toggle="modal"
-                                                    data-bs-target="#tasiModal{{ p.id }}"><i
-                                                        class="fas fa-exchange-alt"></i></button>
-                                                {% if session['rol'] == 'admin' %}
-                                                <button onclick="silOnay('{{ p.id }}', 'personel')"
-                                                    class="btn btn-sm btn-danger py-0"><i
-                                                        class="fas fa-trash"></i></button>
-                                                {% endif %}
-                                                <div class="modal fade" id="editPersonel{{ p.id }}" tabindex="-1">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header bg-warning">
-                                                                <h6 class="modal-title">Düzenle</h6><button
-                                                                    type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <form action="/guncelle-personel" method="POST"><input
-                                                                        type="hidden" name="id"
-                                                                        value="{{ p.id }}"><label
-                                                                        class="small fw-bold">Ad Soyad</label><input
-                                                                        type="text" name="ad_soyad"
-                                                                        class="form-control mb-2"
-                                                                        value="{{ p.ad_soyad }}" required><label
-                                                                        class="small fw-bold">Ünvan</label><input
-                                                                        type="text" name="unvan"
-                                                                        class="form-control mb-2"
-                                                                        value="{{ p.unvan }}"><label
-                                                                        class="small fw-bold">Birimi</label><input
-                                                                        type="text" name="birimi"
-                                                                        class="form-control mb-2"
-                                                                        value="{{ p.birimi }}"><label
-                                                                        class="small fw-bold">Kampüs</label><select
-                                                                        name="kampus" class="form-select mb-2">{% for
-                                                                        yer in yerleskeler %}<option value="{{ yer }}">
-                                                                            {{ yer }}</option>{% endfor
-                                                                        %}</select><label
-                                                                        class="small fw-bold">Ofis</label><input
-                                                                        type="text" name="ofis"
-                                                                        class="form-control mb-3" value="{{ p.ofis }}"
-                                                                        required><button type="submit"
-                                                                        class="btn btn-warning w-100">Güncelle</button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="modal fade" id="tasiModal{{ p.id }}" tabindex="-1">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header bg-primary text-white">
-                                                                <h6 class="mb-0">Taşı</h6><button type="button"
-                                                                    class="btn-close" data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <form action="/tasi-personel" method="POST"><input
-                                                                        type="hidden" name="personel_id"
-                                                                        value="{{ p.id }}"><label>Yeni
-                                                                        Kampüs</label><select name="yeni_kampus"
-                                                                        class="form-select mb-2">{% for yer in
-                                                                        yerleskeler %}<option value="{{ yer }}">{{ yer
-                                                                            }}</option>{% endfor %}</select><label>Yeni
-                                                                        Ofis</label><input type="text" name="yeni_ofis"
-                                                                        class="form-control mb-3"
-                                                                        placeholder="Örn: B-205"><button type="submit"
-                                                                        class="btn btn-primary w-100">Güncelle</button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% else %}
-                                        <tr>
-                                            <td colspan="7">
-                                                <div class="empty-state"><i class="fas fa-user-slash"></i>
-                                                    <h5>Personel Bulunamadı</h5>
-                                                    <p class="mb-0">Aradığınız kriterlere uygun personel kaydı yok.</p>
-                                                    {% if arama_terimi %}<a href="/?tab=personel"
-                                                        class="btn btn-sm btn-outline-primary mt-3">Filtreleri
-                                                        Temizle</a>{% endif %}
-                                                </div>
-                                            </td>
-                                        </tr>
+
+                                <div class="mb-2">
+                                    <select name="kampus" class="form-select form-select-sm" required>
+                                        <option value="" disabled selected>Yerleşke Seçiniz...</option>
+                                        {% for yer in yerleskeler %}
+                                        <option value="{{ yer }}">{{ yer }}</option>
                                         {% endfor %}
-                                    </tbody>
-                                </table>
+                                    </select>
+                                </div>
+
+                                <input type="text" name="ofis" class="form-control mb-2 form-control-sm"
+                                    placeholder="Ofis No (Örn: Z-10)" required>
+
+                                <div class="input-group input-group-sm mb-2">
+                                    <input type="text" name="email_prefix" id="emailInput" class="form-control"
+                                        placeholder="ad.soyad">
+                                    <span class="input-group-text bg-light text-secondary small">@avrasya.edu.tr</span>
+                                </div>
+
+                                <div class="input-group input-group-sm mb-3">
+                                    <span class="input-group-text bg-light text-secondary small">+90</span>
+                                    <input type="text" name="telefon" id="telefonInput" class="form-control"
+                                        placeholder="5XX XXX XX XX" maxlength="13">
+                                </div>
+
+                                <button type="submit" class="btn btn-info text-white w-100 btn-sm fw-bold">
+                                    <i class="fas fa-save"></i> Kaydet
+                                </button>
+                            </form>
+
+                            <div class="mt-3 border-top pt-3 text-center">
+                                <button class="btn btn-outline-success btn-sm w-100" data-bs-toggle="modal"
+                                    data-bs-target="#uploadPersonelModal">
+                                    <i class="fas fa-file-excel"></i> Excel Yükle
+                                </button>
                             </div>
-                            {% if toplam_sayfa_personel > 1 %}
-                            <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
-                                <a href="/?sayfa_p={{ sayfa_p - 1 if sayfa_p > 1 else 1 }}&sayfa_d={{ sayfa_d }}&q={{ arama_terimi }}&tab=personel"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_p == 1 %}disabled{% endif %}"><i
-                                        class="fas fa-chevron-left"></i> Önceki</a>
-                                <span class="small fw-bold text-muted">Sayfa</span>
-                                <input type="number" class="page-input" value="{{ sayfa_p }}" min="1"
-                                    max="{{ toplam_sayfa_personel }}"
-                                    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); sayfayaGit('personel', this.value, '{{ sayfa_d }}', '{{ arama_terimi }}'); }"
-                                    onchange="sayfayaGit('personel', this.value, '{{ sayfa_d }}', '{{ arama_terimi }}')">
-                                <span class="small fw-bold text-muted">/ {{ toplam_sayfa_personel }}</span>
-                                <a href="/?sayfa_p={{ sayfa_p + 1 if sayfa_p < toplam_sayfa_personel else toplam_sayfa_personel }}&sayfa_d={{ sayfa_d }}&q={{ arama_terimi }}&tab=personel"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_p == toplam_sayfa_personel %}disabled{% endif %}">Sonraki
-                                    <i class="fas fa-chevron-right"></i></a>
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
+
+                    <div class="col-md-9 position-relative">
+
+                        <form id="topluPersonelForm" method="POST">
+
+                            <div id="personelActionPanel" class="yuzen-panel">
+                                <div class="d-flex align-items-center w-100">
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                        <span class="badge bg-dark me-2"><span id="secilenPersonelSayisi">0</span>
+                                            Seçili</span>
+                                        <span class="small text-muted fw-bold me-2">İşlemler:</span>
+
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#topluPersonelTasiModal">
+                                            <i class="fas fa-exchange-alt"></i> Taşı
+                                        </button>
+
+                                        {% if session['rol'] == 'admin' %}
+                                        <button type="button" onclick="topluSilBaslat('personel')"
+                                            class="btn btn-danger btn-sm">
+                                            <i class="fas fa-trash-alt"></i> Sil
+                                        </button>
+                                        {% endif %}
+                                    </div>
+
+                                    <button type="button" onclick="sepetiSifirla()" class="btn btn-sm text-secondary">
+                                        <i class="fas fa-times fa-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card p-0 shadow-sm border-0 overflow-hidden">
+                                <div class="table-responsive-custom">
+                                    <table class="table table-hover table-sm align-middle mb-0">
+                                        <thead class="bg-info text-white"
+                                            style="position: sticky; top: 0; z-index: 10;">
+                                            <tr>
+                                                <th class="text-center" style="width: 40px;">
+                                                    <div class="check-center">
+                                                        <input type="checkbox" id="selectAllPersonel"
+                                                            class="form-check-input" style="cursor: pointer;">
+                                                    </div>
+                                                </th>
+                                                <th class="sortable" onclick="tabloyuSirala(1)">Ad Soyad / İletişim</th>
+                                                <th class="sortable" onclick="tabloyuSirala(2)">Ünvan</th>
+                                                <th class="sortable" onclick="tabloyuSirala(3)">Birim</th>
+                                                <th class="sortable" onclick="tabloyuSirala(4)">Kampüs</th>
+                                                <th class="sortable" onclick="tabloyuSirala(5)">Ofis</th>
+                                                <th>İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for p in personeller %}
+                                            <tr>
+                                                <td class="text-center align-middle">
+                                                    <div class="check-center">
+                                                        <input type="checkbox" name="secilen_ids" value="{{ p.id }}"
+                                                            class="form-check-input secim-kutusu-personel"
+                                                            style="cursor: pointer;">
+                                                    </div>
+                                                </td>
+
+                                                <td>
+                                                    <div class="fw-bold">
+                                                        <a href="/personel-detay/{{ p.id }}"
+                                                            class="text-decoration-none text-dark">
+                                                            <i class="fas fa-user-circle text-info me-1"></i> {{
+                                                            p.ad_soyad }}
+                                                        </a>
+                                                    </div>
+                                                    <div class="small text-muted mt-1" style="font-family: monospace;">
+                                                        {% if p.telefon and p.telefon|length >= 10 %}
+                                                        {% set tel = p.telefon | replace(" ", "") %}
+                                                        {% set tel = tel[-10:] %}
+                                                        <i class="fas fa-phone-alt text-success me-1"></i>
+                                                        +90 {{ tel[0:3] }} {{ tel[3:6] }} {{ tel[6:8] }} {{ tel[8:10] }}
+                                                        {% elif p.telefon %}
+                                                        <i class="fas fa-phone-alt text-secondary me-1"></i> {{
+                                                        p.telefon }}
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if p.email %}
+                                                    <div class="small text-muted">
+                                                        <i class="fas fa-envelope text-secondary me-1"></i> {{ p.email
+                                                        }}
+                                                    </div>
+                                                    {% endif %}
+                                                </td>
+
+                                                <td>{{ p.unvan }}</td>
+                                                <td class="small">{{ p.birimi }}</td>
+                                                <td>{{ p.kampus }}</td>
+                                                <td><span class="badge bg-warning text-dark">{{ p.ofis }}</span></td>
+
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-warning py-0"
+                                                        data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-primary py-0"
+                                                        data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}">
+                                                        <i class="fas fa-exchange-alt"></i>
+                                                    </button>
+                                                    {% if session['rol'] == 'admin' %}
+                                                    <button type="button" onclick="silOnay('{{ p.id }}', 'personel')"
+                                                        class="btn btn-sm btn-danger py-0">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% else %}
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4 text-muted">Kayıt bulunamadı.
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {% if toplam_sayfa_personel > 1 %}
+                            <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
+                                <a href="/?sayfa_p={{ sayfa_p - 1 }}&tab=personel"
+                                    class="btn btn-sm btn-outline-secondary {% if sayfa_p == 1 %}disabled{% endif %}">
+                                    <i class="fas fa-chevron-left"></i> Önceki
+                                </a>
+                                <span class="small fw-bold text-muted">{{ sayfa_p }} / {{ toplam_sayfa_personel
+                                    }}</span>
+                                <a href="/?sayfa_p={{ sayfa_p + 1 }}&tab=personel"
+                                    class="btn btn-sm btn-outline-secondary {% if sayfa_p == toplam_sayfa_personel %}disabled{% endif %}">
+                                    Sonraki <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </form>
+                    </div>
                 </div>
-            </div> {% endif %}
+            </div>
+
+            <div class="modal fade" id="topluPersonelTasiModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Toplu Personel Taşı</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form action="/toplu-tasi-personel" method="POST">
+                            <div class="modal-body">
+                                <div id="hiddenIdContainer"></div>
+                                <p class="alert alert-info small">Seçilen personellerin yeri güncellenecektir.</p>
+                                <div class="mb-3">
+                                    <label>Yeni Birim</label>
+                                    <select name="yeni_birim" class="form-select">
+                                        <option value="">Değiştirme</option>
+                                        {% for b in birimler %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label>Yeni Kampüs</label>
+                                    <select name="yeni_kampus" class="form-select">
+                                        <option value="">Değiştirme</option>
+                                        {% for y in yerleskeler %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label>Yeni Ofis</label>
+                                    <input type="text" name="yeni_ofis" class="form-control" placeholder="Z-20"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                <button type="submit" class="btn btn-primary" onclick="sepetiSifirla()">Kaydet ve
+                                    Taşı</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <div class="tab-pane fade {% if aktif_tab == 'ariza' or session['yetki_duzeyi'] == 0 %}show active{% endif %}"
                 id="ariza">
@@ -1021,6 +1273,7 @@
                                 <div class="col-md-3">
                                     <div class="card shadow-sm border-0 h-100">
                                         <div class="card-header bg-white fw-bold text-center small">Kampüs Doluluk</div>
+
                                         <div class="card-body" style="position: relative; height: 200px;"><canvas
                                                 id="campusChart"></canvas></div>
                                     </div>
@@ -1064,12 +1317,13 @@
                         class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <table class="table table-striped table-hover mb-0" style="font-size: 0.9rem;">
+                    <table class="table table-striped table-hover mb-0" style="font-size: 0.85rem;">
                         <thead class="table-light sticky-top">
                             <tr>
-                                <th>Tarih</th>
-                                <th>İşlem Türü</th>
-                                <th>Açıklama</th>
+                                <th style="width: 130px;">Tarih</th>
+                                <th style="width: 150px;">İşlemi Yapan</th>
+                                <th style="width: 100px;">İşlem Türü</th>
+                                <th>İşlem Başlığı</th>
                                 <th>Detay / Konum</th>
                             </tr>
                         </thead>
@@ -1077,13 +1331,19 @@
                             {% for log in tum_gecmis %}
                             <tr>
                                 <td class="text-nowrap text-muted small">{{ log.tarih }}</td>
+
+                                <td class="fw-bold text-dark">
+                                    <i class="fas fa-user-tag text-secondary small me-1"></i>
+                                    {{ log.islem_yapan if log.islem_yapan else 'Sistem' }}
+                                </td>
+
                                 <td>
-                                    {% if log.tur == 'Yükleme' %}
+                                    {% if 'Yükleme' in log.tur %}
                                     <span class="badge bg-primary">Yükleme</span>
-                                    {% elif log.tur == 'Silme' %}
+                                    {% elif 'Silme' in log.tur %}
                                     <span class="badge bg-danger">Silme</span>
-                                    {% elif log.tur == 'Arıza' or log.tur == 'Arıza Bildirimi' %}
-                                    <span class="badge bg-danger">Arıza</span>
+                                    {% elif 'Arıza' in log.tur %}
+                                    <span class="badge bg-warning text-dark">Arıza İşlemi</span>
                                     {% else %}
                                     <span class="badge bg-info text-dark">{{ log.tur }}</span>
                                     {% endif %}
@@ -1239,33 +1499,26 @@
                                 <input type="text" name="sifre" class="form-control form-control-sm" required>
                             </div>
 
-                            <div class="col-md-3">
-                                <label class="small fw-bold">Rol (Görünen)</label>
-                                <select name="rol" class="form-select form-select-sm">
-                                    <option value="personel">Personel</option>
-                                    <option value="teknik">Teknik Servis</option>
-                                    <option value="admin">Sistem Yöneticisi</option>
-                                </select>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-bold small">Sistem Rolü</label>
+                                    <select name="rol" class="form-select form-select-sm"
+                                        onchange="yetkiAciklamaGoster(this.value)">
+                                        <option value="personel" selected>Personel (Akademik/İdari)</option>
+                                        <option value="teknik">Teknik Servis Elemanı</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-bold small">Yetki / Hiyerarşi</label>
+                                    <select name="yetki_duzeyi" class="form-select form-select-sm">
+                                        <option value="0" selected>0 - Standart (İzleyici/Bildiren)</option>
+                                        <option value="1">1 - Birim Sorumlusu (Amir)</option>
+                                        <option value="2">2 - Üst Yönetim (Denetleyici)</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="small fw-bold">Bağlı Olduğu Birim</label>
-                                <select name="birim" class="form-select form-select-sm" required>
-                                    <option value="Genel">Genel (Birim Yok / Rektörlük)</option>
-                                    {% for b in birimler %}
-                                    <option value="{{ b }}">{{ b }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="small fw-bold">Yetki Seviyesi</label>
-                                <select name="yetki_duzeyi" class="form-select form-select-sm">
-                                    <option value="0">0 - Standart (Sadece İzleme)</option>
-                                    <option value="1">1 - Birim Sorumlusu (İşlem Yapar)</option>
-                                    <option value="2">2 - Tam Yetki (Her Şeyi Görür)</option>
-                                </select>
-                            </div>
 
                             <div class="col-md-2 d-flex align-items-end">
                                 <button type="submit" class="btn btn-secondary btn-sm w-100 fw-bold">
@@ -1389,8 +1642,18 @@
 
         function çizGrafikleri() {
             if (typeof Chart === 'undefined') return;
-            const renkPaleti = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69', '#f8f9fc', '#6610f2', '#e83e8c', '#fd7e14', '#20c997', '#0d6efd', '#6c757d', '#198754'];
-
+            // AVRASYA ÜNİVERSİTESİ RENK PALETİ (GÜNCELLENDİ)
+            const renkPaleti = [
+                '#002D5B', // Kurumsal Lacivert (En çok kullanılan)
+                '#F39C12', // Kurumsal Turuncu
+                '#3498db', // Tamamlayıcı Mavi
+                '#e74a3b', // Kırmızı (Danger)
+                '#1cc88a', // Yeşil (Success)
+                '#858796', // Gri
+                '#5a5c69',
+                '#002D5B', // Tekrar Lacivert
+                '#F39C12'  // Tekrar Turuncu
+            ];
             var c1 = Chart.getChart("campusChart"); if (c1) c1.destroy();
             var c2 = Chart.getChart("itemChart"); if (c2) c2.destroy();
             var c3 = Chart.getChart("personnelChart"); if (c3) c3.destroy();
@@ -1684,7 +1947,7 @@
                     }
                 });
             } else if (tur === 'tasi') {
-                const tasiModal = new bootstrap.Modal(document.getElementById('topluTasiModal'));
+                const tasiModal = new bootstrap.Modal(document.getElementById('topluTasimaModal'));
                 tasiModal.show();
             }
         }
@@ -1784,38 +2047,45 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h6 class="modal-title"><i class="fas fa-exchange-alt me-2"></i> Demirbaş Taşı: {{ item.ad }}</h6>
+                    <h6 class="modal-title"><i class="fas fa-edit"></i> Demirbaş Düzenle</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="/tasi-demirbas" method="POST">
+                    <form action="/guncelle-demirbas" method="POST">
                         <input type="hidden" name="id" value="{{ item.id }}">
+                        <label class="small fw-bold">Malzeme Adı</label>
+                        <input type="text" name="ad" class="form-control mb-2" value="{{ item.ad }}" required>
 
-                        <div class="alert alert-secondary py-2 small">
-                            <strong>Mevcut Konum:</strong> {{ item.kampus }} / {{ item.konum }}
-                        </div>
+                        <label class="small fw-bold">Cinsi</label>
+                        <select name="cinsi" class="form-select mb-2">
+                            <option value="Elektronik" {% if item.cinsi=='Elektronik' %}selected{% endif %}>Elektronik
+                            </option>
+                            <option value="Mobilya" {% if item.cinsi=='Mobilya' %}selected{% endif %}>Mobilya</option>
+                            <option value="Kırtasiye" {% if item.cinsi=='Kırtasiye' %}selected{% endif %}>Kırtasiye
+                            </option>
+                            <option value="Diğer" {% if item.cinsi=='Diğer' %}selected{% endif %}>Diğer</option>
+                        </select>
 
-                        <label class="small fw-bold mb-1">Hedef Kampüs</label>
-                        <select name="kampus" class="form-select mb-3">
+                        <label class="small fw-bold">Kampüs</label>
+                        <select name="kampus" class="form-select mb-2">
                             {% for yer in yerleskeler %}
                             <option value="{{ yer }}" {% if item.kampus==yer %}selected{% endif %}>{{ yer }}</option>
                             {% endfor %}
                         </select>
 
-                        <label class="small fw-bold mb-1">Hedef Ofis / Konum</label>
-                        <input type="text" name="konum" class="form-control mb-3" placeholder="Örn: B Blok 204"
-                            value="{{ item.konum }}" required>
+                        <label class="small fw-bold">Konum</label>
+                        <input type="text" name="konum" class="form-control mb-2" value="{{ item.konum }}" required>
 
-                        <button type="submit" class="btn btn-primary w-100 fw-bold">
-                            Taşıma İşlemini Onayla
-                        </button>
+                        <label class="small fw-bold">Adet</label>
+                        <input type="number" name="adet" class="form-control mb-3" value="{{ item.adet }}" required>
+
+                        <button type="submit" class="btn btn-primary w-100">Güncelle</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
     {% endfor %}
-
     {% for p in personeller %}
     <div class="modal fade" id="editPersonel{{ p.id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -1841,6 +2111,14 @@
                         </select>
                         <label class="small fw-bold">Ofis</label>
                         <input type="text" name="ofis" class="form-control mb-3" value="{{ p.ofis }}" required>
+
+                        <label class="small fw-bold">E-Posta</label>
+                        <input type="text" name="email" class="form-control mb-2"
+                            value="{{ p.email if p.email else '' }}">
+                        <label class="small fw-bold">Telefon</label>
+                        <input type="text" name="telefon" class="form-control mb-3"
+                            value="{{ p.telefon if p.telefon else '' }}">
+
                         <button type="submit" class="btn btn-warning w-100 fw-bold text-dark">Bilgileri
                             Güncelle</button>
                     </form>
@@ -1848,108 +2126,35 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="tasiModal{{ p.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-walking"></i> Personel Taşı</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="/tasi-personel" method="POST">
+                        <input type="hidden" name="personel_id" value="{{ p.id }}">
+                        <div class="alert alert-light border small mb-3">
+                            <strong>Şu Anki Konum:</strong> {{ p.kampus }} / {{ p.ofis }}
+                        </div>
+                        <label class="small fw-bold">Yeni Kampüs</label>
+                        <select name="yeni_kampus" class="form-select mb-2">
+                            {% for yer in yerleskeler %}
+                            <option value="{{ yer }}">{{ yer }}</option>
+                            {% endfor %}
+                        </select>
+                        <label class="small fw-bold">Yeni Ofis</label>
+                        <input type="text" name="yeni_ofis" class="form-control mb-3" placeholder="Örn: B-205" required>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Taşıma İşlemini Onayla</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     {% endfor %}
-    <div class="modal fade" id="iptalModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">🚫 Arıza İptal İşlemi</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="/iptal-et-ariza" method="POST">
-                    <div class="modal-body">
-                        <input type="hidden" name="ariza_id" id="modalArizaId">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">İptal Gerekçesi (Zorunlu)</label>
-                            <textarea name="iptal_nedeni" class="form-control" rows="3" required
-                                placeholder="Örn: Mükerrer kayıt, kullanıcı hatası vb."></textarea>
-                        </div>
-                        <div class="alert alert-warning small">
-                            <i class="fas fa-exclamation-triangle"></i> Bu işlem geri alınamaz ve kayıt arşivlenir.
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-danger w-100">İptali Onayla</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function iptalModalAc(id) {
-            document.getElementById('modalArizaId').value = id;
-            var myModal = new bootstrap.Modal(document.getElementById('iptalModal'));
-            myModal.show();
-        }
-    </script>
-    <div class="modal fade" id="arizaModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> Arıza / Talep Bildir</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <form action="/ekle-ariza" method="POST">
-                    <div class="modal-body">
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Arızalı Yer / Konum</label>
-                            <input type="text" name="konum" class="form-control" placeholder="Örn: Zemin Kat, Oda 102"
-                                required>
-                            <div class="form-text small">Lütfen sorunun olduğu odayı veya yeri belirtin.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Sorun Başlığı</label>
-                            <input type="text" name="baslik" class="form-control"
-                                placeholder="Örn: Yazıcı çalışmıyor, Lamba patlak" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Detaylı Açıklama</label>
-                            <textarea name="aciklama" class="form-control" rows="3"
-                                placeholder="Sorunu detaylandırın..."></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Öncelik Durumu</label>
-                            <select name="oncelik" class="form-select">
-                                <option value="Normal">🔹 Normal (Standart İşleyiş)</option>
-                                <option value="Yüksek">⚠️ Yüksek (İş Aksatıyor)</option>
-                                <option value="Acil">🔥 Acil (Güvenlik/Kritik Sorun)</option>
-                            </select>
-                        </div>
-
-                    </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
-                        <button type="submit" class="btn btn-danger btn-sm fw-bold">
-                            <i class="fas fa-paper-plane"></i> Bildirimi Gönder
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // URL'deki parametreleri oku
-            const urlParams = new URLSearchParams(window.location.search);
-            const modalToOpen = urlParams.get('open_modal');
-
-            // Eğer parametre 'userModal' ise ve kullanıcı yöneticiyse
-            if (modalToOpen === 'userModal') {
-                var myModal = new bootstrap.Modal(document.getElementById('userModal'));
-                myModal.show();
-
-                // URL'i temizle (kullanıcı F5 yaparsa tekrar açılmasın diye)
-                // İsteğe bağlı, şimdilik kalabilir.
-                // window.history.replaceState(null, null, window.location.pathname);
-            }
-        });
-    </script>
     {% for u in kullanicilar_listesi %}
     {% if u.kullanici_adi != 'admin' and u.kullanici_adi != session['kullanici_adi'] %}
     <div class="modal fade" id="editUserModal_{{ u.id }}" tabindex="-1" aria-hidden="true">
@@ -1957,79 +2162,368 @@
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title"><i class="fas fa-user-edit"></i> Kullanıcı Düzenle</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-
                 <form action="/guncelle-kullanici" method="POST">
                     <div class="modal-body">
                         <input type="hidden" name="user_id" value="{{ u.id }}">
-
+                        <div class="mb-3"><label class="fw-bold small">Ad Soyad</label><input type="text"
+                                name="ad_soyad" class="form-control" value="{{ u.ad_soyad }}" required></div>
+                        <div class="mb-3"><label class="fw-bold small">Kullanıcı Adı</label><input type="text"
+                                name="kullanici_adi" class="form-control" value="{{ u.kullanici_adi }}" required></div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Ad Soyad</label>
-                            <input type="text" name="ad_soyad" class="form-control" value="{{ u.ad_soyad }}" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Kullanıcı Adı</label>
-                            <input type="text" name="kullanici_adi" class="form-control" value="{{ u.kullanici_adi }}"
-                                required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Bağlı Olduğu Birim</label>
+                            <label class="fw-bold small">Birim</label>
                             <select name="birim" class="form-select">
-                                <option value="Genel">Genel (Birim Yok)</option>
-
+                                <option value="Genel">Genel</option>
                                 {% for b in birimler %}
                                 <option value="{{ b }}" {% if u.birim==b %}selected{% endif %}>{{ b }}</option>
                                 {% endfor %}
-
                             </select>
                         </div>
-
                         <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-bold small">Sistem Rolü</label>
-                                <select name="rol" class="form-select">
+                            <div class="col-6 mb-3"><label class="fw-bold small">Rol</label>
+                                <select name="rol" class="form-select form-select-sm">
                                     <option value="personel" {% if u.rol=='personel' %}selected{% endif %}>Personel
                                     </option>
-                                    <option value="teknik" {% if u.rol=='teknik' %}selected{% endif %}>Teknik Servis
-                                    </option>
-                                    <option value="admin" {% if u.rol=='admin' %}selected{% endif %}>Yönetici</option>
+                                    <option value="teknik" {% if u.rol=='teknik' %}selected{% endif %}>Teknik</option>
                                 </select>
                             </div>
-
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-bold small">Yetki Seviyesi</label>
-                                <select name="yetki_duzeyi" class="form-select">
-                                    <option value="0" {% if u.yetki_duzeyi==0 %}selected{% endif %}>0 - İzleyici
+                            <div class="col-6 mb-3"><label class="fw-bold small">Yetki</label>
+                                <select name="yetki_duzeyi" class="form-select form-select-sm">
+                                    <option value="0" {% if u.yetki_duzeyi==0 %}selected{% endif %}>0 - Standart
                                     </option>
                                     <option value="1" {% if u.yetki_duzeyi==1 %}selected{% endif %}>1 - Sorumlu</option>
-                                    <option value="2" {% if u.yetki_duzeyi==2 %}selected{% endif %}>2 - Tam Yetki
-                                    </option>
+                                    <option value="2" {% if u.yetki_duzeyi==2 %}selected{% endif %}>2 - Yönetim</option>
                                 </select>
                             </div>
                         </div>
-
-                        <hr>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-danger">Yeni Şifre (Opsiyonel)</label>
-                            <input type="text" name="sifre" class="form-control border-danger"
-                                placeholder="Değiştirmek istemiyorsanız boş bırakın">
-                        </div>
-
+                        <div class="mb-3"><label class="fw-bold small text-danger">Yeni Şifre</label><input type="text"
+                                name="sifre" class="form-control border-danger"
+                                placeholder="Değiştirmek istemiyorsanız boş bırakın"></div>
                     </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">İptal</button>
-                        <button type="submit" class="btn btn-primary btn-sm fw-bold">Kaydet ve Güncelle</button>
-                    </div>
+                    <div class="modal-footer"><button type="submit" class="btn btn-primary btn-sm">Kaydet</button></div>
                 </form>
             </div>
         </div>
     </div>
     {% endif %}
     {% endfor %}
+    <div class="modal fade" id="iptalModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">🚫 Arıza İptal</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/iptal-et-ariza" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="ariza_id" id="modalArizaId">
+                        <div class="mb-3"><label class="fw-bold">Gerekçe</label><textarea name="iptal_nedeni"
+                                class="form-control" required></textarea></div>
+                    </div>
+                    <div class="modal-footer"><button type="submit" class="btn btn-danger w-100">Onayla</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="topluTasimaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">📦 Toplu Demirbaş Taşı</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/toplu-tasi-demirbas" method="POST">
+                    <div class="modal-body">
+                        <div id="hiddenIdContainerDemirbas"></div>
+                        <p class="alert alert-warning small"><i class="fas fa-info-circle"></i> Seçili eşyaların konumu
+                            güncellenecektir.</p>
+                        <div class="mb-3"><label class="fw-bold small">Yeni Yerleşke</label>
+                            <select name="yeni_kampus" class="form-select">
+                                <option value="">Değişiklik Yapma</option>
+                                {% for y in yerleskeler %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3"><label class="fw-bold small">Yeni Konum / Ofis</label><input type="text"
+                                name="yeni_konum" class="form-control" placeholder="Örn: B-105" required></div>
+                    </div>
+                    <div class="modal-footer"><button type="submit" class="btn btn-primary"
+                            onclick="sepetiSifirla()">Kaydet ve Taşı</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL AYARLAR ---
+        const STORAGE_KEY = 'envanter_secimleri_v4';
+        let globalState = { 'demirbas': [], 'personel': [] };
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const navigationEntry = performance.getEntriesByType("navigation")[0];
+            if (navigationEntry && navigationEntry.type === 'reload') {
+                localStorage.removeItem(STORAGE_KEY);
+            } else {
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) globalState = JSON.parse(savedData);
+            }
+
+            const tabLinks = document.querySelectorAll('.nav-link');
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function () {
+                    const currentUrl = new URL(window.location.href);
+                    const targetUrl = new URL(this.href);
+                    if (currentUrl.searchParams.get('tab') !== targetUrl.searchParams.get('tab')) {
+                        localStorage.removeItem(STORAGE_KEY);
+                        globalState = { 'demirbas': [], 'personel': [] };
+                    }
+                });
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const aramaTerimi = urlParams.get('q') || '';
+
+            uiGuncelle('demirbas');
+            uiGuncelle('personel');
+
+            // Formatlama Scriptleri
+            const adSoyadInput = document.getElementById('adSoyadInput');
+            const emailInput = document.getElementById('emailInput');
+            const telefonInput = document.getElementById('telefonInput');
+
+            if (adSoyadInput && emailInput) {
+                adSoyadInput.addEventListener('input', function () {
+                    let text = adSoyadInput.value;
+                    const trMap = { 'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ş': 's', 'Ş': 's', 'ü': 'u', 'Ü': 'u', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'Ö': 'o' };
+                    text = text.replace(/[çÇğĞşŞüÜıİöÖ]/g, match => trMap[match]);
+                    text = text.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '').replace(/^\.+|\.+$/g, '');
+                    emailInput.value = text;
+                });
+            }
+            if (telefonInput) {
+                telefonInput.addEventListener('input', function (e) {
+                    let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+                    e.target.value = !x[2] ? x[1] : x[1] + ' ' + x[2] + (x[3] ? ' ' + x[3] : '') + (x[4] ? ' ' + x[4] : '');
+                });
+            }
+
+            setupSelectAll('selectAllDemirbas', 'demirbas', aramaTerimi);
+            setupSelectAll('selectAllPersonel', 'personel', aramaTerimi);
+
+            document.body.addEventListener('change', function (e) {
+                if (e.target.classList.contains('secim-kutusu-demirbas')) {
+                    toggleId('demirbas', e.target.value, e.target.checked);
+                }
+                if (e.target.classList.contains('secim-kutusu-personel')) {
+                    toggleId('personel', e.target.value, e.target.checked);
+                }
+            });
+
+            const btnPersonelTasi = document.querySelector('[data-bs-target="#topluPersonelTasiModal"]');
+            if (btnPersonelTasi) {
+                btnPersonelTasi.addEventListener('click', function () {
+                    if (globalState['personel'].length === 0) {
+                        Swal.fire({ icon: 'warning', title: 'Seçim Yapılmadı', text: 'Lütfen personel seçin.' });
+                        return false;
+                    }
+                    idsToForm('personel', 'hiddenIdContainer');
+                });
+            }
+        });
+
+        function setupSelectAll(btnId, tur, query) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            btn.addEventListener('change', function () {
+                const isChecked = this.checked;
+                if (isChecked) {
+                    fetch(`/get-all-ids?tab=${tur}&q=${encodeURIComponent(query)}`)
+                        .then(res => res.json())
+                        .then(ids => {
+                            globalState[tur] = ids;
+                            saveState();
+                            uiGuncelle(tur);
+                        });
+                } else {
+                    globalState[tur] = [];
+                    saveState();
+                    uiGuncelle(tur);
+                }
+            });
+        }
+
+        function toggleId(tur, id, isChecked) {
+            id = String(id);
+            if (isChecked) {
+                if (!globalState[tur].includes(id)) globalState[tur].push(id);
+            } else {
+                globalState[tur] = globalState[tur].filter(item => item !== id);
+                const mainBox = document.getElementById(tur === 'demirbas' ? 'selectAllDemirbas' : 'selectAllPersonel');
+                if (mainBox) mainBox.checked = false;
+            }
+            saveState();
+            uiGuncelle(tur);
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(globalState));
+        }
+
+        function uiGuncelle(tur) {
+            const secilenListesi = globalState[tur];
+            const count = secilenListesi.length;
+            const panel = document.getElementById(`${tur}ActionPanel`);
+            const countSpan = document.getElementById(tur === 'demirbas' ? 'secilenDemirbasSayisi' : 'secilenPersonelSayisi');
+
+            if (countSpan) countSpan.innerText = count;
+
+            if (panel) {
+                if (count > 0) {
+                    panel.classList.remove('d-none');
+                    panel.classList.add('d-flex');
+                } else {
+                    panel.classList.add('d-none');
+                    panel.classList.remove('d-flex');
+                }
+            }
+
+            const pageCheckboxes = document.querySelectorAll(`.secim-kutusu-${tur}`);
+            let allOnPageSelected = true;
+            pageCheckboxes.forEach(cb => {
+                if (secilenListesi.includes(String(cb.value))) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                    allOnPageSelected = false;
+                }
+            });
+            const mainBox = document.getElementById(tur === 'demirbas' ? 'selectAllDemirbas' : 'selectAllPersonel');
+            if (mainBox && pageCheckboxes.length > 0) {
+                mainBox.checked = allOnPageSelected;
+            }
+        }
+
+        function idsToForm(tur, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            const ids = globalState[tur];
+            ids.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'secilen_ids';
+                input.value = id;
+                container.appendChild(input);
+            });
+        }
+
+        function demirbasTasiKontrolluAc() {
+            if (globalState['demirbas'].length === 0) {
+                Swal.fire({ icon: 'warning', title: 'Seçim Yapılmadı', text: 'Lütfen listeden taşınacak eşyaları seçin.' });
+                return;
+            }
+            idsToForm('demirbas', 'hiddenIdContainerDemirbas');
+            var myModalEl = document.getElementById('topluTasimaModal');
+            var modal = new bootstrap.Modal(myModalEl);
+            modal.show();
+        }
+
+        function topluSilBaslat(tur) {
+            const ids = globalState[tur];
+            if (ids.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'Seçim Yok', text: 'Lütfen silinecek öğeleri seçin.' });
+                return;
+            }
+            Swal.fire({
+                title: `${ids.length} Kayıt Silinecek!`,
+                text: "Seçtiğiniz TÜM kayıtlar kalıcı olarak silinecektir. Emin misiniz?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/toplu-sil-${tur}`;
+                    ids.forEach(id => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden'; input.name = 'secilen_ids'; input.value = id;
+                        form.appendChild(input);
+                    });
+                    document.body.appendChild(form);
+                    sepetiSifirla();
+                    form.submit();
+                }
+            });
+        }
+
+        function topluIslemGonder(islem) {
+            const ids = globalState['demirbas'];
+            if (ids.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'Seçim Yok', text: 'Yazdırılacak öğe seçmediniz.' });
+                return;
+            }
+            if (islem === 'yazdir') {
+                window.open('/toplu-yazdir-demirbas?ids=' + ids.join(','), '_blank');
+                sepetiSifirla();
+            }
+        }
+
+        function sepetiSifirla() {
+            globalState['demirbas'] = [];
+            globalState['personel'] = [];
+            saveState();
+            uiGuncelle('demirbas');
+            uiGuncelle('personel');
+            const dBox = document.getElementById('selectAllDemirbas');
+            const pBox = document.getElementById('selectAllPersonel');
+            if (dBox) dBox.checked = false;
+            if (pBox) pBox.checked = false;
+        }
+
+        function silOnay(id, tur) {
+            Swal.fire({ title: 'Emin misiniz?', text: "Geri alınamaz!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sil' }).then((result) => {
+                if (result.isConfirmed) window.location.href = `/sil-${tur}/${id}`;
+            });
+        }
+
+        function listeyiSifirlaOnay(tur) {
+            Swal.fire({ title: 'TÜM LİSTE SİLİNECEK!', text: "Emin misiniz?", icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Temizle' }).then((result) => {
+                if (result.isConfirmed) {
+                    sepetiSifirla();
+                    window.location.href = '/sifirla-' + tur;
+                }
+            });
+        }
+
+        function iptalModalAc(id) {
+            document.getElementById('modalArizaId').value = id;
+            new bootstrap.Modal(document.getElementById('iptalModal')).show();
+        }
+
+        function sayfayaGit(tur, hedefSayfa, digerSayfa, arama) {
+            var url = "/?q=" + arama + "&tab=" + tur;
+            if (tur === 'demirbas') { url += "&sayfa_d=" + hedefSayfa + "&sayfa_p=" + digerSayfa; }
+            else { url += "&sayfa_p=" + hedefSayfa + "&sayfa_d=" + digerSayfa; }
+            window.location.href = url;
+        }
+
+        window.addEventListener('load', () => {
+            if (typeof NProgress !== 'undefined') NProgress.done();
+        });
+
+        document.querySelectorAll('a:not([href="#"]):not([target="_blank"])').forEach(el => {
+            el.addEventListener('click', function () {
+                if (!this.getAttribute('data-bs-toggle') && !this.getAttribute('onclick')) {
+                    if (typeof NProgress !== 'undefined') NProgress.start();
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
