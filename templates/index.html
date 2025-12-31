@@ -511,7 +511,8 @@
         <div class="tab-content" id="myTabContent">
             {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
             <div class="tab-pane fade {% if aktif_tab == 'demirbas' %}show active{% endif %}" id="demirbas">
-
+                <input type="hidden" id="d_current_page" value="{{ sayfa_d }}">
+                <input type="hidden" id="d_total_pages" value="{{ toplam_sayfa_demirbas }}">
                 <div class="d-flex justify-content-end mb-2" style="height: 38px;">
                     {% if session['rol'] == 'admin' %}
                     <button type="button" onclick="listeyiSifirlaOnay('demirbas')"
@@ -676,14 +677,20 @@
 
                             {% if toplam_sayfa_demirbas > 1 %}
                             <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
-                                <a href="/?sayfa_d={{ sayfa_d - 1 if sayfa_d > 1 else 1 }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}"><i
-                                        class="fas fa-chevron-left"></i> Önceki</a>
+                                <a href="/?sayfa_d={{ sayfa_d - 1 }}&tab=demirbas&q={{ arama_terimi }}"
+                                    id="btnPrevDemirbas"
+                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}">
+                                    <i class="fas fa-chevron-left"></i> Önceki
+                                </a>
+
                                 <span class="small fw-bold text-muted">{{ sayfa_d }} / {{ toplam_sayfa_demirbas
                                     }}</span>
-                                <a href="/?sayfa_d={{ sayfa_d + 1 if sayfa_d < toplam_sayfa_demirbas else toplam_sayfa_demirbas }}&sayfa_p={{ sayfa_p }}&q={{ arama_terimi }}&tab=demirbas"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == toplam_sayfa_demirbas %}disabled{% endif %}">Sonraki
-                                    <i class="fas fa-chevron-right"></i></a>
+
+                                <a href="/?sayfa_d={{ sayfa_d + 1 }}&tab=demirbas&q={{ arama_terimi }}"
+                                    id="btnNextDemirbas"
+                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == toplam_sayfa_demirbas %}disabled{% endif %}">
+                                    Sonraki <i class="fas fa-chevron-right"></i>
+                                </a>
                             </div>
                             {% endif %}
                         </form>
@@ -693,7 +700,8 @@
             {% endif %}
             {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
             <div class="tab-pane fade {% if aktif_tab == 'personel' %}show active{% endif %}" id="personel">
-
+                <input type="hidden" id="p_current_page" value="{{ sayfa_p }}">
+                <input type="hidden" id="p_total_pages" value="{{ toplam_sayfa_personel }}">
                 <div class="d-flex justify-content-end mb-2" style="height: 38px;">
                     {% if session['rol'] == 'admin' %}
                     <button type="button" onclick="listeyiSifirlaOnay('personel')"
@@ -710,7 +718,6 @@
                             <h6 class="text-info border-bottom pb-2 fw-bold">
                                 <i class="fas fa-user-plus"></i> Yeni Personel
                             </h6>
-
                             <form action="/ekle-personel" method="POST">
                                 <input type="text" name="ad_soyad" id="adSoyadInput"
                                     class="form-control mb-2 form-control-sm" placeholder="Ad Soyad" required
@@ -833,7 +840,7 @@
                                                     </div>
                                                 </td>
 
-                                                <td>
+                                                <td class="align-middle">
                                                     <div class="fw-bold">
                                                         <a href="/personel-detay/{{ p.id }}"
                                                             class="text-decoration-none text-dark">
@@ -841,39 +848,28 @@
                                                             p.ad_soyad }}
                                                         </a>
                                                     </div>
-                                                    <div class="small text-muted mt-1" style="font-family: monospace;">
-                                                        {% if p.telefon and p.telefon|length >= 10 %}
-                                                        {% set tel = p.telefon | replace(" ", "") %}
-                                                        {% set tel = tel[-10:] %}
-                                                        <i class="fas fa-phone-alt text-success me-1"></i>
-                                                        +90 {{ tel[0:3] }} {{ tel[3:6] }} {{ tel[6:8] }} {{ tel[8:10] }}
-                                                        {% elif p.telefon %}
-                                                        <i class="fas fa-phone-alt text-secondary me-1"></i> {{
-                                                        p.telefon }}
-                                                        {% endif %}
-                                                    </div>
-                                                    {% if p.email %}
-                                                    <div class="small text-muted">
-                                                        <i class="fas fa-envelope text-secondary me-1"></i> {{ p.email
-                                                        }}
-                                                    </div>
-                                                    {% endif %}
                                                 </td>
 
-                                                <td>{{ p.unvan }}</td>
-                                                <td class="small">{{ p.birimi }}</td>
-                                                <td>{{ p.kampus }}</td>
-                                                <td><span class="badge bg-warning text-dark">{{ p.ofis }}</span></td>
+                                                <td class="align-middle">{{ p.unvan }}</td>
 
-                                                <td>
+                                                <td class="small align-middle">{{ p.birimi }}</td>
+
+                                                <td class="align-middle">{{ p.kampus }}</td>
+
+                                                <td class="align-middle"><span class="badge bg-warning text-dark">{{
+                                                        p.ofis }}</span></td>
+
+                                                <td class="align-middle">
                                                     <button type="button" class="btn btn-sm btn-warning py-0"
                                                         data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
+
                                                     <button type="button" class="btn btn-sm btn-primary py-0"
                                                         data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}">
                                                         <i class="fas fa-exchange-alt"></i>
                                                     </button>
+
                                                     {% if session['rol'] == 'admin' %}
                                                     <button type="button" onclick="silOnay('{{ p.id }}', 'personel')"
                                                         class="btn btn-sm btn-danger py-0">
@@ -884,7 +880,9 @@
                                             </tr>
                                             {% else %}
                                             <tr>
-                                                <td colspan="7" class="text-center py-4 text-muted">Kayıt bulunamadı.
+                                                <td colspan="7" class="text-center py-4 text-muted">
+                                                    <i class="fas fa-info-circle fa-2x mb-2"></i><br>
+                                                    Kayıtlı personel bulunamadı.
                                                 </td>
                                             </tr>
                                             {% endfor %}
@@ -895,13 +893,17 @@
 
                             {% if toplam_sayfa_personel > 1 %}
                             <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
-                                <a href="/?sayfa_p={{ sayfa_p - 1 }}&tab=personel"
+                                <a href="/?sayfa_p={{ sayfa_p - 1 }}&tab=personel&q={{ arama_terimi }}"
+                                    id="btnPrevPersonel"
                                     class="btn btn-sm btn-outline-secondary {% if sayfa_p == 1 %}disabled{% endif %}">
                                     <i class="fas fa-chevron-left"></i> Önceki
                                 </a>
+
                                 <span class="small fw-bold text-muted">{{ sayfa_p }} / {{ toplam_sayfa_personel
                                     }}</span>
-                                <a href="/?sayfa_p={{ sayfa_p + 1 }}&tab=personel"
+
+                                <a href="/?sayfa_p={{ sayfa_p + 1 }}&tab=personel&q={{ arama_terimi }}"
+                                    id="btnNextPersonel"
                                     class="btn btn-sm btn-outline-secondary {% if sayfa_p == toplam_sayfa_personel %}disabled{% endif %}">
                                     Sonraki <i class="fas fa-chevron-right"></i>
                                 </a>
@@ -957,12 +959,12 @@
             <div class="tab-pane fade {% if aktif_tab == 'ariza' or session['yetki_duzeyi'] == 0 %}show active{% endif %}"
                 id="ariza">
 
-                <div
-                    class="d-flex justify-content-between align-items-center mb-3 p-3 bg-white rounded shadow-sm border">
-                    <h5 class="text-primary mb-0"><i class="fas fa-tools"></i> Teknik Servis & Arıza Takip</h5>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-danger mb-0"><i class="fas fa-tools"></i> Arıza Yönetimi</h5>
 
-                    <button class="btn btn-danger btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#arizaModal">
-                        <i class="fas fa-exclamation-triangle"></i> Yeni Arıza Bildir
+                    <button class="btn btn-danger btn-sm shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#arizaEkleModal">
+                        <i class="fas fa-plus"></i> Yeni Arıza Bildir
                     </button>
                 </div>
 
@@ -1181,9 +1183,9 @@
                                 <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                                     <h6 class="text-secondary fw-bold mb-0"><i class="fas fa-chart-bar"></i> Görsel
                                         Analiz Sonucu</h6>
-                                    <a href="/rapor-grafik-ozet?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}"
-                                        class="btn btn-sm btn-outline-success fw-bold">
-                                        <i class="fas fa-file-excel"></i> Grafik Verilerini İndir
+                                    <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}"
+                                        class="btn btn-success fw-bold shadow-sm download-btn"> <i
+                                            class="fas fa-file-excel"></i> Tam Listeyi İndir
                                     </a>
                                 </div>
                                 <div class="row">
@@ -1210,8 +1212,9 @@
                             </div>
                             <div class="col-md-4 text-end">
                                 <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}"
-                                    class="btn btn-success fw-bold shadow-sm"><i class="fas fa-file-excel"></i> Tam
-                                    Listeyi İndir</a>
+                                    class="btn btn-success fw-bold shadow-sm download-btn"> <i
+                                        class="fas fa-file-excel"></i> Tam Listeyi İndir
+                                </a>
                             </div>
                         </div>
 
@@ -1386,21 +1389,37 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-warning">
-                    <h5 class="modal-title">📦 Toplu Demirbaş Yükle</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">📦 Toplu Demirbaş Yükle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="d-grid gap-2 mb-3"><a href="/indir-sablon/demirbas"
-                            class="btn btn-outline-success btn-sm fw-bold"><i class="fas fa-file-download"></i> Örnek
-                            Excel Şablonunu İndir</a></div>
+                    <div class="mb-3 border-bottom pb-3">
+                        <div class="d-grid gap-2">
+                            <a href="/indir-sablon/demirbas"
+                                class="btn btn-outline-success btn-sm fw-bold download-btn">
+                                <i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir
+                            </a>
+                        </div>
+                        <div class="form-text small text-center mt-1">
+                            Sadece "Malzeme Adı", "Cinsi" ve "Adet" sütunlarını doldurun.
+                        </div>
+                    </div>
+
                     <form action="/yukle-demirbas" method="POST" enctype="multipart/form-data">
-                        <label class="form-label fw-bold small">Yerleşke</label><select name="hedef_kampus"
-                            class="form-select mb-3">{% for yer in yerleskeler %}<option value="{{ yer }}">{{ yer }}
-                            </option>{% endfor %}</select>
-                        <label class="form-label fw-bold small">Bina / Blok Bilgisi</label><input type="text"
-                            name="bina_kat" class="form-control mb-3" placeholder="Örn: Yurtlar - A Blok" required>
-                        <label class="form-label fw-bold small">Excel Dosyaları</label><input type="file" name="dosya"
-                            class="form-control mb-3" required accept=".xlsx" multiple>
+                        <label class="form-label fw-bold small">Yerleşke</label>
+                        <select name="hedef_kampus" class="form-select mb-3">
+                            {% for yer in yerleskeler %}
+                            <option value="{{ yer }}">{{ yer }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <label class="form-label fw-bold small">Bina / Blok Bilgisi</label>
+                        <input type="text" name="bina_kat" class="form-control mb-3" placeholder="Örn: Yurtlar - A Blok"
+                            required>
+
+                        <label class="form-label fw-bold small">Excel Dosyaları</label>
+                        <input type="file" name="dosya" class="form-control mb-3" required accept=".xlsx" multiple>
+
                         <button type="submit" class="btn btn-warning w-100">Yükle</button>
                     </form>
                 </div>
@@ -1412,17 +1431,27 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title">👥 Toplu Personel Yükle</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">👥 Toplu Personel Yükle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="d-grid gap-2 mb-3"><a href="/indir-sablon/personel"
-                            class="btn btn-outline-success btn-sm fw-bold"><i class="fas fa-file-download"></i> Örnek
-                            Excel Şablonunu İndir</a></div>
+                    <div class="mb-3 border-bottom pb-3">
+                        <div class="d-grid gap-2">
+                            <a href="/indir-sablon/personel"
+                                class="btn btn-outline-success btn-sm fw-bold download-btn">
+                                <i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir
+                            </a>
+                        </div>
+                        <div class="form-text small text-center mt-1">
+                            İndirdiğiniz dosyadaki sütun başlıklarını değiştirmeyin.
+                        </div>
+                    </div>
+
                     <form action="/yukle-personel" method="POST" enctype="multipart/form-data">
-                        <label class="form-label fw-bold small">Personel Listesi (Excel)</label><input type="file"
-                            name="dosya" class="form-control mb-3" required accept=".xlsx"><button type="submit"
-                            class="btn btn-info text-white w-100">Listeyi Yükle</button>
+                        <label class="form-label fw-bold small">Personel Listesi (Excel)</label>
+                        <input type="file" name="dosya" class="form-control mb-3" required accept=".xlsx">
+
+                        <button type="submit" class="btn btn-info text-white w-100 fw-bold">Listeyi Yükle</button>
                     </form>
                 </div>
             </div>
@@ -1684,13 +1713,26 @@
         }
 
         function analizTuruDegis(tur) {
-            var form
-                = document.getElementById('form-demirbas');
+            // Değişkenleri doğru tanımlayalım
+            var formDemirbas = document.getElementById('form-demirbas');
             var formPersonel = document.getElementById('form-personel');
             var sonuclar = document.getElementById('analizSonuclariContainer');
-            if (sonuclar) { sonuclar.style.display = 'none'; }
-            if (tur === 'personel') { if (formDemirbas) formDemirbas.style.display = 'none'; if (formPersonel) formPersonel.style.display = 'block'; }
-            else { if (formPersonel) formPersonel.style.display = 'none'; if (formDemirbas) formDemirbas.style.display = 'block'; }
+
+            // Eğer sonuç tablosu açıksa onu gizle (Yeni arama yapılsın diye)
+            if (sonuclar) {
+                sonuclar.style.display = 'none';
+            }
+
+            // Değiştirme Mantığı
+            if (tur === 'personel') {
+                // Personeli Göster, Demirbaşı Gizle
+                if (formDemirbas) formDemirbas.style.display = 'none';
+                if (formPersonel) formPersonel.style.display = 'block';
+            } else {
+                // Demirbaşı Göster, Personeli Gizle
+                if (formPersonel) formPersonel.style.display = 'none';
+                if (formDemirbas) formDemirbas.style.display = 'block';
+            }
         }
 
         function highlightSearchTerm(term) {
@@ -2261,25 +2303,29 @@
         let globalState = { 'demirbas': [], 'personel': [] };
 
         document.addEventListener("DOMContentLoaded", function () {
+            // --- 1. DEDEKTİF: SAYFA YENİLEME (F5) KONTROLÜ ---
             const navigationEntry = performance.getEntriesByType("navigation")[0];
-            if (navigationEntry && navigationEntry.type === 'reload') {
-                localStorage.removeItem(STORAGE_KEY);
-            } else {
-                const savedData = localStorage.getItem(STORAGE_KEY);
-                if (savedData) globalState = JSON.parse(savedData);
-            }
 
-            const tabLinks = document.querySelectorAll('.nav-link');
-            tabLinks.forEach(link => {
-                link.addEventListener('click', function () {
-                    const currentUrl = new URL(window.location.href);
-                    const targetUrl = new URL(this.href);
-                    if (currentUrl.searchParams.get('tab') !== targetUrl.searchParams.get('tab')) {
-                        localStorage.removeItem(STORAGE_KEY);
-                        globalState = { 'demirbas': [], 'personel': [] };
-                    }
-                });
-            });
+            if (navigationEntry && navigationEntry.type === 'reload') {
+                // A) Seçim Hafızasını Temizle
+                localStorage.removeItem(STORAGE_KEY);
+
+                // B) İstatistik Sekmesinde Filtreleri Temizle (YENİ EKLENEN KISIM)
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('tab') === 'istatistik' && urlParams.has('analiz_turu')) {
+                    // Eğer istatistik sekmesinde bir analiz yapılmışsa ve F5 atıldıysa:
+                    // Sayfayı parametresiz (temiz) haliyle yeniden yükle
+                    window.location.href = '/?tab=istatistik';
+                    return; // Aşağıdaki kodların çalışmasını durdur
+                }
+
+            } else {
+                // Normal geldiyse hafızadan geri yükle
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    globalState = JSON.parse(savedData);
+                }
+            }
 
             const urlParams = new URLSearchParams(window.location.search);
             const aramaTerimi = urlParams.get('q') || '';
@@ -2512,18 +2558,273 @@
             window.location.href = url;
         }
 
+        // --- PROGRESS BAR AYARLARI ---
         window.addEventListener('load', () => {
             if (typeof NProgress !== 'undefined') NProgress.done();
         });
 
-        document.querySelectorAll('a:not([href="#"]):not([target="_blank"])').forEach(el => {
+        document.querySelectorAll('a:not([href="#"])').forEach(el => {
             el.addEventListener('click', function () {
-                if (!this.getAttribute('data-bs-toggle') && !this.getAttribute('onclick')) {
+                // EĞER:
+                // 1. Modal açmıyorsa (data-bs-toggle yoksa)
+                // 2. Onclick fonksiyonu yoksa
+                // 3. Yeni sekmede açılmıyorsa (target="_blank" yoksa)
+                // 4. VE "no-loading" sınıfına sahip DEĞİLSE
+                if (!this.getAttribute('data-bs-toggle') &&
+                    !this.getAttribute('onclick') &&
+                    this.getAttribute('target') !== '_blank' &&
+                    !this.classList.contains('no-loading')) {
+
                     if (typeof NProgress !== 'undefined') NProgress.start();
                 }
             });
         });
+        // --- PROGRESS BAR AYARLARI ---
+        window.addEventListener('load', () => {
+            if (typeof NProgress !== 'undefined') NProgress.done();
+        });
+
+        // Normal linklere tıklayınca çalışsın (AMA download butonlarını hariç tutuyoruz)
+        document.querySelectorAll('a:not([href="#"])').forEach(el => {
+            el.addEventListener('click', function () {
+                if (!this.getAttribute('data-bs-toggle') &&
+                    !this.getAttribute('onclick') &&
+                    this.getAttribute('target') !== '_blank' &&
+                    !this.classList.contains('download-btn')) { // Download butonlarını burası yönetmesin
+
+                    if (typeof NProgress !== 'undefined') NProgress.start();
+                }
+            });
+        });
+
+        // --- SMOOTH DOWNLOAD (NPROGRESS İLE SENKRONİZE) ---
+        document.querySelectorAll('.download-btn').forEach(btn => {
+            btn.addEventListener('click', async function (e) {
+                e.preventDefault(); // Sayfanın git-gel yapmasını engelle
+
+                // 1. İşlem Başlıyor: Barı Başlat ve Butonu Kilitle
+                if (typeof NProgress !== 'undefined') NProgress.start();
+
+                const originalContent = this.innerHTML;
+                const url = this.getAttribute('href');
+
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> İndiriliyor...';
+                this.classList.add('disabled');
+
+                try {
+                    // 2. Dosyayı iste (Bu işlem süresi kadar bar bekler/ilerler)
+                    const response = await fetch(url);
+
+                    if (!response.ok) throw new Error('İndirme başarısız oldu');
+
+                    // 3. Dosya verisini al
+                    const blob = await response.blob();
+
+                    // 4. Dosya ismini bul
+                    let filename = 'Rapor.xlsx';
+                    const disposition = response.headers.get('Content-Disposition');
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+
+                    // 5. İndirmeyi tetikle
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(downloadUrl);
+
+                    // İstersen başarı mesajı (Opsiyonel)
+                    // const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                    // Toast.fire({ icon: 'success', title: 'Dosya İndirildi' });
+
+                } catch (error) {
+                    console.error('İndirme hatası:', error);
+                    Swal.fire({ icon: 'error', title: 'Hata', text: 'Dosya indirilemedi.' });
+                } finally {
+                    // 6. İşlem Bitti: Barı Tamamla ve Butonu Aç
+                    if (typeof NProgress !== 'undefined') NProgress.done();
+
+                    this.innerHTML = originalContent;
+                    this.classList.remove('disabled');
+                }
+            });
+        });
+
+        // --- GELİŞMİŞ HIZLI SAYFA GEÇİŞİ (BASILI TUTMA DESTEKLİ) ---
+        let targetPage = 1;       // Hedeflenen sayfa
+        let activeType = '';      // 'demirbas' veya 'personel'
+        let maxPage = 1;          // O anki listenin son sayfası
+        let isNavigating = false; // Tuşa basılıyor mu?
+
+        // URL Parametrelerini almak için yardımcı fonksiyon
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param) || '';
+        }
+
+        // 1. TUŞA BASILDIĞINDA (Hold Down)
+        document.addEventListener('keydown', function (e) {
+            // Güvenlik: Inputlardayken veya Modal açıkken çalışma
+            const activeTag = document.activeElement.tagName.toLowerCase();
+            if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+            if (document.body.classList.contains('modal-open')) return;
+
+            // Sadece Sol/Sağ ok tuşlarında çalış
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+            // Aktif Sekmeyi Bul
+            const demirbasPane = document.getElementById('demirbas');
+            const personelPane = document.getElementById('personel');
+
+            // Eğer sekmeler bulunamazsa dur (Hata önleyici)
+            if (!demirbasPane || !personelPane) return;
+
+            const demirbasAktif = demirbasPane.classList.contains('active');
+            const personelAktif = personelPane.classList.contains('active');
+
+            // İlk basış anında verileri hazırla
+            if (!isNavigating) {
+                isNavigating = true;
+
+                if (demirbasAktif) {
+                    const curEl = document.getElementById('d_current_page');
+                    const totEl = document.getElementById('d_total_pages');
+                    if (!curEl || !totEl) return; // Inputlar yoksa çık
+
+                    activeType = 'demirbas';
+                    targetPage = parseInt(curEl.value) || 1;
+                    maxPage = parseInt(totEl.value) || 1;
+                } else if (personelAktif) {
+                    const curEl = document.getElementById('p_current_page');
+                    const totEl = document.getElementById('p_total_pages');
+                    if (!curEl || !totEl) return; // Inputlar yoksa çık
+
+                    activeType = 'personel';
+                    targetPage = parseInt(curEl.value) || 1;
+                    maxPage = parseInt(totEl.value) || 1;
+                } else {
+                    isNavigating = false;
+                    return;
+                }
+
+                // Göstergeyi Aç
+                document.getElementById('pageNavigatorOverlay').style.display = 'block';
+            }
+
+            // HESAPLAMA YAP (Basılı tuttukça burası sürekli çalışır)
+            if (e.key === 'ArrowRight') {
+                if (targetPage < maxPage) targetPage++;
+            } else if (e.key === 'ArrowLeft') {
+                if (targetPage > 1) targetPage--;
+            }
+
+            // Ekrandaki sayıyı güncelle
+            document.getElementById('pageNavNumber').innerText = targetPage;
+        });
+
+        // 2. TUŞ BIRAKILDIĞINDA (Go)
+        document.addEventListener('keyup', function (e) {
+            if (!isNavigating) return;
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+            // Modu kapat
+            isNavigating = false;
+            document.getElementById('pageNavigatorOverlay').style.display = 'none';
+
+            // URL OLUŞTUR VE GİT
+            const arama = getQueryParam('q');
+            let url = '/?tab=' + activeType + '&q=' + encodeURIComponent(arama);
+
+            // Mevcut diğer sayfa bilgisini koru
+            const currentD = document.getElementById('d_current_page') ? document.getElementById('d_current_page').value : 1;
+            const currentP = document.getElementById('p_current_page') ? document.getElementById('p_current_page').value : 1;
+
+            if (activeType === 'demirbas') {
+                url += '&sayfa_d=' + targetPage + '&sayfa_p=' + currentP;
+            } else {
+                url += '&sayfa_p=' + targetPage + '&sayfa_d=' + currentD;
+            }
+
+            // Yönlendir
+            window.location.href = url;
+        });
     </script>
+    <div id="pageNavigatorOverlay"
+        style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); color: white; padding: 20px 40px; border-radius: 10px; z-index: 9999; text-align: center; font-family: sans-serif;">
+        <div style="font-size: 14px; opacity: 0.8;">Hedef Sayfa</div>
+        <div id="pageNavNumber" style="font-size: 40px; font-weight: bold;">1</div>
+        <div style="font-size: 12px; margin-top: 5px; color: #ffc107;">Tuşu Bırak ve Git</div>
+    </div>
+    <div class="modal fade" id="arizaEkleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">🚨 Arıza Bildir</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="/ekle-ariza" method="POST">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Demirbaş ID (Varsa)</label>
+                            <input type="number" name="demirbas_id" class="form-control"
+                                placeholder="Örn: Etiketteki ID (154)">
+                            <div class="form-text small">
+                                Eğer belirli bir cihaz bozuksa ID'sini yazın. Odanın genel sorunuysa (Klima, Kapı vb.)
+                                boş bırakın.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Arızalı Konum / Ofis</label>
+
+                            {# EĞER: Yetki düzeyi 1'den büyükse (Admin/Birim Sorumlusu) veya Teknik ise #}
+                            {% if (session.get('yetki_duzeyi')|int > 0) or (session.get('rol') == 'teknik') %}
+                            <input type="text" name="konum" class="form-control"
+                                placeholder="Örn: Z-23 veya Bilgi İşlem" required>
+                            <div class="form-text text-danger small">Yönetici olduğunuz için konumu elle
+                                belirtmelisiniz.</div>
+
+                            {% else %}
+                            <input type="text" name="konum" class="form-control" value="{{ session.get('ofis', '') }}"
+                                readonly>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Arıza Başlığı</label>
+                            <input type="text" name="baslik" class="form-control"
+                                placeholder="Örn: Yazıcı Kağıt Sıkıştırıyor" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Detaylı Açıklama</label>
+                            <textarea name="aciklama" class="form-control" rows="3" required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Aciliyet Durumu</label>
+                            <select name="oncelik" class="form-select">
+                                <option value="Normal">Normal</option>
+                                <option value="Acil" class="text-danger fw-bold">Acil</option>
+                                <option value="Kritik" class="bg-danger text-white">Kritik (Sistem Durdu)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger w-100 fw-bold">Kaydı Oluştur</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
