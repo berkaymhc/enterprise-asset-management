@@ -1,6 +1,22 @@
+# Sanal Ortam (Binlerce dosya yüklenmesin)
 venv/
+env/
+
+# Veritabanı (İçinde gerçek veriler var, yükleme!)
+*.db
+*.sqlite3
+instance/
+
+# Python Cache Dosyaları (Gereksiz)
 __pycache__/
 *.pyc
-.DS_Store
+
+# Gizli Anahtarlar (GÜVENLİK İÇİN ÇOK ÖNEMLİ)
 .env
-*.db
+
+# Yüklenen Dosyalar (Kullanıcı verileri gitmemeli)
+uploads/
+
+# IDE Ayarları
+.vscode/
+.idea/

@@ -380,6 +380,20 @@
 </head>
 
 <body class="bg-light">
+    <div id="global-loader"
+        class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex flex-column justify-content-center align-items-center"
+        style="z-index: 9999;">
+        <div class="bg-white p-4 rounded shadow text-center" style="width: 300px;">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <h5 id="loader-text" class="fw-bold mb-2">İşlem Yapılıyor...</h5>
+
+            <div class="progress" style="height: 20px;">
+                <div id="dynamic-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                    role="progressbar" style="width: 0%">0%</div>
+            </div>
+            <small class="text-muted mt-2 d-block">Lütfen bekleyiniz, sayfayı kapatmayınız.</small>
+        </div>
+    </div>
 
     <div class="container-fluid px-5 mt-4">
 
@@ -449,7 +463,7 @@
                 {% endif %}
                 {% if session['rol'] == 'admin' %}
                 {% if session['yetki_duzeyi'] >= 1 %} <a href="/rapor" class="btn btn-success btn-sm shadow-sm fw-bold"
-                    target="_blank">
+                    onclick="raporIndirLoading()" target="_blank">
                     <i class="fas fa-file-excel"></i> Rapor
                 </a>
                 {% endif %}
@@ -1178,8 +1192,10 @@
                             <div class="col-md-3"><label class="form-label small fw-bold">Bina / Konum</label><input
                                     type="text" name="ist_konum" class="form-control" placeholder="Örn: Yurtlar"
                                     value="{{ ist_konum }}"></div>
-                            <div class="col-md-2"><button type="submit"
-                                    class="btn btn-warning w-100 fw-bold text-dark">Say</button></div>
+                            <div class="col-md-2"><button type="submit" name="islem" value="analiz"
+                                    class="btn btn-warning w-100 fw-bold text-dark" onclick="showLoader()">
+                                    <i class="fas fa-calculator"></i> Say / Analiz Et
+                                </button></div>
                         </div>
                     </form>
                 </div>
@@ -1206,8 +1222,10 @@
                             <div class="col-md-2"><label class="form-label small fw-bold">Ad / Ünvan</label><input
                                     type="text" name="ist_p_ad" class="form-control" placeholder="Opsiyonel"
                                     value="{{ ist_p_ad }}"></div>
-                            <div class="col-md-2"><button type="submit"
-                                    class="btn btn-info w-100 fw-bold text-white">Listele</button></div>
+                            <div class="col-md-2"><button type="submit" name="islem" value="analiz"
+                                    class="btn btn-info w-100 fw-bold text-white" onclick="showLoader()">
+                                    <i class="fas fa-search"></i> Listele / Analiz Et
+                                </button></div>
                         </div>
                     </form>
                 </div>
@@ -1219,9 +1237,10 @@
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                                 <h6 class="text-secondary fw-bold mb-0"><i class="fas fa-chart-bar"></i> Görsel
                                     Analiz Sonucu</h6>
-                                <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}"
-                                    class="btn btn-success fw-bold shadow-sm download-btn"> <i
-                                        class="fas fa-file-excel"></i> Tam Listeyi İndir
+                                <a href="{{ url_for('reports.rapor_analiz', analiz_turu=analiz_turu, ist_malzeme=ist_malzeme, ist_kampus=ist_kampus, ist_konum=ist_konum, ist_p_ad=ist_p_ad, ist_p_birim=ist_p_birim, ist_p_kampus=ist_p_kampus, ist_p_ofis=ist_p_ofis) }}"
+                                    class="btn btn-success fw-bold shadow-sm download-btn"
+                                    onclick="raporIndirLoading()">
+                                    <i class="fas fa-file-excel"></i> Tam Listeyi İndir
                                 </a>
                             </div>
                             <div class="row">
@@ -1248,7 +1267,7 @@
                         </div>
                         <div class="col-md-4 text-end">
                             <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}"
-                                class="btn btn-success fw-bold shadow-sm download-btn"> <i
+                                class="btn btn-success fw-bold shadow-sm download-btn" onclick="raporIndirLoading()"> <i
                                     class="fas fa-file-excel"></i> Tam Listeyi İndir
                             </a>
                         </div>
@@ -1431,8 +1450,8 @@
                 <div class="modal-body">
                     <div class="mb-3 border-bottom pb-3">
                         <div class="d-grid gap-2">
-                            <a href="/indir-sablon/demirbas"
-                                class="btn btn-outline-success btn-sm fw-bold download-btn">
+                            <a href="/indir-sablon/demirbas" class="btn btn-outline-success btn-sm fw-bold download-btn"
+                                onclick="raporIndirLoading()">
                                 <i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir
                             </a>
                         </div>
@@ -2717,6 +2736,7 @@
             // 4. Modalı Aç
             modal.show();
         }
+
     </script>
 
     <div class="modal fade" id="arizaEkleModal" tabindex="-1">
@@ -2789,6 +2809,109 @@
             </div>
         </div>
     </div>
+    <script>
+        // --- LOADING YÖNETİCİSİ ---
+
+        // 1. Loading Ekranını Göster/Gizle Fonksiyonları
+        function showLoader(text = "İşlem Yapılıyor...", percentage = false) {
+            const loader = document.getElementById('global-loader');
+            const txt = document.getElementById('loader-text');
+            const bar = document.getElementById('dynamic-bar');
+
+            loader.classList.remove('d-none');
+            txt.innerText = text;
+
+            if (percentage) {
+                bar.style.width = '0%';
+                bar.innerText = '0%';
+                bar.parentElement.classList.remove('d-none'); // Barı göster
+            } else {
+                // Yüzde yoksa (Sadece dönen tekerlek yeterliyse) barı %100 yapıp animasyonlu bırak
+                bar.style.width = '100%';
+                bar.innerText = '';
+                bar.classList.add('bg-secondary'); // Rengi değiştir ki upload olmadığı anlaşılsın
+            }
+        }
+
+        function hideLoader() {
+            document.getElementById('global-loader').classList.add('d-none');
+        }
+
+        // 2. TÜM FORMLARI YAKALA (Otomatik Loading)
+        // Sayfadaki herhangi bir form gönderildiğinde (Submit) loading açılır.
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+
+                // Eğer bu bir DOSYA YÜKLEME formuysa (enctype="multipart/form-data")
+                // Standart gönderimi iptal et ve AJAX ile gönder (Progress Bar için)
+                if (this.enctype === "multipart/form-data") {
+                    e.preventDefault(); // Sayfa yenilenmesini durdur
+                    uploadWithProgress(this);
+                } else {
+                    // Normal form ise (Arama, Ekleme vs.) sadece spinner göster
+                    showLoader("İşlem Sürüyor...");
+                }
+            });
+        });
+
+        // 3. DOSYA YÜKLEME VE PROGRESS BAR MANTIĞI (AJAX)
+        function uploadWithProgress(form) {
+            const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
+
+            // Yükleme başladığında
+            showLoader("Dosyalar Yükleniyor...", true); // true = Progress Bar Aktif
+
+            // İlerleme olayını dinle
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    const bar = document.getElementById('dynamic-bar');
+
+                    bar.style.width = percentComplete + '%';
+                    bar.innerText = percentComplete + '%';
+
+                    if (percentComplete === 100) {
+                        document.getElementById('loader-text').innerText = "Sunucu İşliyor, Lütfen Bekleyin...";
+                        bar.classList.remove('bg-primary');
+                        bar.classList.add('bg-success');
+                    }
+                }
+            };
+
+            // İşlem bittiğinde
+            xhr.onload = function () {
+                if (xhr.status === 200 || xhr.status === 302) {
+                    // Başarılıysa sayfayı yenile (Flash mesajları görünsün diye)
+                    // Flask redirect yaptığı için responseURL'e gitmemiz lazım
+                    window.location.href = xhr.responseURL || window.location.href;
+                } else {
+                    alert("Yükleme sırasında bir hata oluştu!");
+                    hideLoader();
+                }
+            };
+
+            // Hata durumunda
+            xhr.onerror = function () {
+                alert("Sunucuya ulaşılamadı.");
+                hideLoader();
+            };
+
+            // İsteği gönder
+            xhr.open(form.method, form.action, true);
+            xhr.send(formData);
+        }
+
+        // 4. RAPOR İNDİRME BUTONLARI İÇİN (Özel Durum)
+        // İndirme işlemi sayfayı yenilemez, bu yüzden loading'i bir süre sonra kapatmalıyız.
+        function raporIndirLoading() {
+            showLoader("Rapor Hazırlanıyor...", false);
+            // İndirme başlayınca (tahmini 3 sn sonra) loading'i kapat
+            setTimeout(() => {
+                hideLoader();
+            }, 3000);
+        }
+    </script>
 </body>
 
 </html>
