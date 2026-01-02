@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,93 +8,116 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .card-header-custom { background: linear-gradient(45deg, #0d6efd, #0dcaf0); color: white; }
-        .info-row { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; }
-        .info-label { font-weight: bold; color: #555; }
-        .info-value { color: #000; font-weight: 500; text-align: right; }
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(45deg, #0d6efd, #0dcaf0);
+            color: white;
+        }
+
+        .info-row {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .info-value {
+            color: #000;
+            font-weight: 500;
+            text-align: right;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-4">
-            
-            <div class="card shadow border-0 rounded-3">
-                <div class="card-header card-header-custom text-center py-4">
-                    <i class="fas fa-cube fa-4x mb-2"></i>
-                    <h4 class="mb-0">{{ item.ad }}</h4>
-                    <span class="badge bg-light text-primary mt-2">ID: {{ item.id }}</span>
-                </div>
-                
-                <div class="card-body p-4">
-                    {% if ariza %}
-                    <div class="alert alert-danger d-flex align-items-center mb-4">
-                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                        <div>
-                            <strong>Arızalı!</strong>
-                            <div class="small">Bu cihaz için açık bir arıza kaydı var.</div>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+
+                <div class="card shadow border-0 rounded-3">
+                    <div class="card-header card-header-custom text-center py-4">
+                        <i class="fas fa-cube fa-4x mb-2"></i>
+                        <h4 class="mb-0">{{ item.ad }}</h4>
+                        <span class="badge bg-light text-primary mt-2">ID: {{ item.id }}</span>
+                    </div>
+
+                    <div class="card-body p-4">
+                        {% if ariza %}
+                        <div class="alert alert-danger d-flex align-items-center mb-4">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <div>
+                                <strong>Arızalı!</strong>
+                                <div class="small">Bu cihaz için açık bir arıza kaydı var.</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-success d-flex align-items-center mb-4">
+                            <i class="fas fa-check-circle fa-2x me-3"></i>
+                            <div>
+                                <strong>Durum: Aktif</strong>
+                                <div class="small">Cihaz kullanımda ve sağlam.</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-layer-group"></i> Cinsi</span>
+                            <span class="info-value">{{ item.cinsi }}</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-university"></i> Kampüs</span>
+                            <span class="info-value">{{ item.kampus }}</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-map-marker-alt"></i> Konum / Ofis</span>
+                            <span class="info-value">{{ item.konum }}</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label"><i class="fas fa-cubes"></i> Stok Adedi</span>
+                            <span class="info-value">{{ item.adet }}</span>
+                        </div>
+
+                        <div class="info-row border-0">
+                            <span class="info-label"><i class="fas fa-calendar-alt"></i> Kayıt Tarihi</span>
+                            <span class="info-value">{{ item.tarih }}</span>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="alert alert-success d-flex align-items-center mb-4">
-                        <i class="fas fa-check-circle fa-2x me-3"></i>
-                        <div>
-                            <strong>Durum: Aktif</strong>
-                            <div class="small">Cihaz kullanımda ve sağlam.</div>
-                        </div>
-                    </div>
-                    {% endif %}
 
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-layer-group"></i> Cinsi</span>
-                        <span class="info-value">{{ item.cinsi }}</span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-university"></i> Kampüs</span>
-                        <span class="info-value">{{ item.kampus }}</span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-map-marker-alt"></i> Konum / Ofis</span>
-                        <span class="info-value">{{ item.konum }}</span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="info-label"><i class="fas fa-cubes"></i> Stok Adedi</span>
-                        <span class="info-value">{{ item.adet }}</span>
-                    </div>
-
-                    <div class="info-row border-0">
-                        <span class="info-label"><i class="fas fa-calendar-alt"></i> Kayıt Tarihi</span>
-                        <span class="info-value">{{ item.tarih }}</span>
-                    </div>
-                </div>
-
-                <div class="card-footer bg-white p-3">
-                    <div class="d-grid gap-2">
-                        {% if not session.get('kullanici_adi') %}
+                    <div class="card-footer bg-white p-3">
+                        <div class="d-grid gap-2">
+                            {% if not session.get('kullanici_adi') %}
                             <a href="/login" class="btn btn-outline-primary">
                                 <i class="fas fa-sign-in-alt"></i> Yönetici Girişi Yap
                             </a>
-                        {% else %}
+                            {% else %}
                             <a href="/?tab=demirbas&q={{ item.ad }}" class="btn btn-primary">
                                 <i class="fas fa-search"></i> Sistemde Göster
                             </a>
-                        {% endif %}
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="text-center mt-3 text-muted small">
-                &copy; {{ item.tarih[:4] }} Üniversite Demirbaş Sistemi
-            </div>
+                <div class="text-center mt-3 text-muted small">
+                    &copy; {{ item.tarih[:4] }} Üniversite Demirbaş Sistemi
+                </div>
 
+            </div>
         </div>
     </div>
-</div>
 
 </body>
+
 </html>

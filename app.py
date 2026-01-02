@@ -502,33 +502,69 @@ def index():
     cur.execute(p_sql + " ORDER BY ofis ASC LIMIT ? OFFSET ?", p_params + [limit, offset_p])
     personeller = cur.fetchall()
 
-    # --- DİĞER VERİLER (ARIZA, GEÇMİŞ) ---
-    a_sql = "SELECT * FROM arizalar"
+    # ==========================================
+    # --- ARIZA SORGUSU (GÜNCELLENDİ: SAYFALAMA EKLENDİ) ---
+    # ==========================================
+    
+    # 1. Sayfalama Ayarları
+    sayfa_a = request.args.get('sayfa_a', 1, type=int)
+    limit_ariza = 5  # İsteğin üzerine sayfada 5 arıza
+    offset_a = (sayfa_a - 1) * limit_ariza
+
+    a_sql = "SELECT * FROM arizalar WHERE 1=1"
     a_params = []
     mevcut_kisi = session.get('ad_soyad', '')
 
+    # 2. Yetki Filtresi (Normal personel sadece kendi bildirdiklerini görür)
     if kullanici_rol not in ['admin', 'teknik']:
-        a_sql += " WHERE bildiren = ?"
+        a_sql += " AND bildiren = ?"
         a_params.append(mevcut_kisi)
     
-    a_sql += " ORDER BY id DESC"
+    # 3. Arama Filtresi (Eğer arama yapılıyorsa Arızalarda da ara)
+    if arama_terimi and aktif_tab == 'ariza':
+        t = f"%{turkce_normalize(arama_terimi)}%"
+        a_sql += " AND (NORMALIZE(baslik) LIKE ? OR NORMALIZE(konum) LIKE ? OR NORMALIZE(aciklama) LIKE ?)"
+        a_params.extend([t, t, t])
+
+    # 4. Toplam Arıza Sayısını Bul (Sayfalama butonları için)
+    count_sql = a_sql.replace("SELECT *", "SELECT COUNT(*)")
+    cur.execute(count_sql, a_params)
+    total_ariza = cur.fetchone()[0]
+    toplam_sayfa_ariza = math.ceil(total_ariza / limit_ariza) if total_ariza > 0 else 1
+
+    # 5. Verileri Çek (LIMIT ve OFFSET ile + Akıllı Sıralama)
+    # Sıralama: Önce 'Bekliyor', Sonra 'İşlemde', En son 'Tamamlandı/İptal'
+    a_sql += """ ORDER BY 
+                 CASE durum 
+                    WHEN 'Bekliyor' THEN 1 
+                    WHEN 'İşlemde' THEN 2 
+                    ELSE 3 
+                 END, id DESC 
+                 LIMIT ? OFFSET ?"""
+    
+    a_params.extend([limit_ariza, offset_a])
+    
     cur.execute(a_sql, a_params)
     arizalar = cur.fetchall()
     
+    # 6. Bildirim Rozeti İçin Sayı (Sayfalamadan bağımsız toplam bekleyen sayısı)
     bildirim_sayisi = 0
     if kullanici_rol in ['admin', 'teknik']:
         cur.execute("SELECT COUNT(*) FROM arizalar WHERE durum='Bekliyor'")
         bildirim_sayisi = cur.fetchone()[0]
     else:
+        # Personel sadece kendi bekleyenlerini görsün (opsiyonel)
         cur.execute("SELECT COUNT(*) FROM arizalar WHERE bildiren=? AND durum='Bekliyor'", (mevcut_kisi,))
         bildirim_sayisi = cur.fetchone()[0]
 
+    # --- GEÇMİŞ VERİLERİ (Aynı kalıyor) ---
     cur.execute("SELECT * FROM yukleme_gecmisi WHERE tur = 'Yükleme' ORDER BY id DESC LIMIT 1")
     son_yukleme = cur.fetchone()
     
     cur.execute("SELECT * FROM yukleme_gecmisi ORDER BY id DESC LIMIT 100")
     tum_gecmis = cur.fetchall()
 
+    # --- KULLANICI LİSTESİ (Aynı kalıyor) ---
     kullanicilar_listesi = []
     if session.get('rol') == 'admin':
         cur.execute("SELECT * FROM kullanicilar ORDER BY id ASC")
@@ -549,6 +585,8 @@ def index():
                            personeller=personeller,
                            arizalar=arizalar,
                            bildirim_sayisi=bildirim_sayisi,
+                           sayfa_a=sayfa_a,
+                           toplam_sayfa_ariza=toplam_sayfa_ariza,
                            yerleskeler=YERLESKELER,
                            sayfa_d=sayfa_d,
                            sayfa_p=sayfa_p,
@@ -1587,10 +1625,11 @@ def get_all_ids():
     tab = request.args.get('tab', 'demirbas')
     q = request.args.get('q', '').strip()
     
-    # Yetki kontrollerini burada da yapmalıyız (Güvenlik)
-    kullanici_yetki = int(session.get('yetki_duzeyi', 0))
-    kullanici_birim = session.get('birim', 'Genel')
-    izinli_kampus = BIRIM_KAMPUS_MAP.get(kullanici_birim, None)
+    # Yetki Bilgileri
+    yetki = int(session.get('yetki_duzeyi', 0))
+    rol = session.get('rol')
+    birim = session.get('birim', 'Genel')
+    izinli_kampus = BIRIM_KAMPUS_MAP.get(birim, None)
 
     conn = baglanti_kur()
     cursor = conn.cursor()
@@ -1599,21 +1638,16 @@ def get_all_ids():
     if tab == 'demirbas':
         sql = "SELECT id FROM demirbaslar WHERE 1=1"
         params = []
-
-        # 1. YETKİ FİLTRESİ
-        if kullanici_yetki == 1: # Birim Sorumlusu
-             if izinli_kampus:
-                sql += " AND kampus = ?"
-                params.append(izinli_kampus)
-        elif kullanici_yetki == 0: # Standart Personel
-             # Hiçbir şey göremez
+        if yetki == 1 and izinli_kampus:
+            sql += " AND kampus = ?"
+            params.append(izinli_kampus)
+        elif yetki == 0 and rol != 'teknik': # Teknik değilse ve yetki 0 ise görmesin
              sql += " AND 1=0"
 
-        # 2. ARAMA FİLTRESİ
         if q:
             t = f"%{turkce_normalize(q)}%"
-            sql += " AND (NORMALIZE(ad) LIKE ? OR NORMALIZE(konum) LIKE ? OR NORMALIZE(kampus) LIKE ? OR NORMALIZE(cinsi) LIKE ?)"
-            params.extend([t, t, t, t])
+            sql += " AND (NORMALIZE(ad) LIKE ? OR NORMALIZE(konum) LIKE ?)"
+            params.extend([t, t])
         
         cursor.execute(sql, params)
         ids = [str(r[0]) for r in cursor.fetchall()]
@@ -1621,28 +1655,40 @@ def get_all_ids():
     elif tab == 'personel':
         sql = "SELECT id FROM personeller WHERE 1=1"
         params = []
-
-        # 1. YETKİ FİLTRESİ
-        if kullanici_yetki == 1:
+        if yetki == 1:
             sql += " AND birimi = ?"
-            params.append(kullanici_birim)
-        elif kullanici_yetki == 0:
+            params.append(birim)
+        elif yetki == 0 and rol != 'teknik':
             sql += " AND 1=0"
 
-        # 2. ARAMA FİLTRESİ
         if q:
             t = f"%{turkce_normalize(q)}%"
-            sql += """ AND (
-                        NORMALIZE(ad_soyad) LIKE ? OR 
-                        NORMALIZE(unvan) LIKE ? OR 
-                        NORMALIZE(birimi) LIKE ? OR 
-                        NORMALIZE(kampus) LIKE ? OR 
-                        NORMALIZE(ofis) LIKE ?
-                    )"""
-            params.extend([t, t, t, t, t])
+            sql += " AND (NORMALIZE(ad_soyad) LIKE ? OR NORMALIZE(ofis) LIKE ?)"
+            params.extend([t, t])
+            
+        cursor.execute(sql, params)
+        ids = [str(r[0]) for r in cursor.fetchall()]
+
+    # --- BURAYI EKLEDİK (ARIZA İÇİN) ---
+    elif tab == 'ariza':
+        sql = "SELECT id FROM arizalar WHERE 1=1"
+        params = []
+        
+        # Eğer Admin veya Teknik değilse SADECE kendi bildirdiklerini seçebilir
+        if rol not in ['admin', 'teknik'] and yetki < 3:
+            mevcut_kisi = session.get('ad_soyad', '')
+            sql += " AND bildiren = ?"
+            params.append(mevcut_kisi)
+        
+        # Arama filtresi varsa
+        if q:
+            t = f"%{turkce_normalize(q)}%"
+            sql += " AND (NORMALIZE(baslik) LIKE ? OR NORMALIZE(konum) LIKE ? OR NORMALIZE(aciklama) LIKE ?)"
+            params.extend([t, t, t])
 
         cursor.execute(sql, params)
         ids = [str(r[0]) for r in cursor.fetchall()]
+    # -----------------------------------
 
     conn.close()
     return jsonify(ids)
@@ -1664,14 +1710,30 @@ def ekle_ariza():
     conn = baglanti_kur()
     cur = conn.cursor()
     
-    konum = request.form.get('konum')
-    # Demirbaş ID varsa al, yoksa (Genel ofis arızası ise) 0 veya None yap
-    demirbas_id = request.form.get('demirbas_id')
-    if not demirbas_id or demirbas_id.strip() == "":
-        demirbas_id = 0 # Genel Arıza (Klima, Kapı vb.)
+    # 1. ID KONTROLÜ (Zorunlu)
+    raw_id = request.form.get('demirbas_id')
     
+    if not raw_id or raw_id.strip() == "":
+        flash("HATA: Demirbaş ID girilmesi zorunludur!", "danger")
+        return redirect(url_for('index', tab='ariza'))
+        
+    try:
+        demirbas_id = int(raw_id)
+    except ValueError:
+        flash("HATA: Geçersiz ID formatı!", "danger")
+        return redirect(url_for('index', tab='ariza'))
+
+    # 2. KONUM KONTROLÜ (Otomatik Bulma)
+    konum = request.form.get('konum')
+    
+    # Eğer konum boşsa, ID'den konumu bulmaya çalış
     if not konum or konum.strip() == "":
-        konum = session.get('ofis', 'Belirtilmedi')
+        cur.execute("SELECT konum FROM demirbaslar WHERE id = ?", (demirbas_id,))
+        bulunan = cur.fetchone()
+        if bulunan:
+            konum = bulunan['konum']
+        else:
+            konum = "Konum Bulunamadı" # ID veritabanında yoksa
 
     baslik = request.form.get('baslik')
     aciklama = request.form.get('aciklama')
@@ -1680,22 +1742,17 @@ def ekle_ariza():
     tarih = datetime.now().strftime("%Y-%m-%d %H:%M")
     
     try:
-        # demirbas_id EKLENDİ
         cur.execute("""
             INSERT INTO arizalar (konum, baslik, aciklama, bildiren, oncelik, durum, tarih, demirbas_id) 
             VALUES (?, ?, ?, ?, ?, 'Bekliyor', ?, ?)
         """, (konum, baslik, aciklama, bildiren, oncelik, tarih, demirbas_id))
         conn.commit()
         
-        # Log mesajını özelleştir
-        log_msg = f"{konum} - {baslik}"
-        if int(demirbas_id) > 0:
-            log_msg += f" (Demirbaş ID: {demirbas_id})"
-            
+        log_msg = f"Arıza: {baslik} (ID: {demirbas_id})"
         try: log_kaydet("Arıza Bildirimi", log_msg, "Arıza")
         except: pass
         
-        flash("Arıza kaydı başarıyla oluşturuldu.", "success")
+        flash("Arıza kaydı oluşturuldu ve malzeme durumu güncellendi.", "success")
     except Exception as e:
         flash(f"Hata: {str(e)}", "danger")
     finally:
@@ -1708,8 +1765,8 @@ def ekle_ariza():
 @app.route('/guncelle-ariza-durum/<int:id>/<durum_kodu>')
 @login_required
 def guncelle_ariza_durum(id, durum_kodu):
-    # Yetki Kontrolü
-    if session.get('rol') != 'teknik' and int(session.get('yetki_duzeyi', 0)) < 1:
+    # Yetki Kontrolü: Sadece Teknik VE Admin yapabilir
+    if session.get('rol') not in ['teknik', 'admin']:
         return redirect(url_for('index', tab='ariza'))
 
     # Kodları Türkçeye Çevir
@@ -1721,15 +1778,12 @@ def guncelle_ariza_durum(id, durum_kodu):
     else:
         return redirect(url_for('index', tab='ariza'))
 
-    islem_yapan = session.get('ad_soyad', 'Teknik Servis')
+    # İşlemi yapanın adını al
+    islem_yapan = session.get('ad_soyad', 'Yetkili Personel')
     
     conn = baglanti_kur()
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    
-    # HATA BURADAYDI: islem_yapan değişkenini alıyordun ama SQL'e yazmıyordun.
-    # Düzeltildi: islem_yapan sütunu da güncelleniyor.
-    cur.execute("UPDATE arizalar SET durum=?, islem_yapan=? WHERE id=?", (yeni_durum, islem_yapan, id))
+    # islem_yapan sütununu da güncelliyoruz
+    conn.execute("UPDATE arizalar SET durum=?, islem_yapan=? WHERE id=?", (yeni_durum, islem_yapan, id))
     conn.commit()
     conn.close()
     
@@ -1738,6 +1792,37 @@ def guncelle_ariza_durum(id, durum_kodu):
     
     return redirect(request.referrer or url_for('index', tab='ariza'))
 
+# --- ARIZA TOPLU SİLME ---
+@app.route('/toplu-sil-ariza', methods=['POST'])
+@login_required
+def toplu_sil_ariza():
+    # Sadece Admin ve Teknik Servis silebilir
+    yetki = int(session.get('yetki_duzeyi', 0))
+    rol = session.get('rol')
+    
+    if yetki < 3 and rol != 'teknik':
+        flash("Bu işlem için yetkiniz yok!", "danger")
+        return redirect(url_for('index', tab='ariza'))
+
+    secilenler = request.form.getlist('secilen_ids')
+    if not secilenler:
+        return redirect(url_for('index', tab='ariza'))
+    
+    conn = baglanti_kur()
+    try:
+        placeholders = ','.join('?' for _ in secilenler)
+        conn.execute(f"DELETE FROM arizalar WHERE id IN ({placeholders})", secilenler)
+        conn.commit()
+        
+        log_kaydet(f"Toplu Arıza Silme", f"{len(secilenler)} adet kayıt silindi.", "Silme")
+        flash(f"{len(secilenler)} adet arıza kaydı başarıyla silindi.", "success")
+        
+    except Exception as e:
+        flash(f"Hata oluştu: {str(e)}", "danger")
+    finally:
+        conn.close()
+    
+    return redirect(url_for('index', tab='ariza'))
 
 # --- ARIZA SİLME ---
 @app.route('/sil-ariza/<int:id>')
@@ -1761,7 +1846,8 @@ def sil_ariza(id):
 @app.route('/iptal-et-ariza', methods=['POST'])
 @login_required
 def iptal_et_ariza():
-    if session.get('rol') != 'teknik' and int(session.get('yetki_duzeyi', 0)) < 1:
+    # Yetki Kontrolü: Sadece Teknik VE Admin
+    if session.get('rol') not in ['teknik', 'admin']:
         return redirect(url_for('index', tab='ariza'))
         
     a_id = request.form.get('ariza_id')
@@ -1769,7 +1855,6 @@ def iptal_et_ariza():
     islem_yapan = session.get('ad_soyad')
     
     conn = baglanti_kur()
-    # İptal edeni de 'islem_yapan' olarak kaydedelim
     conn.execute("UPDATE arizalar SET durum='İptal Edildi', iptal_nedeni=?, islem_yapan=? WHERE id=?", (neden, islem_yapan, a_id))
     conn.commit()
     conn.close()
