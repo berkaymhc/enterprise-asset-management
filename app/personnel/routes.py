@@ -5,7 +5,8 @@ from flask import redirect, url_for, request, session, flash, render_template
 from app.personnel import bp
 from app import db
 from app.models import Personel, YuklemeGecmisi, Demirbas
-from app.utils import login_required, tr_upper, format_telefon
+from flask_login import login_required, current_user
+from app.utils import tr_upper, format_telefon, turkce_normalize
 from datetime import datetime
 
 # --- LOG FONKSİYONU ---
@@ -80,31 +81,31 @@ def yukle_personel():
 @bp.route('/ekle-personel', methods=['POST'])
 @login_required
 def ekle_personel():
-    if session.get('rol') == 'teknik': return redirect(url_for('main.index', tab='ariza'))
+    ad_soyad = request.form.get('ad_soyad')
+    unvan = request.form.get('unvan')
+    birimi = request.form.get('birimi')
+    kampus = request.form.get('kampus')
+    ofis = request.form.get('ofis')
+    telefon = request.form.get('telefon')
     
-    # Email oluşturma mantığı
-    raw_email = request.form.get('email_prefix', '').strip()
-    full_email = f"{raw_email.split('@')[0]}@avrasya.edu.tr" if raw_email else ""
-    
-    # Telefon formatlama
-    raw_tel = request.form.get('telefon', '').strip()
-    telefon = format_telefon(raw_tel)
+    # Email oluşturma (Prefix + Domain)
+    email_prefix = request.form.get('email_prefix')
+    email = f"{email_prefix}@avrasya.edu.tr" if email_prefix else ""
 
+    # Veritabanı Nesnesi
     yeni_p = Personel(
-        ad_soyad=request.form.get('ad_soyad'),
-        unvan=request.form.get('unvan'),
-        birimi=request.form.get('birimi'),
-        kampus=request.form.get('kampus'),
-        ofis=request.form.get('ofis'),
-        email=full_email,
-        telefon=telefon,
-        tarih=datetime.now()
+        ad_soyad=ad_soyad, # <--- DÜZELTİLDİ (Direkt gelen veriyi kaydet)
+        unvan=unvan,
+        birimi=birimi,
+        kampus=kampus,
+        ofis=ofis,
+        email=email,
+        telefon=telefon
     )
     
     db.session.add(yeni_p)
     db.session.commit()
     
-    log_kaydet(f"{yeni_p.ad_soyad} Eklendi", f"Ofis: {yeni_p.ofis}", "Ekleme")
     flash("Personel eklendi.", "success")
     return redirect(url_for('main.index', tab='personel'))
 

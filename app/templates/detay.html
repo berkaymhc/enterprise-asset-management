@@ -111,8 +111,7 @@
                 </div>
 
                 <div class="text-center mt-3 text-muted small">
-                    &copy; {{ item.tarih[:4] }} Üniversite Demirbaş Sistemi
-                </div>
+                    &copy; {{ item.alim_tarihi[:4] if item.alim_tarihi else '2025' }} Üniversite Demirbaş Sistemi </div>
 
             </div>
         </div>

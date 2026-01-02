@@ -1,70 +1,83 @@
-from datetime import datetime
-from app.extensions import db
-from werkzeug.security import generate_password_hash, check_password_hash
+# app/models.py
 
-class Kullanici(db.Model):
-    __tablename__ = 'kullanicilar'
+from app import db, login_manager  # <--- login_manager EKLENDİ
+from flask_login import UserMixin  # <--- UserMixin EKLENDİ
+from datetime import datetime
+
+# ----------------------------------------------------
+# 1. KULLANICI MODELİ (UserMixin Eklendi)
+# ----------------------------------------------------
+class Kullanici(UserMixin, db.Model):  # <--- BURAYA DİKKAT: UserMixin eklendi
+    __tablename__ = 'kullanici'
+    
     id = db.Column(db.Integer, primary_key=True)
-    kullanici_adi = db.Column(db.String(64), unique=True, nullable=False)
-    sifre_hash = db.Column(db.String(128), nullable=False)
-    rol = db.Column(db.String(20), default='personel')
+    kullanici_adi = db.Column(db.String(50), unique=True, nullable=False)
+    sifre = db.Column(db.String(100), nullable=False)
     ad_soyad = db.Column(db.String(100))
     birim = db.Column(db.String(100))
-    yetki_duzeyi = db.Column(db.Integer, default=0)
+    rol = db.Column(db.String(20), default='personel') 
+    yetki_duzeyi = db.Column(db.Integer, default=0) 
     tarih = db.Column(db.String(20))
 
-    def set_password(self, password):
-        self.sifre_hash = generate_password_hash(password)
+    # Flask-Login'in kullanıcı ID'sini alması için gerekli
+    def get_id(self):
+        return str(self.id)
 
-    def check_password(self, password):
-        return check_password_hash(self.sifre_hash, password)
+# ----------------------------------------------------
+# 2. FLASK-LOGIN İÇİN YÜKLEME FONKSİYONU (BU EKSİKTİ!)
+# ----------------------------------------------------
+@login_manager.user_loader
+def load_user(user_id):
+    return Kullanici.query.get(int(user_id))
 
+
+# ----------------------------------------------------
+# 3. DİĞER MODELLER (AYNEN KALIYOR)
+# ----------------------------------------------------
 class Demirbas(db.Model):
-    __tablename__ = 'demirbaslar'
     id = db.Column(db.Integer, primary_key=True)
-    ad = db.Column(db.String(150), nullable=False)
-    cinsi = db.Column(db.String(100))
+    ad = db.Column(db.String(100))
+    marka = db.Column(db.String(100))
+    model = db.Column(db.String(100))
+    seri_no = db.Column(db.String(100))
+    adet = db.Column(db.Integer)
+    alim_tarihi = db.Column(db.String(20))
+    garanti_bitis = db.Column(db.String(20))
+    konum = db.Column(db.String(100))
+    zimmetli_kisi = db.Column(db.String(100))
+    durum = db.Column(db.String(50))
+    aciklama = db.Column(db.Text)
+    barkod = db.Column(db.String(50))
     kampus = db.Column(db.String(100))
-    konum = db.Column(db.String(200), nullable=False)
-    adet = db.Column(db.Integer, nullable=False, default=1)
-    tarih = db.Column(db.String(20), default=datetime.now().strftime("%Y-%m-%d"))
-
-    # İlişki: Bir demirbaşın birden çok arızası olabilir
-    arizalar = db.relationship('Ariza', backref='demirbas', lazy=True)
+    cinsi = db.Column(db.String(50))
 
 class Personel(db.Model):
-    __tablename__ = 'personeller'
     id = db.Column(db.Integer, primary_key=True)
-    ad_soyad = db.Column(db.String(100), nullable=False)
+    ad_soyad = db.Column(db.String(100))
     unvan = db.Column(db.String(100))
     birimi = db.Column(db.String(100))
-    kampus = db.Column(db.String(100))
-    ofis = db.Column(db.String(100), nullable=False)
-    telefon = db.Column(db.String(20))
+    sicil_no = db.Column(db.String(50))
+    ofis = db.Column(db.String(50))
     email = db.Column(db.String(100))
-    tarih = db.Column(db.DateTime, default=datetime.now)
+    telefon = db.Column(db.String(20))
+    baslama_tarihi = db.Column(db.String(20))
+    kampus = db.Column(db.String(100))
 
 class Ariza(db.Model):
-    __tablename__ = 'arizalar'
     id = db.Column(db.Integer, primary_key=True)
-    konum = db.Column(db.String(200), nullable=False)
-    baslik = db.Column(db.String(200), nullable=False)
+    demirbas_id = db.Column(db.Integer)
+    baslik = db.Column(db.String(200))
     aciklama = db.Column(db.Text)
     bildiren = db.Column(db.String(100))
-    durum = db.Column(db.String(50), default='Bekliyor')
-    oncelik = db.Column(db.String(20), default='Normal')
     tarih = db.Column(db.String(20))
-    islem_yapan = db.Column(db.String(100))
-    iptal_nedeni = db.Column(db.String(255))
-    
-    # İlişki (Foreign Key)
-    demirbas_id = db.Column(db.Integer, db.ForeignKey('demirbaslar.id'), nullable=True)
+    durum = db.Column(db.String(20)) # Bekliyor, İşlemde, Tamamlandı
+    konum = db.Column(db.String(100))
+    cozum = db.Column(db.Text)
 
 class YuklemeGecmisi(db.Model):
-    __tablename__ = 'yukleme_gecmisi'
     id = db.Column(db.Integer, primary_key=True)
     dosya_adi = db.Column(db.String(255))
-    hedef_konum = db.Column(db.String(255))
-    tur = db.Column(db.String(50))
-    tarih = db.Column(db.String(20))
+    tarih = db.Column(db.String(30))
     islem_yapan = db.Column(db.String(100))
+    tur = db.Column(db.String(50)) 
+    hedef_konum = db.Column(db.String(255))

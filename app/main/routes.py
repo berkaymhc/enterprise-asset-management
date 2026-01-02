@@ -1,12 +1,16 @@
-# app/main/routes.py - TAM VE DÜZELTİLMİŞ VERSİYON
+# app/main/routes.py - FİNAL TEMİZ VERSİYON
 
 import os
 import math
-from flask import render_template, request, session, redirect, url_for, jsonify, send_from_directory
+from datetime import datetime
+from flask import render_template, request, session, redirect, url_for, jsonify, send_from_directory, flash, send_file
 from sqlalchemy import func, or_, case
+# YENİ IMPORT: Flask-Login kullanıyoruz
+from flask_login import login_required, current_user
 from app.main import bp
 from app.models import Demirbas, Personel, Ariza, YuklemeGecmisi, Kullanici
-from app.utils import login_required, turkce_normalize
+# app.utils içindeki login_required'ı ARTIK KULLANMIYORUZ, sadece turkce_normalize kaldı
+from app.utils import turkce_normalize
 from app import db
 
 # Sabitler
@@ -154,13 +158,11 @@ def index():
     aktif_kullanici_ofis = ""
     
     # ==========================================
-    # 7. İSTATİSTİK ANALİZ MANTIĞI (GÜNCELLENDİ)
+    # 7. İSTATİSTİK ANALİZ MANTIĞI
     # ==========================================
     analiz_sonuclari = []
     analiz_toplam = 0
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
-    
-    # Yeni Eklenen Kontrol: Butona basıldı mı?
     islem_turu = request.args.get('islem') 
 
     # Filtre Parametreleri
@@ -175,7 +177,6 @@ def index():
     f_labels_1, f_values_1 = [], []
     f_labels_2, f_values_2 = [], []
 
-    # SADECE "islem" parametresi "analiz" ise çalışsın
     if aktif_tab == 'istatistik' and islem_turu == 'analiz':
         
         if analiz_turu == 'personel':
@@ -193,7 +194,6 @@ def index():
             analiz_sonuclari = q.order_by(Personel.birimi.asc(), Personel.ad_soyad.asc()).all()
             analiz_toplam = len(analiz_sonuclari)
             
-            # Personel Grafik Verisi (Birim Dağılımı)
             temp_birim = {}
             for p in analiz_sonuclari:
                 b = p.birimi if p.birimi else "Belirtilmedi"
@@ -221,7 +221,6 @@ def index():
             
             analiz_toplam = sum(item.toplam_adet for item in analiz_sonuclari)
             
-            # Demirbaş Grafik Verileri
             temp_kampus = {}
             temp_konum = {}
             for item in analiz_sonuclari:
@@ -238,7 +237,7 @@ def index():
             f_values_2 = list(temp_konum.values())
 
     # ==========================================
-    # 8. RENDER TEMPLATE (SONUÇ)
+    # 8. RENDER TEMPLATE
     # ==========================================
     return render_template('index.html',
                            aktif_tab=aktif_tab,
@@ -267,7 +266,8 @@ def index():
                            ist_malzeme=ist_malzeme, ist_kampus=ist_kampus, ist_konum=ist_konum,
                            ist_p_ad=ist_p_ad, ist_p_birim=ist_p_birim, ist_p_kampus=ist_p_kampus, ist_p_ofis=ist_p_ofis,
                            f_labels_1=f_labels_1, f_values_1=f_values_1,
-                           f_labels_2=f_labels_2, f_values_2=f_values_2
+                           f_labels_2=f_labels_2, f_values_2=f_values_2,
+                           open_modal=request.args.get('open_modal', None)
                            )
 
 @bp.route('/favicon.ico')
@@ -333,3 +333,49 @@ def get_all_ids():
         ids = [str(item.id) for item in query.all()]
 
     return jsonify(ids)
+
+# ----------------------------------------------------
+# İŞLEM GEÇMİŞİ (LOGLAR)
+# ----------------------------------------------------
+@bp.route('/islem-gecmisi')
+@login_required
+def islem_gecmisi():
+    if session.get('rol') != 'admin':
+        flash("Bu sayfayı görüntüleme yetkiniz yok.", "danger")
+        return redirect(url_for('main.index'))
+    
+    logs = YuklemeGecmisi.query.order_by(YuklemeGecmisi.id.desc()).limit(500).all()
+    return render_template('logs.html', logs=logs)
+
+@bp.route('/loglari-temizle')
+@login_required
+def loglari_temizle():
+    if session.get('rol') != 'admin': return redirect(url_for('main.index'))
+    
+    try:
+        db.session.query(YuklemeGecmisi).delete()
+        db.session.commit()
+        flash("Tüm işlem geçmişi temizlendi.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Hata: {str(e)}", "danger")
+        
+    return redirect(url_for('main.islem_gecmisi'))
+
+# ----------------------------------------------------
+# YEDEK ALMA (BACKUP)
+# ----------------------------------------------------
+@bp.route('/yedek-al')
+@login_required
+def yedek_al():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('main.index'))
+    
+    # Proje ana dizinindeki demirbas.db dosyasını hedefle
+    db_file = os.path.join(os.getcwd(), 'demirbas.db')
+    
+    try:
+        return send_file(db_file, as_attachment=True, download_name=f"Yedek_Demirbas_{datetime.now().strftime('%Y-%m-%d_%H%M')}.db")
+    except Exception as e:
+        flash(f"Yedek alma hatası: {str(e)}", "danger")
+        return redirect(url_for('main.islem_gecmisi'))

@@ -2,8 +2,9 @@ from flask import redirect, url_for, request, session, flash, jsonify, render_te
 from app.inventory import bp
 from app import db
 from app.models import Demirbas, YuklemeGecmisi
-from app.utils import login_required, tr_upper, tr_title
-from datetime import datetime
+from datetime import datetime  # <--- BU SATIRI EKLE
+from flask_login import login_required, current_user
+from app.utils import turkce_normalize, tr_upper, tr_title # Kendi utils fonksiyonun burada kalsınfrom datetime import datetime
 from app.models import Ariza, Demirbas # Demirbas zaten vardır, Ariza'yı yanına ekle
 import openpyxl
 import os
@@ -46,7 +47,7 @@ def ekle_demirbas():
         kampus=kampus,
         konum=konum,
         adet=adet,
-        tarih=datetime.now().strftime("%Y-%m-%d")
+        alim_tarihi=datetime.now().strftime("%Y-%m-%d") # DOĞRU SÜTUN İSMİ
     )
     
     db.session.add(yeni_demirbas)
@@ -237,8 +238,7 @@ def yukle_demirbas():
                             kampus=hedef_kampus,
                             konum=tam_konum,
                             adet=adet,
-                            tarih=datetime.now().strftime("%Y-%m-%d")
-                        )
+alim_tarihi=datetime.now().strftime("%Y-%m-%d")                        )
                         db.session.add(yeni)
                         toplam_eklenen += 1
                         islem_yapildi = True
@@ -395,7 +395,7 @@ def yukle_klasor():
                             kampus=aktif_kampus, 
                             konum=tam_konum, 
                             adet=adet, 
-                            tarih=datetime.now().strftime("%Y-%m-%d")
+                            alim_tarihi=datetime.now().strftime("%Y-%m-%d")
                         )
                         db.session.add(yeni)
             

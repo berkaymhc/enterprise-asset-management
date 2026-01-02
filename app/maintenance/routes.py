@@ -4,7 +4,8 @@ from flask import redirect, url_for, request, session, flash
 from app.maintenance import bp
 from app import db
 from app.models import Ariza, Demirbas, YuklemeGecmisi
-from app.utils import login_required
+from flask_login import login_required, current_user
+from app.utils import turkce_normalize
 from datetime import datetime
 
 # --- LOG FONKSİYONU ---
@@ -21,46 +22,41 @@ def log_kaydet(baslik, detay, tur):
 
 # --- ARIZA İŞLEMLERİ ---
 
+# app/maintenance/routes.py - ekle_ariza fonksiyonu
+
 @bp.route('/ekle-ariza', methods=['POST'])
 @login_required
 def ekle_ariza():
-    # 1. ID KONTROLÜ (Zorunlu)
-    raw_id = request.form.get('demirbas_id')
-    if not raw_id:
-        flash("Demirbaş ID zorunludur.", "danger")
-        return redirect(url_for('main.index', tab='ariza'))
-    
-    try:
-        demirbas_id = int(raw_id)
-    except:
-        flash("Geçersiz ID.", "danger")
-        return redirect(url_for('main.index', tab='ariza'))
-        
-    # 2. KONUM BULMA
+    # 1. Formdan verileri al
     konum = request.form.get('konum')
-    if not konum:
-        # ORM ile Demirbaş'ı bul
-        demirbas = Demirbas.query.get(demirbas_id)
-        konum = demirbas.konum if demirbas else "Konum Bulunamadı"
+    baslik = request.form.get('baslik')
+    aciklama = request.form.get('aciklama')
+    bildiren = request.form.get('bildiren')
+    oncelik = request.form.get('oncelik')
+    
+    # "d_id" değişkenini burada tanımlıyoruz (Hatayı çözen kısım)
+    d_id = request.form.get('demirbas_id') 
 
+    # 2. Veritabanı Nesnesi Oluştur
     yeni_ariza = Ariza(
         konum=konum,
-        baslik=request.form.get('baslik'),
-        aciklama=request.form.get('aciklama'),
-        bildiren=session.get('ad_soyad') or session.get('kullanici_adi'),
-        oncelik=request.form.get('oncelik'),
-        durum='Bekliyor',
-        tarih=datetime.now().strftime("%Y-%m-%d %H:%M"),
-        demirbas_id=demirbas_id
+        baslik=baslik,
+        aciklama=aciklama,
+        bildiren=bildiren,
+        durum="Bekliyor",
+        oncelik=oncelik,
+        
+        # Sadece bir kere yazılıyor:
+        demirbas_id=d_id, 
+        
+        tarih=datetime.now().strftime("%d-%m-%Y %H:%M")
     )
-    
+
     db.session.add(yeni_ariza)
     db.session.commit()
     
-    log_kaydet("Arıza Bildirimi", f"{yeni_ariza.baslik} (ID: {demirbas_id})", "Arıza")
     flash("Arıza kaydı oluşturuldu.", "success")
-    
-    return redirect(request.referrer or url_for('main.index', tab='ariza'))
+    return redirect(url_for('main.index', tab='ariza'))
 
 @bp.route('/guncelle-ariza-durum/<int:id>/<durum_kodu>')
 @login_required

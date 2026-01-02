@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,24 +16,28 @@
             height: 100vh;
             margin: 0;
         }
+
         .login-card {
             width: 100%;
             max-width: 400px;
             padding: 40px;
             border-radius: 15px;
             background: white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
         }
+
         .logo-area {
             text-align: center;
             margin-bottom: 30px;
             color: #0d6efd;
         }
+
         .form-control {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
             padding: 12px;
         }
+
         .btn-login {
             padding: 12px;
             font-weight: bold;
@@ -40,49 +45,56 @@
         }
     </style>
 </head>
+
 <body>
 
-<div class="login-card">
-    <div class="logo-area">
-        <i class="fas fa-university fa-4x mb-3"></i>
-        <h4>Envanter Yönetim Sistemi</h4>
-        <p class="text-muted small">Lütfen kimliğinizi doğrulayın</p>
-    </div>
+    <div class="login-card">
+        <div class="logo-area">
+            <i class="fas fa-university fa-4x mb-3"></i>
+            <h4>Envanter Yönetim Sistemi</h4>
+            <p class="text-muted small">Lütfen kimliğinizi doğrulayın</p>
+        </div>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
         <div class="alert alert-danger text-center py-2 small">
-          {{ messages[0] }}
+            {{ messages[0] }}
         </div>
-      {% endif %}
-    {% endwith %}
+        {% endif %}
+        {% endwith %}
 
-    <form action="/login" method="POST">
-        <div class="mb-3">
-            <label class="form-label small fw-bold text-muted">Kullanıcı Adı</label>
-            <div class="input-group">
-                <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
-                <input type="text" name="kullanici_adi" class="form-control border-start-0" placeholder="Kullanıcı adı" required autofocus>
-            </div>
-        </div>
-        
-        <div class="mb-4">
-            <label class="form-label small fw-bold text-muted">Şifre</label>
-            <div class="input-group">
-                <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
-                <input type="password" name="sifre" class="form-control border-start-0" placeholder="********" required>
-            </div>
-        </div>
+        <form action="{{ url_for('auth.login') }}" method="POST">
 
-        <button type="submit" class="btn btn-primary w-100 btn-login shadow-sm">
-            Giriş Yap <i class="fas fa-sign-in-alt ms-2"></i>
-        </button>
-    </form>
-    
-    <div class="text-center mt-4">
-        <small class="text-muted">© 2025 Üniversite Bilgi İşlem Daire Bşk.</small>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted">Kullanıcı Adı</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
+                    <input type="text" name="kullanici_adi" class="form-control border-start-0"
+                        placeholder="Kullanıcı adı" required autofocus>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-muted">Şifre</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
+                    <input type="password" name="sifre" class="form-control border-start-0" placeholder="********"
+                        required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 btn-login shadow-sm">
+                Giriş Yap <i class="fas fa-sign-in-alt ms-2"></i>
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+            <small class="text-muted">© 2025 Üniversite Bilgi İşlem Daire Bşk.</small>
+        </div>
     </div>
-</div>
 
 </body>
+
 </html>
