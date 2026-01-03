@@ -313,6 +313,31 @@
             animation: slideInLeft 0.3s ease-out;
         }
 
+        /* Tablo hücresi içindeki dropdown'ın taşmasına izin ver */
+        .table td {
+            position: relative;
+            /* Menü buna göre konumlansın */
+        }
+
+        /* Z-index çakışmalarını önlemek için btn-group'u özgür bırak */
+        .btn-group,
+        .dropdown {
+            position: static !important;
+        }
+
+        /* Mevcut fadeIn animasyonunu stil dosyana ekle */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @keyframes slideInLeft {
             from {
                 opacity: 0;
@@ -368,22 +393,17 @@
             }
         }
 
-        /* Tablo içindeki dropdown menülerin kesilmesini engeller */
-        .table-responsive-custom .dropdown-menu {
-            position: fixed !important;
-            /* Tablo sınırından kurtarır */
-            top: auto !important;
-            left: auto !important;
-            z-index: 1055 !important;
-            /* Modalların üzerinde durmasını sağlar */
+        .table-responsive {
+            overflow: visible !important;
+            /* Kaydırma çubuğunun menüyü kesmesini engeller */
+            min-height: 250px;
+            /* Tablo boş olsa bile menü için alan bırakır */
         }
 
-        /* Dropdown Animasyonu */
+        /* Animasyonu korumak için */
         .dropdown-menu.animate {
-            animation-duration: 0.3s;
-            -webkit-animation-duration: 0.3s;
-            animation-fill-mode: both;
-            -webkit-animation-fill-mode: both;
+            z-index: 1060 !important;
+            animation: fadeIn 0.3s ease-in-out;
         }
 
         @keyframes slideIn {
@@ -417,6 +437,7 @@
 </head>
 
 <body class="bg-light">
+    <input type="hidden" id="csrf_token_global" value="{{ csrf_token() }}">
     <div id="global-loader"
         class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex flex-column justify-content-center align-items-center"
         style="z-index: 9999;">
@@ -1082,9 +1103,9 @@
                                 <tbody>
                                     {% for ariza in arizalar %}
                                     <tr
-                                        class="{% if ariza.durum == 'İptal Edildi' %}table-secondary text-muted{% endif %}">
+                                        class="align-middle {% if ariza.durum == 'İptal Edildi' %}table-secondary text-muted{% endif %}">
 
-                                        <td class="text-center align-middle">
+                                        <td class="text-center">
                                             <div class="check-center">
                                                 {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
                                                 <input type="checkbox" name="secilen_ids" value="{{ ariza.id }}"
@@ -1094,187 +1115,103 @@
                                             </div>
                                         </td>
 
-                                        <td class="fw-bold text-muted">#{{ ariza.id }}</td>
+                                        <td class="fw-bold text-muted small">#{{ ariza.id }}</td>
+
                                         <td>
-                                            {% if ariza.oncelik == 'Acil' %} <span class="badge bg-danger">🔥
-                                                Acil</span>
-                                            {% elif ariza.oncelik == 'Yüksek' %} <span
-                                                class="badge bg-warning text-dark">⚠️ Yüksek</span>
-                                            {% else %} <span class="badge bg-info text-dark">🔹 Normal</span> {% endif
-                                            %}
-                                        </td>
-                                        <td>
-                                            {% if ariza.durum == 'Bekliyor' %} <span
-                                                class="badge bg-warning text-dark"><i class="fas fa-clock"></i>
-                                                Bekliyor</span>
-                                            {% elif ariza.durum == 'İşlemde' %} <span class="badge bg-primary"><i
-                                                    class="fas fa-cog fa-spin"></i> İşlemde</span>
-                                            {% elif ariza.durum == 'Tamamlandı' %} <span class="badge bg-success"><i
-                                                    class="fas fa-check"></i> Tamamlandı</span>
-                                            {% elif ariza.durum == 'İptal Edildi' %} <span class="badge bg-secondary"><i
-                                                    class="fas fa-ban"></i> İptal</span>
+                                            {% if ariza.oncelik == 'Acil' %}
+                                            <span class="badge bg-danger">🔥 Acil</span>
+                                            {% elif ariza.oncelik == 'Yüksek' %}
+                                            <span class="badge bg-warning text-dark">⚠️ Yüksek</span>
+                                            {% else %}
+                                            <span class="badge bg-info text-dark">🔹 Normal</span>
                                             {% endif %}
                                         </td>
+
+                                        <td>
+                                            {% if ariza.durum == 'Bekliyor' %}
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i>
+                                                Bekliyor</span>
+                                            {% elif ariza.durum == 'İşlemde' or ariza.durum == 'Devam Ediyor' %}
+                                            <span class="badge bg-primary"><i class="fas fa-cog fa-spin"></i>
+                                                İşlemde</span>
+                                            {% elif ariza.durum == 'Tamamlandı' %}
+                                            <span class="badge bg-success"><i class="fas fa-check"></i>
+                                                Tamamlandı</span>
+                                            {% elif ariza.durum == 'İptal Edildi' %}
+                                            <span class="badge bg-secondary"><i class="fas fa-ban"></i> İptal</span>
+                                            {% else %}
+                                            <span class="badge bg-light text-dark border">{{ ariza.durum }}</span>
+                                            {% endif %}
+                                        </td>
+
                                         <td class="fw-bold text-dark small">{{ ariza.konum }}</td>
+
                                         <td>
                                             <span class="d-block fw-bold text-dark">{{ ariza.baslik }}</span>
                                             <small class="text-muted d-block text-truncate" style="max-width: 250px;">{{
                                                 ariza.aciklama }}</small>
                                         </td>
+
                                         <td>
                                             <div class="d-flex flex-column">
                                                 <span class="fw-bold text-dark small">{{ ariza.tarih.split(' ')[0]
                                                     }}</span>
                                                 <span class="text-muted small" style="font-size: 0.8em;">{{
-                                                    ariza.tarih.split(' ')[1] }}</span>
+                                                    ariza.tarih.split(' ')[1] if ' ' in ariza.tarih else '' }}</span>
                                             </div>
                                         </td>
+
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <i class="fas fa-user-circle text-secondary me-1"></i>
-                                                <span class="small fw-bold text-dark">{{ ariza.bildiren }}</span>
+                                                <span class="small fw-bold text-dark">
+                                                    {{ ariza.bildiren if ariza.bildiren else 'Belirtilmedi' }}
+                                                </span>
                                             </div>
                                         </td>
-                                        <td>
-                                            {% if (session['rol'] == 'teknik' or session['rol'] == 'admin') %}
+
+                                        <td class="text-end">
+                                            {% if session['rol'] == 'teknik' or session['rol'] == 'admin' %}
                                             <div class="btn-group">
-                                                {% if ariza.durum != 'İptal Edildi' and ariza.durum != 'Tamamlandı' %}
+
                                                 <button type="button"
-                                                    class="btn btn-outline-primary btn-sm dropdown-toggle py-0"
-                                                    data-bs-toggle="dropdown" aria-expanded="false"
-                                                    data-bs-display="static"> <i class="fas fa-tools"></i>
+                                                    class="btn btn-outline-primary btn-sm dropdown-toggle"
+                                                    data-bs-toggle="dropdown" data-bs-container="body"> <i
+                                                        class="fas fa-tools me-3"></i> İşlem
                                                 </button>
-                                                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 profile-menu">
-                                                    <li class="nav-item dropdown">
-                                                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 text-white ps-3"
-                                                            href="#" id="navbarDropdown" role="button"
-                                                            data-bs-toggle="dropdown" aria-expanded="false">
-
-                                                            <div class="bg-white text-primary rounded-circle d-flex justify-content-center align-items-center fw-bold shadow-sm"
-                                                                style="width: 35px; height: 35px; border: 2px solid rgba(255,255,255,0.3);">
-                                                                {{ session['ad_soyad'][0] | upper }}
-                                                            </div>
-
-                                                            <span class="d-none d-md-block fw-bold"
-                                                                style="letter-spacing: 0.5px;">
-                                                                {{ session['ad_soyad'] }}
-                                                            </span>
-                                                        </a>
-
-                                                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2 animate slideIn"
-                                                            aria-labelledby="navbarDropdown" style="min-width: 260px;">
-
-                                                            <li>
-                                                                <div
-                                                                    class="px-4 py-3 bg-light border-bottom rounded-top">
-                                                                    <div class="d-flex align-items-center mb-2">
-                                                                        <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center fw-bold me-3"
-                                                                            style="width: 40px; height: 40px; font-size: 1.2rem;">
-                                                                            {{ session['ad_soyad'][0] | upper }}
-                                                                        </div>
-                                                                        <div>
-                                                                            <div class="fw-bold text-dark text-truncate"
-                                                                                style="max-width: 150px;">{{
-                                                                                session['ad_soyad'] }}</div>
-                                                                            <div class="small text-muted text-truncate"
-                                                                                style="max-width: 150px;">{{
-                                                                                session['birim'] }}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <span
-                                                                        class="badge bg-{{ 'danger' if session['rol'] == 'admin' else 'primary' }} w-100 py-2">
-                                                                        <i class="fas fa-user-shield me-1"></i> {{
-                                                                        session['rol'] | upper }}
-                                                                    </span>
-                                                                </div>
-                                                            </li>
-
-                                                            {% if session['rol'] == 'admin' %}
-                                                            <li>
-                                                                <div
-                                                                    class="dropdown-header text-uppercase small fw-bold text-primary mt-2">
-                                                                    <i class="fas fa-cogs me-1"></i> Yönetici Paneli
-                                                                </div>
-                                                            </li>
-
-                                                            <li>
-                                                                <a class="dropdown-item py-2 d-flex align-items-center"
-                                                                    href="#" data-bs-toggle="modal"
-                                                                    data-bs-target="#userModal">
-                                                                    <i class="fas fa-users-cog me-3 text-secondary"
-                                                                        style="width: 20px;"></i>
-                                                                    <span>Kullanıcı Yönetimi</span>
-                                                                </a>
-                                                            </li>
-
-                                                            <li>
-                                                                <a class="dropdown-item py-2 d-flex align-items-center"
-                                                                    href="{{ url_for('main.islem_gecmisi') }}">
-                                                                    <i class="fas fa-history me-3 text-secondary"
-                                                                        style="width: 20px;"></i>
-                                                                    <span>İşlem Geçmişi / Loglar</span>
-                                                                </a>
-                                                            </li>
-
-                                                            <li>
-                                                                <hr class="dropdown-divider my-2">
-                                                            </li>
-                                                            {% endif %}
-
-                                                            <li>
-                                                                <div
-                                                                    class="dropdown-header text-uppercase small fw-bold text-success mt-1">
-                                                                    <i class="fas fa-file-download me-1"></i> İndirme
-                                                                    Merkezi
-                                                                </div>
-                                                            </li>
-
-                                                            <li>
-                                                                <a class="dropdown-item py-2 d-flex align-items-center"
-                                                                    href="{{ url_for('reports.indir_sablon', tur='demirbas') }}"
-                                                                    onclick="raporIndirLoading()">
-                                                                    <i class="fas fa-file-excel me-3 text-success"
-                                                                        style="width: 20px;"></i>
-                                                                    <span>Demirbaş Şablonu</span>
-                                                                </a>
-                                                            </li>
-
-                                                            {% if session['rol'] == 'admin' %}
-                                                            <li>
-                                                                <a class="dropdown-item py-2 d-flex align-items-center"
-                                                                    href="{{ url_for('reports.indir_sablon', tur='personel') }}"
-                                                                    onclick="raporIndirLoading()">
-                                                                    <i class="fas fa-file-excel me-3 text-success"
-                                                                        style="width: 20px;"></i>
-                                                                    <span>Personel Şablonu</span>
-                                                                </a>
-                                                            </li>
-                                                            {% endif %}
-
-                                                            <li>
-                                                                <hr class="dropdown-divider my-2">
-                                                            </li>
-
-                                                            <li>
-                                                                <a class="dropdown-item py-3 text-danger fw-bold d-flex align-items-center bg-light-hover"
-                                                                    href="{{ url_for('auth.logout') }}">
-                                                                    <i class="fas fa-sign-out-alt me-3"
-                                                                        style="width: 20px;"></i>
-                                                                    <span>Güvenli Çıkış</span>
-                                                                </a>
-                                                            </li>
-                                                        </ul>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                    <li>
+                                                        <h6 class="dropdown-header">Durum Değiştir</h6>
                                                     </li>
+
+                                                    <li><a class="dropdown-item" href="#"
+                                                            onclick="durumModalAc('{{ ariza.id }}', 'İşlemde', '⚙️ İşleme Al')">⚙️
+                                                            İşleme Al</a></li>
+                                                    <li><a class="dropdown-item" href="#"
+                                                            onclick="durumModalAc('{{ ariza.id }}', 'Parça Bekliyor', '🟠 Parça Bekliyor')">🟠
+                                                            Parça Bekliyor</a></li>
+
+                                                    <li>
+                                                        <hr class="dropdown-divider">
+                                                    </li>
+
+                                                    <li><a class="dropdown-item text-success" href="#"
+                                                            onclick="durumModalAc('{{ ariza.id }}', 'Tamamlandı', '✅ Tamamlandı')">✅
+                                                            Tamamlandı</a></li>
+                                                    <li><a class="dropdown-item text-secondary" href="#"
+                                                            onclick="durumModalAc('{{ ariza.id }}', 'İptal Edildi', '🚫 İptal Et')">🚫
+                                                            İptal Et</a></li>
                                                 </ul>
-                                                {% endif %}
+
                                                 <button type="button" onclick="tekilArizaSilModalAc('{{ ariza.id }}')"
-                                                    class="btn btn-outline-danger btn-sm py-0 ms-1"
+                                                    class="btn btn-outline-danger btn-sm ms-1"
                                                     title="Kalıcı Olarak Sil">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                             {% endif %}
                                         </td>
+
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -1598,9 +1535,9 @@
                 <div class="modal-body">
                     <div class="mb-3 border-bottom pb-3">
                         <div class="d-grid gap-2">
-                            <a href="/indir-sablon/demirbas" class="btn btn-outline-success btn-sm fw-bold download-btn"
-                                onclick="raporIndirLoading()">
-                                <i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir
+                            <a href="{{ url_for('reports.indir_sablon', tur='demirbas') }}"
+                                class="btn btn-outline-secondary" onclick="raporIndirLoading()"> <i
+                                    class="fas fa-download"></i> Şablon İndir
                             </a>
                         </div>
                         <div class="form-text small text-center mt-1">
@@ -1641,9 +1578,9 @@
                 <div class="modal-body">
                     <div class="mb-3 border-bottom pb-3">
                         <div class="d-grid gap-2">
-                            <a href="/indir-sablon/personel"
-                                class="btn btn-outline-success btn-sm fw-bold download-btn">
-                                <i class="fas fa-file-download"></i> Örnek Excel Şablonunu İndir
+                            <a href="{{ url_for('reports.indir_sablon', tur='personel') }}"
+                                class="btn btn-outline-secondary" onclick="raporIndirLoading()"> <i
+                                    class="fas fa-download"></i> Şablon İndir
                             </a>
                         </div>
                         <div class="form-text small text-center mt-1">
@@ -1734,6 +1671,8 @@
                         </h6>
                         <form action="{{ url_for('auth.ekle_kullanici') }}" method="POST"
                             class="row g-2 align-items-end">
+
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <div class="col-md-3">
                                 <label class="small fw-bold text-muted">Kullanıcı Adı</label>
@@ -2798,6 +2737,15 @@
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = `/toplu-sil-${tur}`;
+
+                    // 👇👇👇 YENİ EKLENEN KISIM BAŞLANGIÇ 👇👇👇
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrf_token'; // Flask bu ismi bekler
+                    csrfInput.value = document.getElementById('csrf_token_global').value;
+                    form.appendChild(csrfInput);
+                    // 👆👆👆 YENİ EKLENEN KISIM BİTİŞ 👆👆👆
+
                     ids.forEach(id => {
                         const input = document.createElement('input');
                         input.type = 'hidden'; input.name = 'secilen_ids'; input.value = id;
@@ -2983,6 +2931,41 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="durumModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="durumModalBaslik">Durum Güncelle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="durumForm">
+                        <input type="hidden" id="modalArizaId">
+                        <input type="hidden" id="modalYeniDurum">
+
+                        <div class="text-center mb-4">
+                            <i class="fas fa-info-circle fa-3x text-primary mb-3"></i>
+                            <p class="lead">Arıza durumu <br> <strong id="modalDurumMetin"
+                                    class="text-primary"></strong> <br> olarak değiştirilecek.</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small" id="lblModalAciklama">İşlem Notu /
+                                Açıklama</label>
+
+                            <textarea class="form-control" id="modalAciklama" rows="3" placeholder="..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="button" class="btn btn-primary" onclick="durumKaydet()">
+                        <i class="fas fa-save me-1"></i> Güncelle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
         // --- LOADING YÖNETİCİSİ ---
 
@@ -3076,14 +3059,132 @@
             xhr.send(formData);
         }
 
-        // 4. RAPOR İNDİRME BUTONLARI İÇİN (Özel Durum)
-        // İndirme işlemi sayfayı yenilemez, bu yüzden loading'i bir süre sonra kapatmalıyız.
+        // Rapor İndirme İçin Akıllı Yükleme Ekranı
         function raporIndirLoading() {
-            showLoader("Rapor Hazırlanıyor...", false);
-            // İndirme başlayınca (tahmini 3 sn sonra) loading'i kapat
-            setTimeout(() => {
-                hideLoader();
-            }, 3000);
+            const overlay = document.getElementById('loadingOverlay');
+
+            // 1. Ekranı Aç
+            overlay.style.display = 'flex';
+
+            // 2. SADECE 2 SANİYE SONRA KAPAT (Dosya inmiş olur)
+            setTimeout(function () {
+                overlay.style.display = 'none';
+            }, 2000); // 2000 milisaniye = 2 saniye
+        }
+        // Arıza Durumunu Güncelleyen Fonksiyon
+        function arizaDurumGuncelle(arizaId, yeniDurum) {
+            // Kullanıcıya soralım
+            if (!confirm('Arıza durumunu "' + yeniDurum + '" olarak güncellemek istiyor musunuz?')) {
+                return;
+            }
+
+            // Sunucuya istek gönder
+            fetch('/guncelle-ariza-durum', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    // CSRF Token'ı sayfadaki gizli inputtan alıyoruz
+                    'X-CSRFToken': document.getElementById('csrf_token_global').value
+                },
+                body: `id=${arizaId}&durum=${yeniDurum}`
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // Başarılıysa sayfayı yenile
+                        window.location.reload();
+                    } else {
+                        alert("Bir hata oluştu.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Hata:', error);
+                    alert("Bağlantı hatası.");
+                });
+        }
+        // --- ARIZA DURUM GÜNCELLEME SİSTEMİ ---
+
+        // 1. Modalı Açan Fonksiyon
+        function durumModalAc(id, durumKodu, durumMetni) {
+            document.getElementById('modalArizaId').value = id;
+            document.getElementById('modalYeniDurum').value = durumKodu;
+            document.getElementById('modalDurumMetin').innerText = durumMetni;
+
+            const txtAciklama = document.getElementById('modalAciklama');
+            const lblAciklama = document.getElementById('lblModalAciklama');
+
+            if (txtAciklama) {
+                txtAciklama.value = '';
+                txtAciklama.classList.remove('is-invalid');
+            }
+
+            if (lblAciklama && txtAciklama) {
+                if (durumKodu === 'İptal Edildi') {
+                    lblAciklama.innerHTML = 'İptal Nedeni <span class="text-danger fw-bold">* (Zorunlu)</span>';
+                    txtAciklama.placeholder = "Lütfen iptal edilme sebebini yazınız...";
+                } else {
+                    lblAciklama.innerHTML = 'İşlem Notu / Açıklama (İsteğe Bağlı)';
+                    txtAciklama.placeholder = "Yapılan işlem hakkında not ekleyebilirsiniz...";
+                }
+            }
+
+            var modalElement = document.getElementById('durumModal');
+            if (modalElement) {
+                var modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        }
+
+        // 2. Kaydet Butonu (CSRF Güvenlikli)
+        function durumKaydet() {
+            const id = document.getElementById('modalArizaId').value;
+            const durum = document.getElementById('modalYeniDurum').value;
+            const txtAciklama = document.getElementById('modalAciklama');
+            const not = txtAciklama ? txtAciklama.value.trim() : "";
+
+            // İptal durumunda zorunluluk kontrolü
+            if (durum === 'İptal Edildi' && not === "") {
+                if (txtAciklama) txtAciklama.classList.add('is-invalid');
+                alert("İptal işlemi için bir açıklama girmelisiniz!");
+                return;
+            }
+
+            const btn = document.querySelector('#durumModal .btn-primary');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            }
+
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('durum', durum);
+            formData.append('aciklama', not);
+
+            fetch('/guncelle-ariza-durum', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.getElementById('csrf_token_global').value
+                },
+                body: formData
+            })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert("Sunucu hatası oluştu.");
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = 'Güncelle';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Hata:', error);
+                    alert("Bağlantı hatası.");
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Güncelle';
+                    }
+                });
         }
     </script>
 </body>

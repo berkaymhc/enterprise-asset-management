@@ -1,10 +1,12 @@
-# app/reports/routes.py
+# app/reports/routes.py - DÜZELTİLMİŞ VERSİYON
 
 from flask import render_template, request, session, redirect, url_for, send_file, flash
+from flask_login import login_required, current_user # <--- 1. DÜZELTME: Flask-Login eklendi
 from app.reports import bp
 from app import db
 from app.models import Demirbas, Personel, Ariza, YuklemeGecmisi
-from app.utils import login_required, tr_upper, format_telefon, turkce_normalize
+# login_required BURADAN SİLİNDİ 👇
+from app.utils import tr_upper, format_telefon, turkce_normalize 
 from datetime import datetime
 import io
 import qrcode
@@ -13,7 +15,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from sqlalchemy import func, or_
 
-# --- 1. EXCEL ŞABLON İNDİRME (Zaten Vardı) ---
+# --- 1. EXCEL ŞABLON İNDİRME ---
 @bp.route('/indir-sablon/<tur>')
 @login_required
 def indir_sablon(tur):
@@ -27,8 +29,9 @@ def indir_sablon(tur):
         ws.append(['Ali Yılmaz', 'Memur', 'Bilgi İşlem', 'Yalıncak Yerleşkesi', 'Z-23', '5551234567', 'ali@ornek.com'])
         ws.column_dimensions['A'].width = 25
     else:
-        ws.append(['Malzeme Adı', 'Cinsi', 'Kampüs', 'Konum', 'Adet'])
-        ws.append(['Çalışma Masası', 'Mobilya', 'Yalıncak Yerleşkesi', 'B-Blok 105', 1])
+        # Demirbaş Şablonu
+        ws.append(['Malzeme Adı', 'Cinsi', 'Marka', 'Model', 'Seri No', 'Kampüs', 'Konum', 'Adet', 'Zimmetli Kişi', 'Açıklama'])
+        ws.append(['Çalışma Masası', 'Mobilya', '', '', '', 'Yalıncak Yerleşkesi', 'B-Blok 105', 1, '', ''])
         ws.column_dimensions['A'].width = 25
 
     for cell in ws[1]: cell.font = bold_font
@@ -50,15 +53,13 @@ def rapor():
     # SAYFA 1: DEMİRBAŞLAR
     ws1 = wb.active
     ws1.title = "Demirbaş Listesi"
-    ws1.append(['ID', 'Malzeme Adı', 'Cinsi', 'Kampüs', 'Konum', 'Adet', 'Tarih'])
+    ws1.append(['ID', 'Malzeme Adı', 'Cinsi', 'Kampüs', 'Konum', 'Adet', 'Alım Tarihi'])
     
-    # ORM Sorgusu
-    query_d = Demirbas.query
-    # Eğer yetki kısıtlıysa filtrele (Örnek: Sadece kendi birimi)
-    # if session.get('yetki_duzeyi') == 1: ...
+    query_d = Demirbas.query.all()
     
-    for d in query_d.all():
-        ws1.append([d.id, d.ad, d.cinsi, d.kampus, d.konum, d.adet, d.tarih])
+    for d in query_d:
+        # 2. DÜZELTME: d.tarih -> d.alim_tarihi yapıldı
+        ws1.append([d.id, d.ad, d.cinsi, d.kampus, d.konum, d.adet, d.alim_tarihi])
 
     # SAYFA 2: PERSONELLER
     ws2 = wb.create_sheet("Personel Listesi")
@@ -103,8 +104,9 @@ def toplu_yazdir_demirbas():
     qr_listesi = []
     
     for item in demirbaslar:
-        # QR İçeriği (Metin formatında)
-        qr_icerik = f"DEMİRBAŞ BİLGİSİ\nID: {item.id}\nÜrün: {item.ad}\nKonum: {item.konum}\nCinsi: {item.cinsi}\nKayıt: {item.tarih}"
+        # 3. DÜZELTME: item.tarih -> item.alim_tarihi
+        tarih_bilgisi = item.alim_tarihi if item.alim_tarihi else "Belirtilmedi"
+        qr_icerik = f"DEMİRBAŞ BİLGİSİ\nID: {item.id}\nÜrün: {item.ad}\nKonum: {item.konum}\nCinsi: {item.cinsi}\nKayıt: {tarih_bilgisi}"
         
         # QR Oluştur
         qr = qrcode.QRCode(box_size=10, border=2)
@@ -143,7 +145,6 @@ def kapi_karti(konum_adi):
 @bp.route('/ofis/<path:konum_adi>')
 def ofis_detay(konum_adi):
     # Ofis detay sayfası (Kapı kartındaki QR okutulunca açılır)
-    # ORM LIKE sorgusu
     t = f"%{turkce_normalize(konum_adi)}%"
     
     esyalar = Demirbas.query.filter(func.NORMALIZE(Demirbas.konum).like(t)).all()
@@ -248,7 +249,6 @@ def rapor_grafik_ozet():
     ist_malzeme = request.args.get('ist_malzeme', '').strip()
     ist_kampus = request.args.get('ist_kampus', '')
     ist_p_birim = request.args.get('ist_p_birim', '').strip()
-    # (Diğer filtreleri de alabiliriz ama özet için bunlar yeterli)
 
     wb = Workbook()
     ws1 = wb.active

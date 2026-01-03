@@ -73,6 +73,8 @@ class Ariza(db.Model):
     durum = db.Column(db.String(20)) # Bekliyor, İşlemde, Tamamlandı
     konum = db.Column(db.String(100))
     cozum = db.Column(db.Text)
+    islem_yapan = db.Column(db.String(100))
+    oncelik = db.Column(db.String(20))
 
 class YuklemeGecmisi(db.Model):
     id = db.Column(db.Integer, primary_key=True)

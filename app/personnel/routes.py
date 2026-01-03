@@ -58,8 +58,7 @@ def yukle_personel():
                 if not mevcut:
                     yeni_p = Personel(
                         ad_soyad=ad_soyad, unvan=unvan, birimi=birim,
-                        kampus=kampus, ofis=ofis, telefon=telefon, email=email,
-                        tarih=datetime.now()
+                        kampus=kampus, ofis=ofis, telefon=telefon, email=email
                     )
                     db.session.add(yeni_p)
                     eklenen_sayisi += 1

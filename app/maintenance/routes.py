@@ -1,5 +1,3 @@
-# app/maintenance/routes.py
-
 from flask import redirect, url_for, request, session, flash
 from app.maintenance import bp
 from app import db
@@ -12,32 +10,31 @@ from datetime import datetime
 def log_kaydet(baslik, detay, tur):
     try:
         log = YuklemeGecmisi(
-            dosya_adi=baslik, hedef_konum=detay, tur=tur, 
+            dosya_adi=baslik, 
+            hedef_konum=detay, 
+            tur=tur, 
             tarih=datetime.now().strftime("%d-%m-%Y %H:%M"),
-            islem_yapan=session.get('ad_soyad', 'Sistem')
+            # session yerine current_user kullanmak daha güvenlidir
+            islem_yapan=current_user.ad_soyad if current_user.is_authenticated else "Sistem"
         )
         db.session.add(log)
         db.session.commit()
-    except: pass
+    except Exception as e:
+        db.session.rollback()
+        pass
 
 # --- ARIZA İŞLEMLERİ ---
-
-# app/maintenance/routes.py - ekle_ariza fonksiyonu
 
 @bp.route('/ekle-ariza', methods=['POST'])
 @login_required
 def ekle_ariza():
-    # 1. Formdan verileri al
     konum = request.form.get('konum')
     baslik = request.form.get('baslik')
     aciklama = request.form.get('aciklama')
     bildiren = request.form.get('bildiren')
     oncelik = request.form.get('oncelik')
-    
-    # "d_id" değişkenini burada tanımlıyoruz (Hatayı çözen kısım)
     d_id = request.form.get('demirbas_id') 
 
-    # 2. Veritabanı Nesnesi Oluştur
     yeni_ariza = Ariza(
         konum=konum,
         baslik=baslik,
@@ -45,71 +42,77 @@ def ekle_ariza():
         bildiren=bildiren,
         durum="Bekliyor",
         oncelik=oncelik,
-        
-        # Sadece bir kere yazılıyor:
         demirbas_id=d_id, 
-        
         tarih=datetime.now().strftime("%d-%m-%Y %H:%M")
     )
 
     db.session.add(yeni_ariza)
     db.session.commit()
     
+    log_kaydet(f"Yeni Arıza Kaydı: {baslik}", f"Konum: {konum}", "Arıza")
+    
     flash("Arıza kaydı oluşturuldu.", "success")
     return redirect(url_for('main.index', tab='ariza'))
 
-@bp.route('/guncelle-ariza-durum/<int:id>/<durum_kodu>')
+@bp.route('/guncelle-ariza-durum', methods=['POST'])
 @login_required
-def guncelle_ariza_durum(id, durum_kodu):
-    if session.get('rol') not in ['teknik', 'admin']:
-        return redirect(url_for('main.index', tab='ariza'))
-        
-    ariza = Ariza.query.get(id)
-    if not ariza: return redirect(url_for('main.index', tab='ariza'))
-    
-    yeni_durum = ""
-    if durum_kodu == 'islem': yeni_durum = "İşlemde"
-    elif durum_kodu == 'tamam': yeni_durum = "Tamamlandı"
-    else: return redirect(url_for('main.index', tab='ariza'))
-    
-    islem_yapan = session.get('ad_soyad', 'Yetkili')
-    
-    ariza.durum = yeni_durum
-    ariza.islem_yapan = islem_yapan
-    
-    db.session.commit()
-    log_kaydet(f"Arıza Durumu: {yeni_durum}", f"ID: {id}", "Arıza")
-    
-    return redirect(request.referrer or url_for('main.index', tab='ariza'))
+def guncelle_ariza_durum():
+    if not current_user.rol in ['teknik', 'admin']:
+        return "Yetkisiz işlem", 403
 
-@bp.route('/iptal-et-ariza', methods=['POST'])
-@login_required
-def iptal_et_ariza():
-    if session.get('rol') not in ['teknik', 'admin']: return redirect(url_for('main.index'))
-    
-    a_id = request.form.get('ariza_id')
-    neden = request.form.get('iptal_nedeni')
-    
-    ariza = Ariza.query.get(a_id)
-    if ariza:
-        ariza.durum = "İptal Edildi"
-        ariza.iptal_nedeni = neden
-        ariza.islem_yapan = session.get('ad_soyad')
-        db.session.commit()
+    try:
+        ariza_id = request.form.get('id')
+        yeni_durum = request.form.get('durum')
+        aciklama_notu = request.form.get('aciklama')
         
-    return redirect(url_for('main.index', tab='ariza'))
+        ariza = Ariza.query.get(ariza_id)
+        if ariza:
+            eski_durum = ariza.durum
+            if eski_durum == yeni_durum:
+                # JavaScript fetch kullandığı için JSON veya sade metin dönebiliriz
+                return "Değişiklik yok", 200
+
+            ariza.durum = yeni_durum
+            ariza.islem_yapan = current_user.ad_soyad
+            
+            if aciklama_notu:
+                mevcut_aciklama = ariza.cozum if ariza.cozum else ""
+                zaman = datetime.now().strftime("%d-%m %H:%M")
+                ariza.cozum = f"{mevcut_aciklama} \n[{zaman}] {yeni_durum}: {aciklama_notu}"
+
+            db.session.commit()
+            
+            log_mesaji = f"Durum: {eski_durum} -> {yeni_durum}"
+            if aciklama_notu:
+                log_mesaji += f" (Not: {aciklama_notu})"
+                
+            log_kaydet(log_mesaji, f"Arıza ID: {ariza_id}", "Arıza")
+
+            # FETCH İSTEĞİ OLDUĞU İÇİN BURADA REDIRECT DEĞİL, ONAY DÖNÜYORUZ
+            return "Başarılı", 200
+        else:
+            return "Arıza bulunamadı", 404
+    except Exception as e:
+        db.session.rollback()
+        return str(e), 500
 
 @bp.route('/sil-ariza/<int:id>')
 @login_required
 def sil_ariza(id):
-    if session.get('rol') != 'teknik' and int(session.get('yetki_duzeyi', 0)) < 3:
+    # Yetki kontrolü
+    if current_user.rol != 'teknik' and current_user.rol != 'admin':
         flash("Yetkisiz işlem.", "danger")
         return redirect(url_for('main.index', tab='ariza'))
         
     ariza = Ariza.query.get(id)
     if ariza:
+        baslik_yedek = ariza.baslik
         db.session.delete(ariza)
         db.session.commit()
+        
+        # LOG KAYDI EKLE
+        log_kaydet(f"Arıza Silindi: {baslik_yedek}", f"ID: {id}", "Arıza")
+        
         flash("Arıza silindi.", "warning")
         
     return redirect(url_for('main.index', tab='ariza'))
@@ -117,13 +120,17 @@ def sil_ariza(id):
 @bp.route('/toplu-sil-ariza', methods=['POST'])
 @login_required
 def toplu_sil_ariza():
-    if session.get('rol') != 'teknik' and int(session.get('yetki_duzeyi', 0)) < 3:
+    if current_user.rol != 'teknik' and current_user.rol != 'admin':
         return redirect(url_for('main.index', tab='ariza'))
         
     ids = request.form.getlist('secilen_ids')
     if ids:
+        count = len(ids)
         Ariza.query.filter(Ariza.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()
-        flash(f"{len(ids)} arıza silindi.", "success")
+        
+        log_kaydet(f"Toplu Arıza Silme ({count} Kayıt)", f"Silinen ID'ler: {', '.join(ids)}", "Arıza")
+        
+        flash(f"{count} arıza başarıyla silindi.", "success")
         
     return redirect(url_for('main.index', tab='ariza'))
