@@ -37,12 +37,3 @@ def tr_title(text):
         kalan = kelime[1:].replace('I', 'ı').replace('İ', 'i').lower()
         yeni_kelimeler.append(ilk + kalan)
     return " ".join(yeni_kelimeler)
-
-# Login Decorator'ı buraya taşıdık, her yerden çağırabiliriz
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session:
-            return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
-    return decorated_function
