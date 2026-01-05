@@ -21,7 +21,7 @@ def log_kaydet(baslik, detay, tur):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        print(f"LOG HATASI: {e}")
+        print(f"LOG HATASI: {e}") #pass eğer uygulama bitmişse
 
 # --- ARIZA İŞLEMLERİ ---
 
