@@ -1,5 +1,7 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash
+from itsdangerous import URLSafeTimedSerializer
+from flask import current_app
 
 def turkce_normalize(metin):
     if metin is None: return ""
@@ -37,3 +39,15 @@ def tr_title(text):
         kalan = kelime[1:].replace('I', 'ı').replace('İ', 'i').lower()
         yeni_kelimeler.append(ilk + kalan)
     return " ".join(yeni_kelimeler)
+
+def get_reset_token(user_id, expires_sec=1800): # 30 Dakika geçerli
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return s.dumps(user_id, salt='sifre-sifirlama-tuzu')
+
+def verify_reset_token(token):
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try:
+        user_id = s.loads(token, salt='sifre-sifirlama-tuzu', max_age=1800)
+    except:
+        return None
+    return user_id

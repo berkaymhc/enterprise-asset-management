@@ -423,7 +423,7 @@
             <div class="collapse navbar-collapse" id="navbarContent">
 
                 <div class="mx-auto my-2 my-lg-0 w-100 d-flex justify-content-center">
-                    {% if session['rol'] != 'teknik' and aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
+                    {% if session.get('rol') != 'teknik' and aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
                     <form action="/" method="GET" class="d-flex bg-white rounded-pill overflow-hidden shadow-sm"
                         style="max-width: 500px; width: 100%;">
                         <input type="hidden" name="tab" value="{{ aktif_tab }}">
@@ -443,14 +443,14 @@
 
                 <div class="d-flex align-items-center justify-content-end text-white gap-3 mt-3 mt-lg-0">
                     <div class="d-none d-lg-block text-end lh-1">
-                        <div class="fw-bold" style="font-size: 0.9rem;">{{ session['ad_soyad'] }}</div>
+                        <div class="fw-bold" style="font-size: 0.9rem;">{{ session.get('ad_soyad') }}</div>
                         <span class="badge bg-white text-primary rounded-pill" style="font-size: 0.65rem;">
-                            {{ session['rol'] | upper }}
+                            {{ session.get('rol') | upper }}
                         </span>
                     </div>
 
                     <div class="d-lg-none text-white-50 mb-2">
-                        <i class="fas fa-user me-1"></i> {{ session['ad_soyad'] }}
+                        <i class="fas fa-user me-1"></i> {{ session.get('ad_soyad') }}
                     </div>
 
                     <a href="/logout" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm">
@@ -465,7 +465,7 @@
         <div>
         </div>
         <div>
-            {% if session['rol'] == 'admin' %}
+            {% if session.get('rol') == 'admin' %}
             <button class="btn btn-primary text-white btn-sm me-1" data-bs-toggle="modal"
                 data-bs-target="#uploadFolderModal">
                 <i class="fas fa-folder-open"></i> Klasör Yükle
@@ -474,9 +474,9 @@
                 <i class="fas fa-users-cog"></i> Kullanıcılar
             </button>
             {% endif %}
-            {% if session['rol'] == 'admin' %}
-            {% if session['yetki_duzeyi'] >= 1 %} <a href="/rapor" class="btn btn-success btn-sm shadow-sm fw-bold"
-                onclick="raporIndirLoading()" target="_blank">
+            {% if session.get('rol') == 'admin' %}
+            {% if session.get('yetki_duzeyi', 0) >= 1 %} <a href="/rapor"
+                class="btn btn-success btn-sm shadow-sm fw-bold" onclick="raporIndirLoading()" target="_blank">
                 <i class="fas fa-file-excel"></i> Rapor
             </a>
             {% endif %}
@@ -503,8 +503,8 @@
 
     <ul class="nav nav-tabs mb-3" id="myTab">
 
-        {% if session['rol'] != 'teknik' %}
-        {% if session['yetki_duzeyi'] >= 1 %}
+        {% if session.get('rol') != 'teknik' %}
+        {% if session.get('yetki_duzeyi', 0) >= 1 %}
         <li class="nav-item">
             <a class="nav-link {% if aktif_tab == 'demirbas' %}active{% endif %}" href="/?tab=demirbas">
                 📦 Demirbaşlar
@@ -513,8 +513,8 @@
         {% endif %}
         {% endif %}
 
-        {% if session['rol'] != 'teknik' %}
-        {% if session['yetki_duzeyi'] >= 1 %}
+        {% if session.get('rol') != 'teknik' %}
+        {% if session.get('yetki_duzeyi', 0) >= 1 %}
         <li class="nav-item">
             <a class="nav-link {% if aktif_tab == 'personel' %}active{% endif %}" href="/?tab=personel">
                 👥 Personel Listesi
@@ -534,8 +534,8 @@
             </a>
         </li>
 
-        {% if session['rol'] != 'teknik' %}
-        {% if session['yetki_duzeyi'] >= 1 %}
+        {% if session.get('rol') != 'teknik' %}
+        {% if session.get('yetki_duzeyi', 0) >= 1 %}
         <li class="nav-item">
             <a class="nav-link {% if aktif_tab == 'istatistik' %}active{% endif %}" href="/?tab=istatistik">
                 📊 İstatistik & Analiz
@@ -546,12 +546,12 @@
     </ul>
 
     <div class="tab-content" id="myTabContent">
-        {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
-        <div class="tab-pane fade {% if aktif_tab == 'demirbas' %}show active{% endif %}" id="demirbas">
+        {% if session.get('yetki_duzeyi', 0) >= 1 and session.get('rol') != 'teknik' %} <div
+            class="tab-pane fade {% if aktif_tab == 'demirbas' %}show active{% endif %}" id="demirbas">
             <input type="hidden" id="d_current_page" value="{{ sayfa_d }}">
             <input type="hidden" id="d_total_pages" value="{{ toplam_sayfa_demirbas }}">
             <div class="d-flex justify-content-end mb-2" style="height: 38px;">
-                {% if session['rol'] == 'admin' %}
+                {% if session.get('rol') == 'admin' %}
                 <button type="button" onclick="listeyiSifirlaOnay('demirbas')"
                     class="btn btn-outline-danger btn-sm border-0">
                     <i class="fas fa-trash-alt"></i> Listeyi Temizle
@@ -626,7 +626,7 @@
                                         <i class="fas fa-print"></i> Yazdır
                                     </button>
 
-                                    {% if session['rol'] == 'admin' %}
+                                    {% if session.get('rol') == 'admin' %}
                                     <button type="button" onclick="topluSilBaslat('demirbas')"
                                         class="btn btn-danger btn-sm">
                                         <i class="fas fa-trash-alt"></i> Sil
@@ -646,7 +646,7 @@
                                         <tr>
                                             <th class="text-center" style="width: 40px;">
                                                 <div class="check-center">
-                                                    {% if session['yetki_duzeyi'] >= 1 %}
+                                                    {% if session.get('yetki_duzeyi', 0) >= 1 %}
                                                     <input type="checkbox" id="selectAllDemirbas"
                                                         class="form-check-input" style="cursor: pointer;">
                                                     {% endif %}
@@ -665,7 +665,7 @@
                                         <tr>
                                             <td class="text-center align-middle">
                                                 <div class="check-center">
-                                                    {% if session['yetki_duzeyi'] >= 1 %}
+                                                    {% if session.get('yetki_duzeyi', 0) >= 1 %}
                                                     <input type="checkbox" name="secilen_ids" value="{{ item.id }}"
                                                         class="form-check-input secim-kutusu-demirbas"
                                                         style="cursor: pointer;">
@@ -687,13 +687,13 @@
                                             <td><span class="badge bg-light text-dark border">{{ item.adet }}</span>
                                             </td>
                                             <td>
-                                                {% if session['yetki_duzeyi'] >= 1 %}
+                                                {% if session.get('yetki_duzeyi', 0) >= 1 %}
                                                 <button type="button" class="btn btn-primary btn-sm py-0"
                                                     data-bs-toggle="modal" data-bs-target="#editDemirbas{{ item.id }}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 {% endif %}
-                                                {% if session['rol'] == 'admin' %}
+                                                {% if session.get('rol') == 'admin' %}
                                                 <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')"
                                                     class="btn btn-outline-danger btn-sm py-0">
                                                     <i class="fas fa-trash"></i>
@@ -735,12 +735,12 @@
             </div>
         </div>
         {% endif %}
-        {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
+        {% if session.get('yetki_duzeyi', 0) >= 1 and session.get('rol') != 'teknik' %}
         <div class="tab-pane fade {% if aktif_tab == 'personel' %}show active{% endif %}" id="personel">
             <input type="hidden" id="p_current_page" value="{{ sayfa_p }}">
             <input type="hidden" id="p_total_pages" value="{{ toplam_sayfa_personel }}">
             <div class="d-flex justify-content-end mb-2" style="height: 38px;">
-                {% if session['rol'] == 'admin' %}
+                {% if session.get('rol') == 'admin' %}
                 <button type="button" onclick="listeyiSifirlaOnay('personel')"
                     class="btn btn-outline-danger btn-sm border-0">
                     <i class="fas fa-trash-alt"></i> Listeyi Temizle
@@ -835,7 +835,7 @@
                                         <i class="fas fa-exchange-alt"></i> Taşı
                                     </button>
 
-                                    {% if session['rol'] == 'admin' %}
+                                    {% if session.get('rol') == 'admin' %}
                                     <button type="button" onclick="topluSilBaslat('personel')"
                                         class="btn btn-danger btn-sm">
                                         <i class="fas fa-trash-alt"></i> Sil
@@ -908,7 +908,7 @@
                                                     <i class="fas fa-exchange-alt"></i>
                                                 </button>
 
-                                                {% if session['rol'] == 'admin' %}
+                                                {% if session.get('rol') == 'admin' %}
                                                 <button type="button" onclick="silOnay('{{ p.id }}', 'personel')"
                                                     class="btn btn-sm btn-danger py-0">
                                                     <i class="fas fa-trash"></i>
@@ -992,7 +992,7 @@
         </div>
         {% endif %}
 
-        <div class="tab-pane fade {% if aktif_tab == 'ariza' or session['yetki_duzeyi'] == 0 %}show active{% endif %}"
+        <div class="tab-pane fade {% if aktif_tab == 'ariza' or session.get('yetki_duzeyi', 0) == 0 %}show active{% endif %}"
             id="ariza">
 
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1013,7 +1013,7 @@
                                 <span class="badge bg-dark me-2"><span id="secilenArizaSayisi">0</span>
                                     Seçili</span>
 
-                                {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
+                                {% if session.get('rol') == 'admin' or session.get('rol') == 'teknik' %}
                                 <button type="button" onclick="topluSilBaslat('ariza')" class="btn btn-danger btn-sm">
                                     <i class="fas fa-trash-alt"></i> Seçilenleri Sil
                                 </button>
@@ -1032,7 +1032,7 @@
                                 <tr>
                                     <th class="text-center" style="width: 40px;">
                                         <div class="check-center">
-                                            {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
+                                            {% if session.get('rol') == 'admin' or session.get('rol') == 'teknik' %}
                                             <input type="checkbox" id="selectAllAriza" class="form-check-input"
                                                 style="cursor: pointer;">
                                             {% endif %}
@@ -1056,7 +1056,7 @@
 
                                     <td class="text-center">
                                         <div class="check-center">
-                                            {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
+                                            {% if session.get('rol') == 'admin' or session.get('rol') == 'teknik' %}
                                             <input type="checkbox" name="secilen_ids" value="{{ ariza.id }}"
                                                 class="form-check-input secim-kutusu-ariza" style="cursor: pointer;">
                                             {% endif %}
@@ -1119,7 +1119,7 @@
                                     </td>
 
                                     <td class="text-end">
-                                        {% if session['rol'] == 'teknik' or session['rol'] == 'admin' %}
+                                        {% if session.get('rol') == 'teknik' or session.get('rol') == 'admin' %}
                                         <div class="btn-group">
 
                                             <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle"
@@ -1187,7 +1187,7 @@
             {% endif %}
         </div>
     </div>
-    {% if session['yetki_duzeyi'] >= 1 %}
+    {% if session.get('yetki_duzeyi', 0) >= 1 %}
     <div class="tab-pane fade {% if aktif_tab == 'istatistik' %}show active{% endif %}" id="istatistik">
         <div class="card p-4 shadow-sm border-0">
             <div class="text-center mb-4">
@@ -1593,7 +1593,7 @@
                         <i class="fas fa-users-cog"></i> Kullanıcı Yönetimi
                     </h5>
                     <div class="d-flex align-items-center">
-                        {% if session['rol'] == 'admin' %}
+                        {% if session.get('rol') == 'admin' %}
                         <a href="{{ url_for('main.islem_gecmisi') }}"
                             class="btn btn-dark text-white btn-sm me-2 shadow-sm">
                             <i class="fas fa-clipboard-list"></i> Geçmiş / Loglar
@@ -1628,7 +1628,14 @@
                                 <input type="text" name="ad_soyad" id="inputAdSoyad"
                                     class="form-control form-control-sm" placeholder="Personel Adı" required>
                             </div>
-
+                            <div class="col-md-6">
+                                <label class="small fw-bold text-muted">E-Posta Adresi</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light"><i class="fas fa-envelope"></i></span>
+                                    <input type="email" name="email" id="inputEmail" class="form-control"
+                                        placeholder="ornek@avrasya.edu.tr" required>
+                                </div>
+                            </div>
                             <div class="col-md-3">
                                 <label class="small fw-bold text-muted">Şifre</label>
                                 <input type="text" name="sifre" id="inputSifre" class="form-control form-control-sm"
@@ -1715,7 +1722,7 @@
                                             session['kullanici_adi'] %}
 
                                             <button class="btn btn-outline-primary btn-sm py-0 me-1" title="Düzenle"
-                                                onclick="duzenleModalAc('{{ u.id }}', '{{ u.kullanici_adi }}', '{{ u.ad_soyad }}', '{{ u.rol }}', '{{ u.birim }}', '{{ u.yetki_duzeyi }}')">
+                                                onclick="duzenleModalAc('{{ u.id }}', '{{ u.kullanici_adi }}', '{{ u.ad_soyad }}','{{ u.email }}', '{{ u.rol }}', '{{ u.birim }}', '{{ u.yetki_duzeyi }}')">
                                                 <i class="fas fa-edit"></i>
                                             </button>
 
@@ -3170,7 +3177,7 @@
         }
 
         // --- DÜZENLEME İŞLEMİ (DÜZELTİLMİŞ HALİ) ---
-        function duzenleModalAc(id, kadi, adsoyad, rol, birim, yetki) {
+        function duzenleModalAc(id, kadi, adsoyad, email, rol, birim, yetki) {
             // 1. Başlıkları ve Butonu Değiştir
             document.getElementById('userModalLabel').innerText = "Kullanıcı Düzenle";
             document.getElementById('userSubmitBtn').innerText = "Güncelle";
@@ -3182,6 +3189,7 @@
             document.getElementById('editUserId').value = id;
             document.getElementById('inputKadi').value = kadi;
             document.getElementById('inputAdSoyad').value = adsoyad;
+            document.getElementById('inputEmail').value = email; // <-- YENİ
             document.getElementById('selectRol').value = rol;
             document.getElementById('inputBirim').value = birim;
             document.getElementById('inputYetki').value = yetki;

@@ -5,6 +5,7 @@ from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from flask_mail import Mail # <-- EKLE
 from flask_wtf.csrf import CSRFProtect  # <--- YENİ EKLENDİ
 
 # 1. GLOBAL NESNELERİ TANIMLA
@@ -12,6 +13,7 @@ from flask_wtf.csrf import CSRFProtect  # <--- YENİ EKLENDİ
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+mail = Mail() # <-- EKLE
 csrf = CSRFProtect()  # <--- YENİ EKLENDİ
 
 def create_app(config_class=Config):
@@ -22,12 +24,13 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    mail.init_app(app) # <-- EKLE
     csrf.init_app(app)  # <--- YENİ EKLENDİ
 
     # Login Yöneticisi Ayarları
     # Kullanıcı giriş yapmadan yasaklı sayfaya girerse buraya yönlendir:
     login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Lütfen önce giriş yapınız.'
+    login_manager.login_message = ""
     login_manager.login_message_category = 'warning'
 
     # 3. TÜRKÇE KARAKTER DESTEĞİ (SQLite İçin)

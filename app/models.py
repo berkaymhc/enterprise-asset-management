@@ -83,3 +83,19 @@ class YuklemeGecmisi(db.Model):
     islem_yapan = db.Column(db.String(100))
     tur = db.Column(db.String(50)) 
     hedef_konum = db.Column(db.String(255))
+    
+class Kullanici(UserMixin, db.Model):
+    # --- BU İKİ SATIRI EKLE (HATA ÇÖZÜCÜ) ---
+    __tablename__ = 'kullanici'
+    __table_args__ = {'extend_existing': True}
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_adi = db.Column(db.String(80), unique=True, nullable=False)
+    # YENİ EKLENEN SATIR:
+    email = db.Column(db.String(120), unique=True, nullable=True) 
+    
+    sifre = db.Column(db.String(200), nullable=False)
+    ad_soyad = db.Column(db.String(100))
+    rol = db.Column(db.String(20), default='personel')
+    birim = db.Column(db.String(100))
+    yetki_duzeyi = db.Column(db.Integer, default=0)
+    tarih = db.Column(db.String(20))
