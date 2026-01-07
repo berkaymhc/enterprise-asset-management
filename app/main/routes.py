@@ -19,6 +19,7 @@ BIRIMLER = ["Bilgi İşlem Daire Başkanlığı", "İdari ve Mali İşler", "Per
 UNVANLAR = ["Daire Başkanı", "Şube Müdürü", "Memur", "Tekniker", "Mühendis", "Sürekli İşçi"]
 
 @bp.route('/')
+@bp.route('/index')
 @login_required
 def index():
     # 1. TEMEL DEĞİŞKENLER
@@ -379,3 +380,16 @@ def yedek_al():
     except Exception as e:
         flash(f"Yedek alma hatası: {str(e)}", "danger")
         return redirect(url_for('main.islem_gecmisi'))
+    
+    # app/main/routes.py dosyasının en altı
+
+@bp.app_errorhandler(404)
+def page_not_found(e):
+    # Kullanıcı giriş yapmışsa index şablonunu, yapmamışsa login şablonunu baz alabiliriz
+    # ama en temizi basit, bağımsız bir HTML döndürmektir.
+    return render_template('404.html'), 404
+
+@bp.app_errorhandler(500)
+def internal_server_error(e):
+    db.session.rollback() # Hata durumunda veritabanını kilitlemesin
+    return render_template('500.html'), 500

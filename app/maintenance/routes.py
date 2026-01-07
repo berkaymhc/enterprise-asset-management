@@ -99,9 +99,9 @@ def guncelle_ariza_durum():
 @bp.route('/sil-ariza/<int:id>')
 @login_required
 def sil_ariza(id):
-    # Yetki kontrolü
-    if current_user.rol != 'teknik' and current_user.rol != 'admin':
-        flash("Yetkisiz işlem.", "danger")
+    # DÜZELTME: 'teknik' rolünü buradan kaldırdık. Sadece 'admin' silebilir.
+    if current_user.rol != 'admin':
+        flash("Bu işlem için yetkiniz yok. Sadece yönetici silebilir.", "danger")
         return redirect(url_for('main.index', tab='ariza'))
         
     ariza = Ariza.query.get(id)
@@ -109,10 +109,7 @@ def sil_ariza(id):
         baslik_yedek = ariza.baslik
         db.session.delete(ariza)
         db.session.commit()
-        
-        # LOG KAYDI EKLE
         log_kaydet(f"Arıza Silindi: {baslik_yedek}", f"ID: {id}", "Arıza")
-        
         flash("Arıza silindi.", "warning")
         
     return redirect(url_for('main.index', tab='ariza'))

@@ -138,3 +138,39 @@ def sil_kullanici(id):
             flash("Kullanıcı silindi.", "success")
             
     return redirect(url_for('main.index', open_modal='userModal'))
+
+# app/auth/routes.py içerisine ekle
+
+@bp.route('/guncelle-kullanici', methods=['POST'])
+@login_required
+def guncelle_kullanici():
+    if session.get('rol') != 'admin':
+        return redirect(url_for('main.index'))
+
+    # Formdan verileri al
+    user_id = request.form.get('kullanici_id')
+    user = Kullanici.query.get(user_id)
+    
+    if user:
+        # Bilgileri güncelle
+        user.kullanici_adi = request.form.get('kullanici_adi')
+        user.ad_soyad = request.form.get('ad_soyad')
+        user.rol = request.form.get('rol')
+        user.birim = request.form.get('birim')
+        try:
+            user.yetki_duzeyi = int(request.form.get('yetki_duzeyi', 0))
+        except:
+            user.yetki_duzeyi = 0
+            
+        # Şifre alanı doluysa şifreyi de güncelle
+        sifre = request.form.get('sifre')
+        if sifre and sifre.strip() != "":
+            user.sifre = generate_password_hash(sifre)
+            
+        db.session.commit()
+        log_kaydet("Kullanıcı Güncellendi", f"{user.kullanici_adi}", "Güncelleme")
+        flash("Kullanıcı bilgileri güncellendi.", "success")
+    else:
+        flash("Kullanıcı bulunamadı.", "danger")
+        
+    return redirect(url_for('main.index', open_modal='userModal'))

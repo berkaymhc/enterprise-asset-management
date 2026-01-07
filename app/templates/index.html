@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Üniversite Envanter Sistemi</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/sade_logo.png') }}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -15,288 +16,371 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-    /* --- YENİ RENK PALETİ TANIMLARI --- */
-    :root {
-        --uni-dark: #092442;   /* Ana Kurumsal Renk (Koyu Lacivert) */
-        --uni-action: #1d61a9; /* Aksiyon Rengi (Parlak Mavi) */
-        --uni-accent: #8dd4e3; /* Vurgu Rengi (Açık Mavi) */
-        --uni-bg: #f6f2e7;     /* Zemin Rengi (Krem) */
-        --uni-orange: #F39C12; /* Eski Turuncu (Uyarılar için tutuldu) */
-    }
+        /* --- YENİ RENK PALETİ TANIMLARI --- */
+        :root {
+            --uni-dark: #092442;
+            /* Ana Kurumsal Renk (Koyu Lacivert) */
+            --uni-action: #1d61a9;
+            /* Aksiyon Rengi (Parlak Mavi) */
+            --uni-accent: #8dd4e3;
+            /* Vurgu Rengi (Açık Mavi) */
+            --uni-bg: #f6f2e7;
+            /* Zemin Rengi (Krem) */
+            --uni-orange: #F39C12;
+            /* Eski Turuncu (Uyarılar için tutuldu) */
+        }
 
-    /* GENEL SAYFA YAPISI */
-    body {
-        background-color: var(--uni-bg) !important;
-        color: #333;
-    }
+        /* GENEL SAYFA YAPISI */
+        body {
+            background-color: var(--uni-bg) !important;
+            color: #333;
+        }
 
-    /* 1. PRIMARY -> KOYU LACİVERT (Logo, Başlıklar) */
-    .bg-primary {
-        background-color: var(--uni-dark) !important;
-    }
+        /* 1. PRIMARY -> KOYU LACİVERT (Logo, Başlıklar) */
+        .bg-primary {
+            background-color: var(--uni-dark) !important;
+        }
 
-    .text-primary {
-        color: var(--uni-dark) !important;
-    }
+        .text-primary {
+            color: var(--uni-dark) !important;
+        }
 
-    .border-primary {
-        border-color: var(--uni-dark) !important;
-    }
+        .border-primary {
+            border-color: var(--uni-dark) !important;
+        }
 
-    /* Logo Alanı Gradyan */
-    .bg-primary.rounded-circle {
-        background: linear-gradient(135deg, var(--uni-dark) 0%, #05162b 100%) !important;
-    }
+        /* Logo Alanı Gradyan */
+        .bg-primary.rounded-circle {
+            background: linear-gradient(135deg, var(--uni-dark) 0%, #05162b 100%) !important;
+        }
 
-    /* 2. BUTONLAR -> PARLAK MAVİ (Daha tıklanabilir hissi verir) */
-    .btn-primary {
-        background-color: var(--uni-action) !important;
-        border-color: var(--uni-action) !important;
-    }
+        /* 2. BUTONLAR -> PARLAK MAVİ (Daha tıklanabilir hissi verir) */
+        .btn-primary {
+            background-color: var(--uni-action) !important;
+            border-color: var(--uni-action) !important;
+        }
 
-    .btn-primary:hover {
-        background-color: var(--uni-dark) !important; /* Hover olunca koyulaşsın */
-        border-color: var(--uni-dark) !important;
-    }
+        .btn-primary:hover {
+            background-color: var(--uni-dark) !important;
+            /* Hover olunca koyulaşsın */
+            border-color: var(--uni-dark) !important;
+        }
 
-    .btn-outline-primary {
-        color: var(--uni-action) !important;
-        border-color: var(--uni-action) !important;
-    }
+        .btn-outline-primary {
+            color: var(--uni-action) !important;
+            border-color: var(--uni-action) !important;
+        }
 
-    .btn-outline-primary:hover {
-        background-color: var(--uni-action) !important;
-        color: #fff !important;
-    }
+        .btn-outline-primary:hover {
+            background-color: var(--uni-action) !important;
+            color: #fff !important;
+        }
 
-    /* 3. WARNING (Turuncu - Uyarılar için standart kaldı) */
-    .bg-warning {
-        background-color: var(--uni-orange) !important;
-        color: #fff !important;
-    }
+        /* 3. WARNING (Turuncu - Uyarılar için standart kaldı) */
+        .bg-warning {
+            background-color: var(--uni-orange) !important;
+            color: #fff !important;
+        }
 
-    .text-warning {
-        color: var(--uni-orange) !important;
-    }
+        .text-warning {
+            color: var(--uni-orange) !important;
+        }
 
-    .btn-warning {
-        background-color: var(--uni-orange) !important;
-        border-color: var(--uni-orange) !important;
-        color: #fff !important;
-    }
+        .btn-warning {
+            background-color: var(--uni-orange) !important;
+            border-color: var(--uni-orange) !important;
+            color: #fff !important;
+        }
 
-    .btn-warning:hover {
-        background-color: #d35400 !important;
-        color: #fff !important;
-    }
+        .btn-warning:hover {
+            background-color: #d35400 !important;
+            color: #fff !important;
+        }
 
-    /* 4. INFO -> AÇIK MAVİ (Yeni Palet) */
-    .bg-info {
-        background-color: var(--uni-accent) !important;
-        color: var(--uni-dark) !important; /* Açık zemin üstüne koyu yazı */
-    }
+        /* 4. INFO -> AÇIK MAVİ (Yeni Palet) */
+        .bg-info {
+            background-color: var(--uni-accent) !important;
+            color: var(--uni-dark) !important;
+            /* Açık zemin üstüne koyu yazı */
+        }
 
-    .text-info {
-        color: var(--uni-action) !important;
-    }
+        .text-info {
+            color: var(--uni-action) !important;
+        }
 
-    .btn-info {
-        background-color: var(--uni-accent) !important;
-        border-color: var(--uni-accent) !important;
-        color: var(--uni-dark) !important;
-        font-weight: bold;
-    }
+        .btn-info {
+            background-color: var(--uni-accent) !important;
+            border-color: var(--uni-accent) !important;
+            color: var(--uni-dark) !important;
+            font-weight: bold;
+        }
 
-    .btn-info:hover {
-        background-color: #7bc0cf !important;
-    }
+        .btn-info:hover {
+            background-color: #7bc0cf !important;
+        }
 
-    /* 5. SEKMELER (TABS) */
-    .nav-tabs .nav-link.active {
-        color: var(--uni-action) !important;
-        border-top: 3px solid var(--uni-action) !important;
-        background-color: #fff;
-        font-weight: bold;
-    }
+        /* 5. SEKMELER (TABS) */
+        .nav-tabs .nav-link.active {
+            color: var(--uni-action) !important;
+            border-top: 3px solid var(--uni-action) !important;
+            background-color: #fff;
+            font-weight: bold;
+        }
 
-    .nav-link {
-        color: #666;
-    }
+        .nav-link {
+            color: #666;
+        }
 
-    .nav-link:hover {
-        color: var(--uni-action);
-    }
+        .nav-link:hover {
+            color: var(--uni-action);
+        }
 
-    /* --- TABLO VE KART DÜZENLEMELERİ --- */
-    .card {
-        border: none;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        background-color: #ffffff;
-    }
+        /* --- TABLO VE KART DÜZENLEMELERİ --- */
+        .card {
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            background-color: #ffffff;
+        }
 
-    /* Tablo Başlıkları (Yapışkan) */
-    .table-responsive-custom thead th {
-        position: sticky;
-        top: 0;
-        background-color: var(--uni-dark) !important; /* Başlıklar Koyu Lacivert */
-        color: white;
-        z-index: 10;
-    }
-    
-    /* Personel Tablosu Başlığı (Farklılaşması için Aksiyon Mavisi) */
-    #personel .table thead th {
-        background-color: var(--uni-action) !important;
-    }
+        /* Tablo Başlıkları (Yapışkan) */
+        .table-responsive-custom thead th {
+            position: sticky;
+            top: 0;
+            background-color: var(--uni-dark) !important;
+            /* Başlıklar Koyu Lacivert */
+            color: white;
+            z-index: 10;
+        }
 
-    .table-hover tbody tr {
-        transition: background-color 0.2s ease-in-out;
-    }
+        /* Personel Tablosu Başlığı (Farklılaşması için Aksiyon Mavisi) */
+        #personel .table thead th {
+            background-color: var(--uni-action) !important;
+        }
 
-    .table-hover tbody tr:hover {
-        background-color: #eef6fc !important; /* Çok açık mavi hover */
-    }
+        .table-hover tbody tr {
+            transition: background-color 0.2s ease-in-out;
+        }
 
-    .table td, .table th {
-        padding: 12px 10px !important;
-    }
+        .table-hover tbody tr:hover {
+            background-color: #eef6fc !important;
+            /* Çok açık mavi hover */
+        }
 
-    th.sortable {
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
-        user-select: none;
-    }
+        .table td,
+        .table th {
+            padding: 12px 10px !important;
+        }
 
-    th.sortable:hover {
-        background-color: var(--uni-action) !important;
-    }
+        th.sortable {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            user-select: none;
+        }
 
-    .highlight {
-        background-color: var(--uni-accent);
-        color: var(--uni-dark);
-        font-weight: bold;
-        border-radius: 3px;
-        padding: 0 2px;
-    }
+        th.sortable:hover {
+            background-color: var(--uni-action) !important;
+        }
 
-    .page-input {
-        width: 60px;
-        text-align: center;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        padding: 4px;
-        font-weight: bold;
-    }
+        .highlight {
+            background-color: var(--uni-accent);
+            color: var(--uni-dark);
+            font-weight: bold;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
 
-    /* --- TABLO MENÜ VE SCROLL DÜZELTMELERİ (CRITICAL FIXES) --- */
-    .table-responsive-custom {
-        max-height: 65vh;
-        overflow-y: auto;
-        border-bottom: 1px solid #dee2e6;
-        min-height: 65vh;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
+        .page-input {
+            width: 60px;
+            text-align: center;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 4px;
+            font-weight: bold;
+        }
 
-    .table-responsive {
-        overflow: visible !important; /* Dropdown kesilmesini engeller */
-        min-height: 250px;
-    }
+        /* --- TABLO MENÜ VE SCROLL DÜZELTMELERİ (CRITICAL FIXES) --- */
+        .table-responsive-custom {
+            max-height: 65vh;
+            overflow-y: auto;
+            border-bottom: 1px solid #dee2e6;
+            min-height: 65vh;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
 
-    .table td {
-        position: relative; /* Menü konumlandırması için */
-        white-space: normal !important;
-        word-wrap: break-word;
-        max-width: 300px;
-        vertical-align: middle;
-    }
+        .table-responsive {
+            overflow: visible !important;
+            /* Dropdown kesilmesini engeller */
+            min-height: 250px;
+        }
 
-    .table td:last-child {
-        white-space: nowrap !important;
-        width: 1px;
-    }
+        .table td {
+            position: relative;
+            /* Menü konumlandırması için */
+            white-space: normal !important;
+            word-wrap: break-word;
+            max-width: 300px;
+            vertical-align: middle;
+        }
 
-    /* Dropdown menüyü özgür bırak */
-    .btn-group, .dropdown {
-        position: static !important; 
-    }
-    
-    .dropdown-menu {
-        z-index: 9999 !important;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
+        .table td:last-child {
+            white-space: nowrap !important;
+            width: 1px;
+        }
 
-    /* Dropdown Animasyonu */
-    .dropdown-menu.animate {
-        animation: fadeIn 0.3s ease-in-out;
-    }
+        /* Dropdown menüyü özgür bırak */
+        .btn-group,
+        .dropdown {
+            position: static !important;
+        }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+        .dropdown-menu {
+            z-index: 9999 !important;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
 
-    /* Hover Efekti */
-    .dropdown-item:hover {
-        background-color: var(--uni-bg);
-        color: var(--uni-action);
-    }
+        /* Dropdown Animasyonu */
+        .dropdown-menu.animate {
+            animation: fadeIn 0.3s ease-in-out;
+        }
 
-    .dropdown-item:active {
-        background-color: var(--uni-action);
-        color: white;
-    }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
 
-    /* --- YÜZEN AKSİYON PANELİ (TOPLU İŞLEM) --- */
-    .yuzen-panel {
-        z-index: 1040 !important;
-        pointer-events: auto;
-        position: absolute;
-        top: -55px;
-        left: 12px;
-        right: 12px;
-        height: 45px;
-        background-color: #fff;
-        border: 2px solid var(--uni-action); /* Yeni mavi çerçeve */
-        border-radius: 8px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-        display: none;
-        align-items: center;
-        padding: 0 15px;
-        animation: slideDown 0.3s ease-out;
-    }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-    .yuzen-panel.active {
-        display: flex !important;
-    }
+        /* Hover Efekti */
+        .dropdown-item:hover {
+            background-color: var(--uni-bg);
+            color: var(--uni-action);
+        }
 
-    @keyframes slideDown {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+        .dropdown-item:active {
+            background-color: var(--uni-action);
+            color: white;
+        }
 
-    /* --- DİĞER MODÜLLER --- */
-    .check-center {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-    }
+        /* --- YÜZEN AKSİYON PANELİ (TOPLU İŞLEM) --- */
+        .yuzen-panel {
+            z-index: 1040 !important;
+            pointer-events: auto;
+            position: absolute;
+            top: -55px;
+            left: 12px;
+            right: 12px;
+            height: 45px;
+            background-color: #fff;
+            border: 2px solid var(--uni-action);
+            /* Yeni mavi çerçeve */
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            display: none;
+            align-items: center;
+            padding: 0 15px;
+            animation: slideDown 0.3s ease-out;
+        }
 
-    .empty-state {
-        text-align: center;
-        padding: 50px 20px;
-        background-color: #fff;
-        border-radius: 10px;
-        border: 2px dashed #dee2e6;
-        color: #6c757d;
-        margin-top: 20px;
-    }
+        .yuzen-panel.active {
+            display: flex !important;
+        }
 
-    #nprogress .bar {
-        background: var(--uni-action) !important;
-        height: 4px !important;
-    }
-</style>
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- DİĞER MODÜLLER --- */
+        .check-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+            color: #6c757d;
+            margin-top: 20px;
+        }
+
+        #nprogress .bar {
+            background: var(--uni-action) !important;
+            height: 4px !important;
+        }
+
+        /* --- MOBİL TABLO DÜZELTMELERİ --- */
+        @media (max-width: 768px) {
+
+            /* Tablo kapsayıcısını kaydırılabilir yap */
+            .table-responsive-custom {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Butonların olduğu son sütunu biraz genişlet ki butonlar sığsın */
+            .table td:last-child {
+                min-width: 120px;
+                /* Butonlar için minimum yer */
+                white-space: nowrap !important;
+            }
+
+            /* Mobilde yazı boyutunu biraz küçült */
+            .table {
+                font-size: 0.85rem;
+            }
+
+            .btn-sm {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* --- MOBİL İÇİN KAYDIRILABİLİR SEKMELER --- */
+        @media (max-width: 768px) {
+            .nav-tabs {
+                flex-wrap: nowrap !important;
+                /* Alt alta düşmeyi engelle */
+                overflow-x: auto !important;
+                /* Yatay kaydırmaya izin ver */
+                overflow-y: hidden;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+                /* Mobilde akıcı kaydırma */
+                border-bottom: 2px solid #dee2e6;
+            }
+
+            .nav-tabs .nav-link {
+                white-space: nowrap;
+                /* Yazıların alt satıra geçmesini engelle */
+                font-size: 0.9rem;
+                /* Mobilde yazıları biraz küçült */
+                padding: 0.5rem 1rem;
+            }
+
+            /* Kaydırma çubuğunu gizle (İsteğe bağlı - daha temiz görünüm için) */
+            .nav-tabs::-webkit-scrollbar {
+                display: none;
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-light">
@@ -316,620 +400,236 @@
         </div>
     </div>
 
-    <div class="container-fluid px-5 mt-4">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/" onclick="tamamenSifirla()">
+                <div class="bg-white rounded-circle d-flex align-items-center justify-content-center me-2 p-1"
+                    style="width: 45px; height: 45px;">
+                    <img src="{{ url_for('static', filename='img/sade_logo.png') }}" alt="Logo"
+                        style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                </div>
 
-        <div class="row align-items-center mb-4 border-bottom pb-3">
-            <div class="col-md-4 d-flex align-items-center">
-                <a href="/" onclick="tamamenSifirla()" class="text-decoration-none d-flex align-items-center">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-                        style="width: 50px; height: 50px;">
-                        <i class="fas fa-university fa-lg"></i>
-                    </div>
-                    <div>
-                        <h4 class="text-primary fw-bold mb-0">Envanter Pro</h4>
-                        <small class="text-muted" style="font-size: 0.8rem;">Üniversite Yönetim Sistemi v11</small>
-                    </div>
-                </a>
-            </div>
+                <div class="d-flex flex-column lh-1">
+                    <span>Envanter Pro</span>
+                    <small class="fw-normal text-white-50" style="font-size: 0.7rem;">v11 Y.S.</small>
+                </div>
+            </a>
 
-            <div class="col-md-4">
-                {% if session['rol'] != 'teknik' and aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
-                <form action="/" method="GET" class="d-flex shadow-sm rounded-pill overflow-hidden" id="searchForm">
-                    <input type="hidden" name="tab" id="activeTabInput" value="{{ aktif_tab }}">
-                    <input class="form-control border-0 ps-4" type="search" name="q" placeholder="Detaylı arama yap..."
-                        value="{{ arama_terimi if arama_terimi else '' }}">
-                    <button class="btn btn-white border-start px-3" type="submit"><i
-                            class="fas fa-search text-primary"></i></button>
-                    {% if arama_terimi %}
-                    <a href="/?tab={{ aktif_tab }}" class="btn btn-white border-start px-3 text-danger"><i
-                            class="fas fa-times"></i></a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+
+                <div class="mx-auto my-2 my-lg-0 w-100 d-flex justify-content-center">
+                    {% if session['rol'] != 'teknik' and aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
+                    <form action="/" method="GET" class="d-flex bg-white rounded-pill overflow-hidden shadow-sm"
+                        style="max-width: 500px; width: 100%;">
+                        <input type="hidden" name="tab" value="{{ aktif_tab }}">
+                        <input class="form-control border-0 ps-3 shadow-none" type="search" name="q"
+                            placeholder="Detaylı arama yap..." value="{{ arama_terimi if arama_terimi else '' }}">
+                        <button class="btn btn-white border-start px-3 text-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        {% if arama_terimi %}
+                        <a href="/?tab={{ aktif_tab }}" class="btn btn-white border-start px-3 text-danger">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        {% endif %}
+                    </form>
                     {% endif %}
-                </form>
-                {% endif %}
-            </div>
+                </div>
 
-            <div class="col-md-4 text-end">
-                <div class="d-flex align-items-center justify-content-end gap-3">
-                    <div class="text-end lh-1">
-                        <div class="fw-bold text-dark">{{ session['ad_soyad'] }}</div>
-                        <span class="badge bg-{{ 'danger' if session['rol'] == 'admin' else 'info' }} rounded-pill"
-                            style="font-size: 0.7rem;">
+                <div class="d-flex align-items-center justify-content-end text-white gap-3 mt-3 mt-lg-0">
+                    <div class="d-none d-lg-block text-end lh-1">
+                        <div class="fw-bold" style="font-size: 0.9rem;">{{ session['ad_soyad'] }}</div>
+                        <span class="badge bg-white text-primary rounded-pill" style="font-size: 0.65rem;">
                             {{ session['rol'] | upper }}
                         </span>
                     </div>
 
-                    <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold">
-                        <i class="fas fa-sign-out-alt"></i> Çıkış
+                    <div class="d-lg-none text-white-50 mb-2">
+                        <i class="fas fa-user me-1"></i> {{ session['ad_soyad'] }}
+                    </div>
+
+                    <a href="/logout" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="fas fa-sign-out-alt me-1"></i> Çıkış
                     </a>
                 </div>
             </div>
         </div>
+    </nav>
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-            </div>
-            <div>
-                {% if session['rol'] == 'admin' %}
-                <button class="btn btn-primary text-white btn-sm me-1" data-bs-toggle="modal"
-                    data-bs-target="#uploadFolderModal">
-                    <i class="fas fa-folder-open"></i> Klasör Yükle
-                </button>
-                <button class="btn btn-secondary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#userModal">
-                    <i class="fas fa-users-cog"></i> Kullanıcılar
-                </button>
-                {% endif %}
-                {% if session['rol'] == 'admin' %}
-                {% if session['yetki_duzeyi'] >= 1 %} <a href="/rapor" class="btn btn-success btn-sm shadow-sm fw-bold"
-                    onclick="raporIndirLoading()" target="_blank">
-                    <i class="fas fa-file-excel"></i> Rapor
-                </a>
-                {% endif %}
-                {% endif %}
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
         </div>
+        <div>
+            {% if session['rol'] == 'admin' %}
+            <button class="btn btn-primary text-white btn-sm me-1" data-bs-toggle="modal"
+                data-bs-target="#uploadFolderModal">
+                <i class="fas fa-folder-open"></i> Klasör Yükle
+            </button>
+            <button class="btn btn-secondary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#userModal">
+                <i class="fas fa-users-cog"></i> Kullanıcılar
+            </button>
+            {% endif %}
+            {% if session['rol'] == 'admin' %}
+            {% if session['yetki_duzeyi'] >= 1 %} <a href="/rapor" class="btn btn-success btn-sm shadow-sm fw-bold"
+                onclick="raporIndirLoading()" target="_blank">
+                <i class="fas fa-file-excel"></i> Rapor
+            </a>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
 
-        {% if son_yukleme %}
-        <div class="collapse mb-3" id="gecmisPanel">
-            <div
-                class="card card-body bg-light border-0 py-2 small shadow-sm d-flex flex-row align-items-center justify-content-between">
-                <div>
-                    <strong class="text-primary">Son İşlem:</strong> <span class="ms-2 text-muted">{{ son_yukleme.tarih
-                        }}</span>
-                    <span class="mx-2">|</span>
-                    <strong>{{ son_yukleme.hedef_konum }}</strong> <span class="text-muted">({{ son_yukleme.dosya_adi
-                        }})</span>
-                </div>
-                <button type="button" class="btn-close btn-sm" data-bs-toggle="collapse"
-                    data-bs-target="#gecmisPanel"></button>
+    {% if son_yukleme %}
+    <div class="collapse mb-3" id="gecmisPanel">
+        <div
+            class="card card-body bg-light border-0 py-2 small shadow-sm d-flex flex-row align-items-center justify-content-between">
+            <div>
+                <strong class="text-primary">Son İşlem:</strong> <span class="ms-2 text-muted">{{ son_yukleme.tarih
+                    }}</span>
+                <span class="mx-2">|</span>
+                <strong>{{ son_yukleme.hedef_konum }}</strong> <span class="text-muted">({{ son_yukleme.dosya_adi
+                    }})</span>
             </div>
+            <button type="button" class="btn-close btn-sm" data-bs-toggle="collapse"
+                data-bs-target="#gecmisPanel"></button>
         </div>
+    </div>
+    {% endif %}
+
+    <ul class="nav nav-tabs mb-3" id="myTab">
+
+        {% if session['rol'] != 'teknik' %}
+        {% if session['yetki_duzeyi'] >= 1 %}
+        <li class="nav-item">
+            <a class="nav-link {% if aktif_tab == 'demirbas' %}active{% endif %}" href="/?tab=demirbas">
+                📦 Demirbaşlar
+            </a>
+        </li>
+        {% endif %}
         {% endif %}
 
-        <ul class="nav nav-tabs mb-3" id="myTab">
+        {% if session['rol'] != 'teknik' %}
+        {% if session['yetki_duzeyi'] >= 1 %}
+        <li class="nav-item">
+            <a class="nav-link {% if aktif_tab == 'personel' %}active{% endif %}" href="/?tab=personel">
+                👥 Personel Listesi
+            </a>
+        </li>
+        {% endif %}
+        {% endif %}
 
-            {% if session['rol'] != 'teknik' %}
-            {% if session['yetki_duzeyi'] >= 1 %}
-            <li class="nav-item">
-                <a class="nav-link {% if aktif_tab == 'demirbas' %}active{% endif %}" href="/?tab=demirbas">
-                    📦 Demirbaşlar
-                </a>
-            </li>
-            {% endif %}
-            {% endif %}
+        <li class="nav-item">
+            <a class="nav-link {% if aktif_tab == 'ariza' %}active{% endif %}" href="/?tab=ariza">
+                🛠️ Arıza Takip
+                {% if bildirim_sayisi > 0 %}
+                <span class="badge bg-danger rounded-pill ms-1 animate__animated animate__pulse animate__infinite">
+                    {{ bildirim_sayisi }}
+                </span>
+                {% endif %}
+            </a>
+        </li>
 
-            {% if session['rol'] != 'teknik' %}
-            {% if session['yetki_duzeyi'] >= 1 %}
-            <li class="nav-item">
-                <a class="nav-link {% if aktif_tab == 'personel' %}active{% endif %}" href="/?tab=personel">
-                    👥 Personel Listesi
-                </a>
-            </li>
-            {% endif %}
-            {% endif %}
+        {% if session['rol'] != 'teknik' %}
+        {% if session['yetki_duzeyi'] >= 1 %}
+        <li class="nav-item">
+            <a class="nav-link {% if aktif_tab == 'istatistik' %}active{% endif %}" href="/?tab=istatistik">
+                📊 İstatistik & Analiz
+            </a>
+        </li>
+        {% endif %}
+        {% endif %}
+    </ul>
 
-            <li class="nav-item">
-                <a class="nav-link {% if aktif_tab == 'ariza' %}active{% endif %}" href="/?tab=ariza">
-                    🛠️ Arıza Takip
-                    {% if bildirim_sayisi > 0 %}
-                    <span class="badge bg-danger rounded-pill ms-1 animate__animated animate__pulse animate__infinite">
-                        {{ bildirim_sayisi }}
-                    </span>
-                    {% endif %}
-                </a>
-            </li>
-
-            {% if session['rol'] != 'teknik' %}
-            {% if session['yetki_duzeyi'] >= 1 %}
-            <li class="nav-item">
-                <a class="nav-link {% if aktif_tab == 'istatistik' %}active{% endif %}" href="/?tab=istatistik">
-                    📊 İstatistik & Analiz
-                </a>
-            </li>
-            {% endif %}
-            {% endif %}
-        </ul>
-
-        <div class="tab-content" id="myTabContent">
-            {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
-            <div class="tab-pane fade {% if aktif_tab == 'demirbas' %}show active{% endif %}" id="demirbas">
-                <input type="hidden" id="d_current_page" value="{{ sayfa_d }}">
-                <input type="hidden" id="d_total_pages" value="{{ toplam_sayfa_demirbas }}">
-                <div class="d-flex justify-content-end mb-2" style="height: 38px;">
-                    {% if session['rol'] == 'admin' %}
-                    <button type="button" onclick="listeyiSifirlaOnay('demirbas')"
-                        class="btn btn-outline-danger btn-sm border-0">
-                        <i class="fas fa-trash-alt"></i> Listeyi Temizle
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px; z-index: 5;">
-                            <h6 class="text-primary border-bottom pb-2 fw-bold">
-                                <i class="fas fa-box-open"></i> Yeni Eşya Ekle
-                            </h6>
-                            <form action="/ekle-demirbas" method="POST">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="text" name="ad" class="form-control mb-2 form-control-sm"
-                                    placeholder="Malzeme Adı" required>
-                                <div class="mb-2">
-                                    <select name="cinsi" class="form-select form-select-sm" required>
-                                        <option value="" disabled selected>Cinsi...</option>
-                                        <option value="Elektronik">Elektronik</option>
-                                        <option value="Mobilya">Mobilya</option>
-                                        <option value="Kırtasiye">Kırtasiye</option>
-                                        <option value="Diğer">Diğer</option>
-                                    </select>
-                                </div>
-                                <div class="mb-2">
-                                    <select name="kampus" class="form-select form-select-sm" required>
-                                        <option value="" disabled selected>Yerleşke...</option>
-                                        {% for y in yerleskeler %}
-                                        <option value="{{ y }}">{{ y }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <input type="text" name="konum" class="form-control mb-2 form-control-sm"
-                                    placeholder="Ofis No" required>
-                                <div class="input-group input-group-sm mb-3">
-                                    <span class="input-group-text bg-light text-muted">Adet</span>
-                                    <input type="number" name="adet" class="form-control" value="1" min="1" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary text-white w-100 btn-sm fw-bold">
-                                    <i class="fas fa-plus-circle"></i> Ekle
-                                </button>
-                            </form>
-                            <div class="mt-3 border-top pt-3 text-center">
-                                <button class="btn btn-outline-success btn-sm w-100" data-bs-toggle="modal"
-                                    data-bs-target="#uploadDemirbasModal">
-                                    <i class="fas fa-file-excel"></i> Excel Yükle
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-9 position-relative">
-                        <form id="topluDemirbasForm" method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                            <div id="demirbasActionPanel" class="yuzen-panel">
-                                <div class="d-flex align-items-center w-100">
-                                    <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                        <span class="badge bg-dark me-2"><span id="secilenDemirbasSayisi">0</span>
-                                            Seçili</span>
-                                        <span class="small text-muted fw-bold me-2">İşlemler:</span>
-
-                                        <button type="button" class="btn btn-primary btn-sm"
-                                            onclick="demirbasTasiKontrolluAc()">
-                                            <i class="fas fa-exchange-alt"></i> Taşı
-                                        </button>
-
-                                        <button type="button" onclick="topluIslemGonder('yazdir')"
-                                            class="btn btn-dark btn-sm">
-                                            <i class="fas fa-print"></i> Yazdır
-                                        </button>
-
-                                        {% if session['rol'] == 'admin' %}
-                                        <button type="button" onclick="topluSilBaslat('demirbas')"
-                                            class="btn btn-danger btn-sm">
-                                            <i class="fas fa-trash-alt"></i> Sil
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                    <button type="button" onclick="sepetiSifirla()" class="btn btn-sm text-secondary">
-                                        <i class="fas fa-times fa-lg"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="card p-0 shadow-sm border-0 overflow-hidden">
-                                <div class="table-responsive-custom">
-                                    <table class="table table-hover table-sm align-middle mb-0">
-                                        <thead class="bg-primary text-white"
-                                            style="position: sticky; top: 0; z-index: 10;">
-                                            <tr>
-                                                <th class="text-center" style="width: 40px;">
-                                                    <div class="check-center">
-                                                        {% if session['yetki_duzeyi'] >= 1 %}
-                                                        <input type="checkbox" id="selectAllDemirbas"
-                                                            class="form-check-input" style="cursor: pointer;">
-                                                        {% endif %}
-                                                    </div>
-                                                </th>
-                                                <th class="sortable" onclick="tabloyuSirala(1)">Malzeme</th>
-                                                <th class="sortable" onclick="tabloyuSirala(2)">Cinsi</th>
-                                                <th class="sortable" onclick="tabloyuSirala(3)">Kampüs</th>
-                                                <th class="sortable" onclick="tabloyuSirala(4)">Konum</th>
-                                                <th class="sortable" onclick="tabloyuSirala(5)">Adet</th>
-                                                <th>İşlem</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for item in demirbaslar %}
-                                            <tr>
-                                                <td class="text-center align-middle">
-                                                    <div class="check-center">
-                                                        {% if session['yetki_duzeyi'] >= 1 %}
-                                                        <input type="checkbox" name="secilen_ids" value="{{ item.id }}"
-                                                            class="form-check-input secim-kutusu-demirbas"
-                                                            style="cursor: pointer;">
-                                                        {% endif %}
-                                                    </div>
-                                                </td>
-                                                <td class="fw-bold">
-                                                    <a href="/demirbas-detay/{{ item.id }}"
-                                                        class="text-decoration-none text-dark">
-                                                        <i class="fas fa-box text-primary me-1"></i> {{ item.ad }}
-                                                    </a>
-                                                </td>
-                                                <td class="text-muted small">{{ item.cinsi }}</td>
-                                                <td>{{ item.kampus }}</td>
-                                                <td style="max-width: 200px; white-space: normal; font-size: 0.85rem;">
-                                                    <i class="fas fa-map-marker-alt text-primary me-1"></i> {{
-                                                    item.konum }}
-                                                </td>
-                                                <td><span class="badge bg-light text-dark border">{{ item.adet }}</span>
-                                                </td>
-                                                <td>
-                                                    {% if session['yetki_duzeyi'] >= 1 %}
-                                                    <button type="button" class="btn btn-primary btn-sm py-0"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#editDemirbas{{ item.id }}">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    {% endif %}
-                                                    {% if session['rol'] == 'admin' %}
-                                                    <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')"
-                                                        class="btn btn-outline-danger btn-sm py-0">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                    {% endif %}
-                                                    <a href="/kapi-karti/{{ item.konum }}" target="_blank"
-                                                        class="btn btn-outline-dark btn-sm py-0"><i
-                                                            class="fas fa-print"></i></a>
-                                                </td>
-                                            </tr>
-                                            {% else %}
-                                            <tr>
-                                                <td colspan="7" class="text-center py-4 text-muted">Kayıt yok.</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {% if toplam_sayfa_demirbas > 1 %}
-                            <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
-                                <a href="/?sayfa_d={{ sayfa_d - 1 }}&tab=demirbas&q={{ arama_terimi }}"
-                                    id="btnPrevDemirbas"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}">
-                                    <i class="fas fa-chevron-left"></i> Önceki
-                                </a>
-
-                                <span class="small fw-bold text-muted">{{ sayfa_d }} / {{ toplam_sayfa_demirbas
-                                    }}</span>
-
-                                <a href="/?sayfa_d={{ sayfa_d + 1 }}&tab=demirbas&q={{ arama_terimi }}"
-                                    id="btnNextDemirbas"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_d == toplam_sayfa_demirbas %}disabled{% endif %}">
-                                    Sonraki <i class="fas fa-chevron-right"></i>
-                                </a>
-                            </div>
-                            {% endif %}
-                        </form>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
-            <div class="tab-pane fade {% if aktif_tab == 'personel' %}show active{% endif %}" id="personel">
-                <input type="hidden" id="p_current_page" value="{{ sayfa_p }}">
-                <input type="hidden" id="p_total_pages" value="{{ toplam_sayfa_personel }}">
-                <div class="d-flex justify-content-end mb-2" style="height: 38px;">
-                    {% if session['rol'] == 'admin' %}
-                    <button type="button" onclick="listeyiSifirlaOnay('personel')"
-                        class="btn btn-outline-danger btn-sm border-0">
-                        <i class="fas fa-trash-alt"></i> Listeyi Temizle
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="row">
-
-                    <div class="col-md-3">
-                        <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px; z-index: 5;">
-                            <h6 class="text-info border-bottom pb-2 fw-bold">
-                                <i class="fas fa-user-plus"></i> Yeni Personel
-                            </h6>
-                            <form action="/ekle-personel" method="POST">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="text" name="ad_soyad" id="adSoyadInput"
-                                    class="form-control mb-2 form-control-sm" placeholder="Ad Soyad" required
-                                    autocomplete="off">
-
-                                <div class="mb-2">
-                                    <select name="unvan" class="form-select form-select-sm" required>
-                                        <option value="" disabled selected>Ünvan Seçiniz...</option>
-                                        {% for u in unvanlar %}
-                                        <option value="{{ u }}">{{ u }}</option>
-                                        {% endfor %}
-                                        <option value="Diğer">Diğer</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-2">
-                                    <select name="birimi" class="form-select form-select-sm" required>
-                                        <option value="" disabled selected>Birim Seçiniz...</option>
-                                        {% for b in birimler %}
-                                        <option value="{{ b }}">{{ b }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-
-                                <div class="mb-2">
-                                    <select name="kampus" class="form-select form-select-sm" required>
-                                        <option value="" disabled selected>Yerleşke Seçiniz...</option>
-                                        {% for yer in yerleskeler %}
-                                        <option value="{{ yer }}">{{ yer }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-
-                                <input type="text" name="ofis" class="form-control mb-2 form-control-sm"
-                                    placeholder="Ofis No (Örn: Z-10)" required>
-
-                                <div class="input-group input-group-sm mb-2">
-                                    <input type="text" name="email_prefix" id="emailInput" class="form-control"
-                                        placeholder="ad.soyad">
-                                    <span class="input-group-text bg-light text-secondary small">@avrasya.edu.tr</span>
-                                </div>
-
-                                <div class="input-group input-group-sm mb-3">
-                                    <span class="input-group-text bg-light text-secondary small">+90</span>
-                                    <input type="text" name="telefon" id="telefonInput" class="form-control"
-                                        placeholder="5XX XXX XX XX" maxlength="13">
-                                </div>
-
-                                <button type="submit" class="btn btn-info text-white w-100 btn-sm fw-bold">
-                                    <i class="fas fa-save"></i> Kaydet
-                                </button>
-                            </form>
-
-                            <div class="mt-3 border-top pt-3 text-center">
-                                <button class="btn btn-outline-success btn-sm w-100" data-bs-toggle="modal"
-                                    data-bs-target="#uploadPersonelModal">
-                                    <i class="fas fa-file-excel"></i> Excel Yükle
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-9 position-relative">
-
-                        <form id="topluPersonelForm" method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                            <div id="personelActionPanel" class="yuzen-panel">
-                                <div class="d-flex align-items-center w-100">
-                                    <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                        <span class="badge bg-dark me-2"><span id="secilenPersonelSayisi">0</span>
-                                            Seçili</span>
-                                        <span class="small text-muted fw-bold me-2">İşlemler:</span>
-
-                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
-                                            data-bs-target="#topluPersonelTasiModal">
-                                            <i class="fas fa-exchange-alt"></i> Taşı
-                                        </button>
-
-                                        {% if session['rol'] == 'admin' %}
-                                        <button type="button" onclick="topluSilBaslat('personel')"
-                                            class="btn btn-danger btn-sm">
-                                            <i class="fas fa-trash-alt"></i> Sil
-                                        </button>
-                                        {% endif %}
-                                    </div>
-
-                                    <button type="button" onclick="sepetiSifirla()" class="btn btn-sm text-secondary">
-                                        <i class="fas fa-times fa-lg"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card p-0 shadow-sm border-0 overflow-hidden">
-                                <div class="table-responsive-custom">
-                                    <table class="table table-hover table-sm align-middle mb-0">
-                                        <thead class="bg-info text-white"
-                                            style="position: sticky; top: 0; z-index: 10;">
-                                            <tr>
-                                                <th class="text-center" style="width: 40px;">
-                                                    <div class="check-center">
-                                                        <input type="checkbox" id="selectAllPersonel"
-                                                            class="form-check-input" style="cursor: pointer;">
-                                                    </div>
-                                                </th>
-                                                <th class="sortable" onclick="tabloyuSirala(1)">Ad Soyad / İletişim</th>
-                                                <th class="sortable" onclick="tabloyuSirala(2)">Ünvan</th>
-                                                <th class="sortable" onclick="tabloyuSirala(3)">Birim</th>
-                                                <th class="sortable" onclick="tabloyuSirala(4)">Kampüs</th>
-                                                <th class="sortable" onclick="tabloyuSirala(5)">Ofis</th>
-                                                <th>İşlem</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for p in personeller %}
-                                            <tr>
-                                                <td class="text-center align-middle">
-                                                    <div class="check-center">
-                                                        <input type="checkbox" name="secilen_ids" value="{{ p.id }}"
-                                                            class="form-check-input secim-kutusu-personel"
-                                                            style="cursor: pointer;">
-                                                    </div>
-                                                </td>
-
-                                                <td class="align-middle">
-                                                    <div class="fw-bold">
-                                                        <a href="/personel-detay/{{ p.id }}"
-                                                            class="text-decoration-none text-dark">
-                                                            <i class="fas fa-user-circle text-info me-1"></i> {{
-                                                            p.ad_soyad }}
-                                                        </a>
-                                                    </div>
-                                                </td>
-
-                                                <td class="align-middle">{{ p.unvan }}</td>
-
-                                                <td class="small align-middle">{{ p.birimi }}</td>
-
-                                                <td class="align-middle">{{ p.kampus }}</td>
-
-                                                <td class="align-middle"><span class="badge bg-warning text-dark">{{
-                                                        p.ofis }}</span></td>
-
-                                                <td class="align-middle">
-                                                    <button type="button" class="btn btn-sm btn-warning py-0"
-                                                        data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-
-                                                    <button type="button" class="btn btn-sm btn-primary py-0"
-                                                        data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}">
-                                                        <i class="fas fa-exchange-alt"></i>
-                                                    </button>
-
-                                                    {% if session['rol'] == 'admin' %}
-                                                    <button type="button" onclick="silOnay('{{ p.id }}', 'personel')"
-                                                        class="btn btn-sm btn-danger py-0">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                            {% else %}
-                                            <tr>
-                                                <td colspan="7" class="text-center py-4 text-muted">
-                                                    <i class="fas fa-info-circle fa-2x mb-2"></i><br>
-                                                    Kayıtlı personel bulunamadı.
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {% if toplam_sayfa_personel > 1 %}
-                            <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
-                                <a href="/?sayfa_p={{ sayfa_p - 1 }}&tab=personel&q={{ arama_terimi }}"
-                                    id="btnPrevPersonel"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_p == 1 %}disabled{% endif %}">
-                                    <i class="fas fa-chevron-left"></i> Önceki
-                                </a>
-
-                                <span class="small fw-bold text-muted">{{ sayfa_p }} / {{ toplam_sayfa_personel
-                                    }}</span>
-
-                                <a href="/?sayfa_p={{ sayfa_p + 1 }}&tab=personel&q={{ arama_terimi }}"
-                                    id="btnNextPersonel"
-                                    class="btn btn-sm btn-outline-secondary {% if sayfa_p == toplam_sayfa_personel %}disabled{% endif %}">
-                                    Sonraki <i class="fas fa-chevron-right"></i>
-                                </a>
-                            </div>
-                            {% endif %}
-                        </form>
-                    </div>
-                </div>
+    <div class="tab-content" id="myTabContent">
+        {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
+        <div class="tab-pane fade {% if aktif_tab == 'demirbas' %}show active{% endif %}" id="demirbas">
+            <input type="hidden" id="d_current_page" value="{{ sayfa_d }}">
+            <input type="hidden" id="d_total_pages" value="{{ toplam_sayfa_demirbas }}">
+            <div class="d-flex justify-content-end mb-2" style="height: 38px;">
+                {% if session['rol'] == 'admin' %}
+                <button type="button" onclick="listeyiSifirlaOnay('demirbas')"
+                    class="btn btn-outline-danger btn-sm border-0">
+                    <i class="fas fa-trash-alt"></i> Listeyi Temizle
+                </button>
+                {% endif %}
             </div>
 
-            <div class="modal fade" id="topluPersonelTasiModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title">Toplu Personel Taşı</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="/toplu-tasi-personel" method="POST">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px; z-index: 5;">
+                        <h6 class="text-primary border-bottom pb-2 fw-bold">
+                            <i class="fas fa-box-open"></i> Yeni Eşya Ekle
+                        </h6>
+                        <form action="/ekle-demirbas" method="POST">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <div class="modal-body">
-                                <div id="hiddenIdContainer"></div>
-                                <p class="alert alert-info small">Seçilen personellerin yeri güncellenecektir.</p>
-                                <div class="mb-3">
-                                    <label>Yeni Birim</label>
-                                    <select name="yeni_birim" class="form-select">
-                                        <option value="">Değiştirme</option>
-                                        {% for b in birimler %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label>Yeni Kampüs</label>
-                                    <select name="yeni_kampus" class="form-select">
-                                        <option value="">Değiştirme</option>
-                                        {% for y in yerleskeler %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label>Yeni Ofis</label>
-                                    <input type="text" name="yeni_ofis" class="form-control" placeholder="Z-20"
-                                        required>
-                                </div>
+                            <input type="text" name="ad" class="form-control mb-2 form-control-sm"
+                                placeholder="Malzeme Adı" required>
+                            <div class="mb-2">
+                                <select name="cinsi" class="form-select form-select-sm" required>
+                                    <option value="" disabled selected>Cinsi...</option>
+                                    <option value="Elektronik">Elektronik</option>
+                                    <option value="Mobilya">Mobilya</option>
+                                    <option value="Kırtasiye">Kırtasiye</option>
+                                    <option value="Diğer">Diğer</option>
+                                </select>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                                <button type="submit" class="btn btn-primary" onclick="sepetiSifirla()">Kaydet ve
-                                    Taşı</button>
+                            <div class="mb-2">
+                                <select name="kampus" class="form-select form-select-sm" required>
+                                    <option value="" disabled selected>Yerleşke...</option>
+                                    {% for y in yerleskeler %}
+                                    <option value="{{ y }}">{{ y }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
+                            <input type="text" name="konum" class="form-control mb-2 form-control-sm"
+                                placeholder="Ofis No" required>
+                            <div class="input-group input-group-sm mb-3">
+                                <span class="input-group-text bg-light text-muted">Adet</span>
+                                <input type="number" name="adet" class="form-control" value="1" min="1" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary text-white w-100 btn-sm fw-bold">
+                                <i class="fas fa-plus-circle"></i> Ekle
+                            </button>
                         </form>
+                        <div class="mt-3 border-top pt-3 text-center">
+                            <button class="btn btn-outline-success btn-sm w-100" data-bs-toggle="modal"
+                                data-bs-target="#uploadDemirbasModal">
+                                <i class="fas fa-file-excel"></i> Excel Yükle
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
 
-            <div class="tab-pane fade {% if aktif_tab == 'ariza' or session['yetki_duzeyi'] == 0 %}show active{% endif %}"
-                id="ariza">
-
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="text-danger mb-0"><i class="fas fa-tools"></i> Arıza Yönetimi</h5>
-                    <button class="btn btn-danger btn-sm shadow-sm" data-bs-toggle="modal"
-                        data-bs-target="#arizaEkleModal">
-                        <i class="fas fa-plus"></i> Yeni Arıza Bildir
-                    </button>
-                </div>
-
-                <div class="position-relative">
-
-                    <form id="topluArizaForm" method="POST">
+                <div class="col-md-9 position-relative">
+                    <form id="topluDemirbasForm" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <div id="arizaActionPanel" class="yuzen-panel">
+                        <div id="demirbasActionPanel" class="yuzen-panel">
                             <div class="d-flex align-items-center w-100">
                                 <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                    <span class="badge bg-dark me-2"><span id="secilenArizaSayisi">0</span>
+                                    <span class="badge bg-dark me-2"><span id="secilenDemirbasSayisi">0</span>
                                         Seçili</span>
+                                    <span class="small text-muted fw-bold me-2">İşlemler:</span>
 
-                                    {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
-                                    <button type="button" onclick="topluSilBaslat('ariza')"
+                                    <button type="button" class="btn btn-primary btn-sm"
+                                        onclick="demirbasTasiKontrolluAc()">
+                                        <i class="fas fa-exchange-alt"></i> Taşı
+                                    </button>
+
+                                    <button type="button" onclick="topluIslemGonder('yazdir')"
+                                        class="btn btn-dark btn-sm">
+                                        <i class="fas fa-print"></i> Yazdır
+                                    </button>
+
+                                    {% if session['rol'] == 'admin' %}
+                                    <button type="button" onclick="topluSilBaslat('demirbas')"
                                         class="btn btn-danger btn-sm">
-                                        <i class="fas fa-trash-alt"></i> Seçilenleri Sil
+                                        <i class="fas fa-trash-alt"></i> Sil
                                     </button>
                                     {% endif %}
                                 </div>
@@ -939,378 +639,760 @@
                             </div>
                         </div>
 
-                        <div class="table-responsive bg-white rounded shadow-sm border"
-                            style="padding-bottom: 150px; margin-bottom: 0;">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light text-secondary">
-                                    <tr>
-                                        <th class="text-center" style="width: 40px;">
-                                            <div class="check-center">
-                                                {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
-                                                <input type="checkbox" id="selectAllAriza" class="form-check-input"
-                                                    style="cursor: pointer;">
-                                                {% endif %}
-                                            </div>
-                                        </th>
-
-                                        <th style="width: 5%;">ID</th>
-                                        <th style="width: 10%;">Öncelik</th>
-                                        <th style="width: 12%;">Durum</th>
-                                        <th style="width: 15%;">Konum</th>
-                                        <th style="width: 25%;">Arıza Detayı</th>
-                                        <th style="width: 13%;"><i class="far fa-clock"></i> Zaman</th>
-                                        <th style="width: 12%;">Bildiren</th>
-                                        <th style="width: 8%;">İşlem</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for ariza in arizalar %}
-                                    <tr
-                                        class="align-middle {% if ariza.durum == 'İptal Edildi' %}table-secondary text-muted{% endif %}">
-
-                                        <td class="text-center">
-                                            <div class="check-center">
-                                                {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
-                                                <input type="checkbox" name="secilen_ids" value="{{ ariza.id }}"
-                                                    class="form-check-input secim-kutusu-ariza"
-                                                    style="cursor: pointer;">
-                                                {% endif %}
-                                            </div>
-                                        </td>
-
-                                        <td class="fw-bold text-muted small">#{{ ariza.id }}</td>
-
-                                        <td>
-                                            {% if ariza.oncelik == 'Acil' %}
-                                            <span class="badge bg-danger">🔥 Acil</span>
-                                            {% elif ariza.oncelik == 'Yüksek' %}
-                                            <span class="badge bg-warning text-dark">⚠️ Yüksek</span>
-                                            {% else %}
-                                            <span class="badge bg-info text-dark">🔹 Normal</span>
-                                            {% endif %}
-                                        </td>
-
-                                        <td>
-                                            {% if ariza.durum == 'Bekliyor' %}
-                                            <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i>
-                                                Bekliyor</span>
-                                            {% elif ariza.durum == 'İşlemde' or ariza.durum == 'Devam Ediyor' %}
-                                            <span class="badge bg-primary"><i class="fas fa-cog fa-spin"></i>
-                                                İşlemde</span>
-                                            {% elif ariza.durum == 'Tamamlandı' %}
-                                            <span class="badge bg-success"><i class="fas fa-check"></i>
-                                                Tamamlandı</span>
-                                            {% elif ariza.durum == 'İptal Edildi' %}
-                                            <span class="badge bg-secondary"><i class="fas fa-ban"></i> İptal</span>
-                                            {% else %}
-                                            <span class="badge bg-light text-dark border">{{ ariza.durum }}</span>
-                                            {% endif %}
-                                        </td>
-
-                                        <td class="fw-bold text-dark small">{{ ariza.konum }}</td>
-
-                                        <td>
-                                            <span class="d-block fw-bold text-dark">{{ ariza.baslik }}</span>
-                                            <small class="text-muted d-block text-truncate" style="max-width: 250px;">{{
-                                                ariza.aciklama }}</small>
-                                        </td>
-
-                                        <td>
-                                            <div class="d-flex flex-column">
-                                                <span class="fw-bold text-dark small">{{ ariza.tarih.split(' ')[0]
-                                                    }}</span>
-                                                <span class="text-muted small" style="font-size: 0.8em;">{{
-                                                    ariza.tarih.split(' ')[1] if ' ' in ariza.tarih else '' }}</span>
-                                            </div>
-                                        </td>
-
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-user-circle text-secondary me-1"></i>
-                                                <span class="small fw-bold text-dark">
-                                                    {{ ariza.bildiren if ariza.bildiren else 'Belirtilmedi' }}
-                                                </span>
-                                            </div>
-                                        </td>
-
-                                        <td class="text-end">
-                                            {% if session['rol'] == 'teknik' or session['rol'] == 'admin' %}
-                                            <div class="btn-group">
-
-                                                <button type="button"
-                                                    class="btn btn-outline-primary btn-sm dropdown-toggle"
-                                                    data-bs-toggle="dropdown" data-bs-container="body"> <i
-                                                        class="fas fa-tools me-3"></i> İşlem
+                        <div class="card p-0 shadow-sm border-0 overflow-hidden">
+                            <div class="table-responsive-custom">
+                                <table class="table table-hover table-sm align-middle mb-0">
+                                    <thead class="bg-primary text-white" style="position: sticky; top: 0; z-index: 10;">
+                                        <tr>
+                                            <th class="text-center" style="width: 40px;">
+                                                <div class="check-center">
+                                                    {% if session['yetki_duzeyi'] >= 1 %}
+                                                    <input type="checkbox" id="selectAllDemirbas"
+                                                        class="form-check-input" style="cursor: pointer;">
+                                                    {% endif %}
+                                                </div>
+                                            </th>
+                                            <th class="sortable" onclick="tabloyuSirala(1)">Malzeme</th>
+                                            <th class="sortable" onclick="tabloyuSirala(2)">Cinsi</th>
+                                            <th class="sortable" onclick="tabloyuSirala(3)">Kampüs</th>
+                                            <th class="sortable" onclick="tabloyuSirala(4)">Konum</th>
+                                            <th class="sortable" onclick="tabloyuSirala(5)">Adet</th>
+                                            <th>İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in demirbaslar %}
+                                        <tr>
+                                            <td class="text-center align-middle">
+                                                <div class="check-center">
+                                                    {% if session['yetki_duzeyi'] >= 1 %}
+                                                    <input type="checkbox" name="secilen_ids" value="{{ item.id }}"
+                                                        class="form-check-input secim-kutusu-demirbas"
+                                                        style="cursor: pointer;">
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td class="fw-bold">
+                                                <a href="/demirbas-detay/{{ item.id }}"
+                                                    class="text-decoration-none text-dark">
+                                                    <i class="fas fa-box text-primary me-1"></i> {{ item.ad }}
+                                                </a>
+                                            </td>
+                                            <td class="text-muted small">{{ item.cinsi }}</td>
+                                            <td>{{ item.kampus }}</td>
+                                            <td style="max-width: 200px; white-space: normal; font-size: 0.85rem;">
+                                                <i class="fas fa-map-marker-alt text-primary me-1"></i> {{
+                                                item.konum }}
+                                            </td>
+                                            <td><span class="badge bg-light text-dark border">{{ item.adet }}</span>
+                                            </td>
+                                            <td>
+                                                {% if session['yetki_duzeyi'] >= 1 %}
+                                                <button type="button" class="btn btn-primary btn-sm py-0"
+                                                    data-bs-toggle="modal" data-bs-target="#editDemirbas{{ item.id }}">
+                                                    <i class="fas fa-edit"></i>
                                                 </button>
-                                                <ul class="dropdown-menu dropdown-menu-end shadow">
-                                                    <li>
-                                                        <h6 class="dropdown-header">Durum Değiştir</h6>
-                                                    </li>
-
-                                                    <li><a class="dropdown-item" href="#"
-                                                            onclick="durumModalAc('{{ ariza.id }}', 'İşlemde', '⚙️ İşleme Al')">⚙️
-                                                            İşleme Al</a></li>
-                                                    <li><a class="dropdown-item" href="#"
-                                                            onclick="durumModalAc('{{ ariza.id }}', 'Parça Bekliyor', '🟠 Parça Bekliyor')">🟠
-                                                            Parça Bekliyor</a></li>
-
-                                                    <li>
-                                                        <hr class="dropdown-divider">
-                                                    </li>
-
-                                                    <li><a class="dropdown-item text-success" href="#"
-                                                            onclick="durumModalAc('{{ ariza.id }}', 'Tamamlandı', '✅ Tamamlandı')">✅
-                                                            Tamamlandı</a></li>
-                                                    <li><a class="dropdown-item text-secondary" href="#"
-                                                            onclick="durumModalAc('{{ ariza.id }}', 'İptal Edildi', '🚫 İptal Et')">🚫
-                                                            İptal Et</a></li>
-                                                </ul>
-
-                                                <button type="button" onclick="tekilArizaSilModalAc('{{ ariza.id }}')"
-                                                    class="btn btn-outline-danger btn-sm ms-1"
-                                                    title="Kalıcı Olarak Sil">
+                                                {% endif %}
+                                                {% if session['rol'] == 'admin' %}
+                                                <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')"
+                                                    class="btn btn-outline-danger btn-sm py-0">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </div>
-                                            {% endif %}
-                                        </td>
-
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-
-                            {% if not arizalar %}
-                            <div class="text-center p-5 text-muted">
-                                <i class="fas fa-clipboard-check fa-3x mb-3 text-secondary opacity-50"></i>
-                                <p>Şu an görüntülenecek bir arıza veya talep bulunmuyor.</p>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </form>
-                </div> {% if toplam_sayfa_ariza > 1 %}
-                <div class="d-flex justify-content-center align-items-center gap-2 p-3 mt-2">
-                    <a href="/?sayfa_a={{ sayfa_a - 1 }}&tab=ariza&q={{ arama_terimi }}"
-                        class="btn btn-sm btn-outline-danger {% if sayfa_a == 1 %}disabled{% endif %}">
-                        <i class="fas fa-chevron-left"></i> Önceki
-                    </a>
-                    <span class="small fw-bold text-muted bg-white px-3 py-1 rounded border">Sayfa {{ sayfa_a }} / {{
-                        toplam_sayfa_ariza }}</span>
-                    <a href="/?sayfa_a={{ sayfa_a + 1 }}&tab=ariza&q={{ arama_terimi }}"
-                        class="btn btn-sm btn-outline-danger {% if sayfa_a == toplam_sayfa_ariza %}disabled{% endif %}">
-                        Sonraki <i class="fas fa-chevron-right"></i>
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% if session['yetki_duzeyi'] >= 1 %}
-        <div class="tab-pane fade {% if aktif_tab == 'istatistik' %}show active{% endif %}" id="istatistik">
-            <div class="card p-4 shadow-sm border-0">
-                <div class="text-center mb-4">
-                    <div class="btn-group" role="group">
-                        <input type="radio" class="btn-check" name="analiz_secim" id="radioDemirbas" autocomplete="off"
-                            onchange="analizTuruDegis('demirbas')" {% if analiz_turu=='demirbas' %}checked{% endif %}>
-                        <label class="btn btn-outline-warning px-4 fw-bold" for="radioDemirbas">📦 Demirbaş
-                            Analizi</label>
-                        <input type="radio" class="btn-check" name="analiz_secim" id="radioPersonel" autocomplete="off"
-                            onchange="analizTuruDegis('personel')" {% if analiz_turu=='personel' %}checked{% endif %}>
-                        <label class="btn btn-outline-info px-4 fw-bold" for="radioPersonel">👥 Personel
-                            Analizi</label>
-                    </div>
-                </div>
-
-                <div id="form-demirbas" class="bg-light p-4 rounded border mb-4" {% if analiz_turu=='personel'
-                    %}style="display:none;" {% endif %}>
-                    <h6 class="text-warning fw-bold mb-3"><i class="fas fa-boxes"></i> Malzeme Sayım Kriterleri</h6>
-                    <form action="/" method="GET">
-                        <input type="hidden" name="tab" value="istatistik">
-                        <input type="hidden" name="analiz_turu" value="demirbas">
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-4"><label class="form-label small fw-bold">Malzeme Adı</label><input
-                                    type="text" name="ist_malzeme" class="form-control"
-                                    placeholder="Örn: Masa, Sandalye" value="{{ ist_malzeme }}"></div>
-                            <div class="col-md-3"><label class="form-label small fw-bold">Kampüs</label><select
-                                    name="ist_kampus" class="form-select">
-                                    <option value="Tümü">Tüm Kampüsler</option>{% for yer in yerleskeler %}<option
-                                        value="{{ yer }}" {% if ist_kampus==yer %}selected{% endif %}>{{ yer }}
-                                    </option>{% endfor %}
-                                </select></div>
-                            <div class="col-md-3"><label class="form-label small fw-bold">Bina / Konum</label><input
-                                    type="text" name="ist_konum" class="form-control" placeholder="Örn: Yurtlar"
-                                    value="{{ ist_konum }}"></div>
-                            <div class="col-md-2"><button type="submit" name="islem" value="analiz"
-                                    class="btn btn-warning w-100 fw-bold text-dark" onclick="showLoader()">
-                                    <i class="fas fa-calculator"></i> Say / Analiz Et
-                                </button></div>
-                        </div>
-                    </form>
-                </div>
-
-                <div id="form-personel" class="bg-light p-4 rounded border mb-4" {% if analiz_turu=='demirbas'
-                    %}style="display:none;" {% endif %}>
-                    <h6 class="text-info fw-bold mb-3"><i class="fas fa-users"></i> Personel Analiz Kriterleri</h6>
-                    <form action="/" method="GET">
-                        <input type="hidden" name="tab" value="istatistik">
-                        <input type="hidden" name="analiz_turu" value="personel">
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-3"><label class="form-label small fw-bold">Birim</label><input
-                                    type="text" name="ist_p_birim" class="form-control" placeholder="Örn: Bilgi İşlem"
-                                    value="{{ ist_p_birim }}"></div>
-                            <div class="col-md-3"><label class="form-label small fw-bold">Kampüs</label><select
-                                    name="ist_p_kampus" class="form-select">
-                                    <option value="Tümü">Tüm Kampüsler</option>{% for yer in yerleskeler %}<option
-                                        value="{{ yer }}" {% if ist_p_kampus==yer %}selected{% endif %}>{{ yer }}
-                                    </option>{% endfor %}
-                                </select></div>
-                            <div class="col-md-2"><label class="form-label small fw-bold">Ofis / Konum</label><input
-                                    type="text" name="ist_p_ofis" class="form-control" placeholder="Örn: B-205"
-                                    value="{{ ist_p_ofis }}"></div>
-                            <div class="col-md-2"><label class="form-label small fw-bold">Ad / Ünvan</label><input
-                                    type="text" name="ist_p_ad" class="form-control" placeholder="Opsiyonel"
-                                    value="{{ ist_p_ad }}"></div>
-                            <div class="col-md-2"><button type="submit" name="islem" value="analiz"
-                                    class="btn btn-info w-100 fw-bold text-white" onclick="showLoader()">
-                                    <i class="fas fa-search"></i> Listele / Analiz Et
-                                </button></div>
-                        </div>
-                    </form>
-                </div>
-
-                <div id="analizSonuclariContainer" class="mb-5">
-                    {% if analiz_sonuclari %}
-                    <div class="card bg-light border-0 mb-4 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                                <h6 class="text-secondary fw-bold mb-0"><i class="fas fa-chart-bar"></i> Görsel
-                                    Analiz Sonucu</h6>
-                                <a href="{{ url_for('reports.rapor_analiz', analiz_turu=analiz_turu, ist_malzeme=ist_malzeme, ist_kampus=ist_kampus, ist_konum=ist_konum, ist_p_ad=ist_p_ad, ist_p_birim=ist_p_birim, ist_p_kampus=ist_p_kampus, ist_p_ofis=ist_p_ofis) }}"
-                                    class="btn btn-success fw-bold shadow-sm download-btn"
-                                    onclick="raporIndirLoading()">
-                                    <i class="fas fa-file-excel"></i> Tam Listeyi İndir
-                                </a>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 border-end">
-                                    <div style="height: 200px;"><canvas id="filterChart1"></canvas></div>
-                                    <div class="text-center small text-muted mt-2">Kampüs Dağılımı</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div style="height: 200px;"><canvas id="filterChart2"></canvas></div>
-                                    <div class="text-center small text-muted mt-2">{{ 'Unvan Dağılımı' if
-                                        analiz_turu == 'personel' else 'Blok/Konum Yoğunluğu' }}</div>
-                                </div>
+                                                {% endif %}
+                                                <a href="/kapi-karti/{{ item.konum }}" target="_blank"
+                                                    class="btn btn-outline-dark btn-sm py-0"><i
+                                                        class="fas fa-print"></i></a>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4 text-muted">Kayıt yok.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </div>
 
-                    <div
-                        class="alert alert-success text-center border-0 shadow-sm d-flex justify-content-between align-items-center px-5">
-                        <div class="text-start">
-                            <small class="text-muted d-block text-uppercase fw-bold mb-1">Analiz Sonucu</small>
-                            <span class="fs-5"><i class="fas fa-check-circle"></i> Toplam: <span
-                                    class="fw-bold display-6 mx-2">{{ analiz_toplam }}</span> {{ 'Kişi' if
-                                analiz_turu == 'personel' else 'Adet' }} Bulundu</span>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}"
-                                class="btn btn-success fw-bold shadow-sm download-btn" onclick="raporIndirLoading()"> <i
-                                    class="fas fa-file-excel"></i> Tam Listeyi İndir
+                        {% if toplam_sayfa_demirbas > 1 %}
+                        <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
+                            <a href="/?sayfa_d={{ sayfa_d - 1 }}&tab=demirbas&q={{ arama_terimi }}" id="btnPrevDemirbas"
+                                class="btn btn-sm btn-outline-secondary {% if sayfa_d == 1 %}disabled{% endif %}">
+                                <i class="fas fa-chevron-left"></i> Önceki
+                            </a>
+
+                            <span class="small fw-bold text-muted">{{ sayfa_d }} / {{ toplam_sayfa_demirbas
+                                }}</span>
+
+                            <a href="/?sayfa_d={{ sayfa_d + 1 }}&tab=demirbas&q={{ arama_terimi }}" id="btnNextDemirbas"
+                                class="btn btn-sm btn-outline-secondary {% if sayfa_d == toplam_sayfa_demirbas %}disabled{% endif %}">
+                                Sonraki <i class="fas fa-chevron-right"></i>
                             </a>
                         </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if session['yetki_duzeyi'] >= 1 and session['rol'] != 'teknik' %}
+        <div class="tab-pane fade {% if aktif_tab == 'personel' %}show active{% endif %}" id="personel">
+            <input type="hidden" id="p_current_page" value="{{ sayfa_p }}">
+            <input type="hidden" id="p_total_pages" value="{{ toplam_sayfa_personel }}">
+            <div class="d-flex justify-content-end mb-2" style="height: 38px;">
+                {% if session['rol'] == 'admin' %}
+                <button type="button" onclick="listeyiSifirlaOnay('personel')"
+                    class="btn btn-outline-danger btn-sm border-0">
+                    <i class="fas fa-trash-alt"></i> Listeyi Temizle
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-3">
+                    <div class="card p-3 shadow-sm border-0 bg-white sticky-top" style="top: 20px; z-index: 5;">
+                        <h6 class="text-info border-bottom pb-2 fw-bold">
+                            <i class="fas fa-user-plus"></i> Yeni Personel
+                        </h6>
+                        <form action="/ekle-personel" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="text" name="ad_soyad" id="adSoyadInput"
+                                class="form-control mb-2 form-control-sm" placeholder="Ad Soyad" required
+                                autocomplete="off">
+
+                            <div class="mb-2">
+                                <select name="unvan" class="form-select form-select-sm" required>
+                                    <option value="" disabled selected>Ünvan Seçiniz...</option>
+                                    {% for u in unvanlar %}
+                                    <option value="{{ u }}">{{ u }}</option>
+                                    {% endfor %}
+                                    <option value="Diğer">Diğer</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <select name="birimi" class="form-select form-select-sm" required>
+                                    <option value="" disabled selected>Birim Seçiniz...</option>
+                                    {% for b in birimler %}
+                                    <option value="{{ b }}">{{ b }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <select name="kampus" class="form-select form-select-sm" required>
+                                    <option value="" disabled selected>Yerleşke Seçiniz...</option>
+                                    {% for yer in yerleskeler %}
+                                    <option value="{{ yer }}">{{ yer }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <input type="text" name="ofis" class="form-control mb-2 form-control-sm"
+                                placeholder="Ofis No (Örn: Z-10)" required>
+
+                            <div class="input-group input-group-sm mb-2">
+                                <input type="text" name="email_prefix" id="emailInput" class="form-control"
+                                    placeholder="ad.soyad">
+                                <span class="input-group-text bg-light text-secondary small">@avrasya.edu.tr</span>
+                            </div>
+
+                            <div class="input-group input-group-sm mb-3">
+                                <span class="input-group-text bg-light text-secondary small">+90</span>
+                                <input type="text" name="telefon" id="telefonInput" class="form-control"
+                                    placeholder="5XX XXX XX XX" maxlength="13">
+                            </div>
+
+                            <button type="submit" class="btn btn-info text-white w-100 btn-sm fw-bold">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                        </form>
+
+                        <div class="mt-3 border-top pt-3 text-center">
+                            <button class="btn btn-outline-success btn-sm w-100" data-bs-toggle="modal"
+                                data-bs-target="#uploadPersonelModal">
+                                <i class="fas fa-file-excel"></i> Excel Yükle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-9 position-relative">
+
+                    <form id="topluPersonelForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div id="personelActionPanel" class="yuzen-panel">
+                            <div class="d-flex align-items-center w-100">
+                                <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                    <span class="badge bg-dark me-2"><span id="secilenPersonelSayisi">0</span>
+                                        Seçili</span>
+                                    <span class="small text-muted fw-bold me-2">İşlemler:</span>
+
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#topluPersonelTasiModal">
+                                        <i class="fas fa-exchange-alt"></i> Taşı
+                                    </button>
+
+                                    {% if session['rol'] == 'admin' %}
+                                    <button type="button" onclick="topluSilBaslat('personel')"
+                                        class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash-alt"></i> Sil
+                                    </button>
+                                    {% endif %}
+                                </div>
+
+                                <button type="button" onclick="sepetiSifirla()" class="btn btn-sm text-secondary">
+                                    <i class="fas fa-times fa-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card p-0 shadow-sm border-0 overflow-hidden">
+                            <div class="table-responsive-custom">
+                                <table class="table table-hover table-sm align-middle mb-0">
+                                    <thead class="bg-info text-white" style="position: sticky; top: 0; z-index: 10;">
+                                        <tr>
+                                            <th class="text-center" style="width: 40px;">
+                                                <div class="check-center">
+                                                    <input type="checkbox" id="selectAllPersonel"
+                                                        class="form-check-input" style="cursor: pointer;">
+                                                </div>
+                                            </th>
+                                            <th class="sortable" onclick="tabloyuSirala(1)">Ad Soyad / İletişim</th>
+                                            <th class="sortable" onclick="tabloyuSirala(2)">Ünvan</th>
+                                            <th class="sortable" onclick="tabloyuSirala(3)">Birim</th>
+                                            <th class="sortable" onclick="tabloyuSirala(4)">Kampüs</th>
+                                            <th class="sortable" onclick="tabloyuSirala(5)">Ofis</th>
+                                            <th>İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in personeller %}
+                                        <tr>
+                                            <td class="text-center align-middle">
+                                                <div class="check-center">
+                                                    <input type="checkbox" name="secilen_ids" value="{{ p.id }}"
+                                                        class="form-check-input secim-kutusu-personel"
+                                                        style="cursor: pointer;">
+                                                </div>
+                                            </td>
+
+                                            <td class="align-middle">
+                                                <div class="fw-bold">
+                                                    <a href="/personel-detay/{{ p.id }}"
+                                                        class="text-decoration-none text-dark">
+                                                        <i class="fas fa-user-circle text-info me-1"></i> {{
+                                                        p.ad_soyad }}
+                                                    </a>
+                                                </div>
+                                            </td>
+
+                                            <td class="align-middle">{{ p.unvan }}</td>
+
+                                            <td class="small align-middle">{{ p.birimi }}</td>
+
+                                            <td class="align-middle">{{ p.kampus }}</td>
+
+                                            <td class="align-middle"><span class="badge bg-warning text-dark">{{
+                                                    p.ofis }}</span></td>
+
+                                            <td class="align-middle">
+                                                <button type="button" class="btn btn-sm btn-warning py-0"
+                                                    data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+
+                                                <button type="button" class="btn btn-sm btn-primary py-0"
+                                                    data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}">
+                                                    <i class="fas fa-exchange-alt"></i>
+                                                </button>
+
+                                                {% if session['rol'] == 'admin' %}
+                                                <button type="button" onclick="silOnay('{{ p.id }}', 'personel')"
+                                                    class="btn btn-sm btn-danger py-0">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4 text-muted">
+                                                <i class="fas fa-info-circle fa-2x mb-2"></i><br>
+                                                Kayıtlı personel bulunamadı.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {% if toplam_sayfa_personel > 1 %}
+                        <div class="d-flex justify-content-center align-items-center gap-2 p-2 bg-light border-top">
+                            <a href="/?sayfa_p={{ sayfa_p - 1 }}&tab=personel&q={{ arama_terimi }}" id="btnPrevPersonel"
+                                class="btn btn-sm btn-outline-secondary {% if sayfa_p == 1 %}disabled{% endif %}">
+                                <i class="fas fa-chevron-left"></i> Önceki
+                            </a>
+
+                            <span class="small fw-bold text-muted">{{ sayfa_p }} / {{ toplam_sayfa_personel
+                                }}</span>
+
+                            <a href="/?sayfa_p={{ sayfa_p + 1 }}&tab=personel&q={{ arama_terimi }}" id="btnNextPersonel"
+                                class="btn btn-sm btn-outline-secondary {% if sayfa_p == toplam_sayfa_personel %}disabled{% endif %}">
+                                Sonraki <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="topluPersonelTasiModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Toplu Personel Taşı</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="/toplu-tasi-personel" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <div id="hiddenIdContainer"></div>
+                            <p class="alert alert-info small">Seçilen personellerin yeri güncellenecektir.</p>
+                            <div class="mb-3">
+                                <label>Yeni Birim</label>
+                                <select name="yeni_birim" class="form-select">
+                                    <option value="">Değiştirme</option>
+                                    {% for b in birimler %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label>Yeni Kampüs</label>
+                                <select name="yeni_kampus" class="form-select">
+                                    <option value="">Değiştirme</option>
+                                    {% for y in yerleskeler %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label>Yeni Ofis</label>
+                                <input type="text" name="yeni_ofis" class="form-control" placeholder="Z-20" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                            <button type="submit" class="btn btn-primary" onclick="sepetiSifirla()">Kaydet ve
+                                Taşı</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="tab-pane fade {% if aktif_tab == 'ariza' or session['yetki_duzeyi'] == 0 %}show active{% endif %}"
+            id="ariza">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-danger mb-0"><i class="fas fa-tools"></i> Arıza Yönetimi</h5>
+                <button class="btn btn-danger btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#arizaEkleModal">
+                    <i class="fas fa-plus"></i> Yeni Arıza Bildir
+                </button>
+            </div>
+
+            <div class="position-relative">
+
+                <form id="topluArizaForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div id="arizaActionPanel" class="yuzen-panel">
+                        <div class="d-flex align-items-center w-100">
+                            <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                <span class="badge bg-dark me-2"><span id="secilenArizaSayisi">0</span>
+                                    Seçili</span>
+
+                                {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
+                                <button type="button" onclick="topluSilBaslat('ariza')" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash-alt"></i> Seçilenleri Sil
+                                </button>
+                                {% endif %}
+                            </div>
+                            <button type="button" onclick="sepetiSifirla()" class="btn btn-sm text-secondary">
+                                <i class="fas fa-times fa-lg"></i>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="table-responsive-custom mt-3" style="max-height: 400px;">
-                        <table class="table table-hover align-middle">
-                            <thead class="bg-dark text-white" style="position: sticky; top: 0;">
+                    <div class="table-responsive bg-white rounded shadow-sm border"
+                        style="padding-bottom: 150px; margin-bottom: 0;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-secondary">
                                 <tr>
-                                    {% if analiz_turu == 'personel' %}
-                                    <th>Ad Soyad</th>
-                                    <th>Ünvan</th>
-                                    <th>Birim</th>
-                                    <th>Kampüs</th>
-                                    <th>Ofis</th>
-                                    {% else %}
-                                    <th>Malzeme Adı</th>
-                                    <th>Kampüs</th>
-                                    <th>Konum / Ofis</th>
-                                    <th class="text-center">Adet</th>
-                                    {% endif %}
+                                    <th class="text-center" style="width: 40px;">
+                                        <div class="check-center">
+                                            {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
+                                            <input type="checkbox" id="selectAllAriza" class="form-check-input"
+                                                style="cursor: pointer;">
+                                            {% endif %}
+                                        </div>
+                                    </th>
+
+                                    <th style="width: 5%;">ID</th>
+                                    <th style="width: 10%;">Öncelik</th>
+                                    <th style="width: 12%;">Durum</th>
+                                    <th style="width: 15%;">Konum</th>
+                                    <th style="width: 25%;">Arıza Detayı</th>
+                                    <th style="width: 13%;"><i class="far fa-clock"></i> Zaman</th>
+                                    <th style="width: 12%;">Bildiren</th>
+                                    <th style="width: 8%;">İşlem</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for row in analiz_sonuclari %}
-                                <tr>
-                                    {% if analiz_turu == 'personel' %}
-                                    <td class="fw-bold">{{ row.ad_soyad }}</td>
-                                    <td>{{ row.unvan }}</td>
-                                    <td><span class="badge bg-info text-dark">{{ row.birimi }}</span></td>
-                                    <td class="small">{{ row.kampus }}</td>
-                                    <td class="text-primary small">{{ row.ofis }}</td>
-                                    {% else %}
-                                    <td class="fw-bold">{{ row.ad }}</td>
-                                    <td><span class="badge bg-secondary">{{ row.kampus }}</span></td>
-                                    <td class="text-primary small">{{ row.konum }}</td>
-                                    <td class="text-center fw-bold fs-5 text-success">{{ row.toplam_adet }}</td>
-                                    {% endif %}
+                                {% for ariza in arizalar %}
+                                <tr
+                                    class="align-middle {% if ariza.durum == 'İptal Edildi' %}table-secondary text-muted{% endif %}">
+
+                                    <td class="text-center">
+                                        <div class="check-center">
+                                            {% if session['rol'] == 'admin' or session['rol'] == 'teknik' %}
+                                            <input type="checkbox" name="secilen_ids" value="{{ ariza.id }}"
+                                                class="form-check-input secim-kutusu-ariza" style="cursor: pointer;">
+                                            {% endif %}
+                                        </div>
+                                    </td>
+
+                                    <td class="fw-bold text-muted small">#{{ ariza.id }}</td>
+
+                                    <td>
+                                        {% if ariza.oncelik == 'Acil' %}
+                                        <span class="badge bg-danger">🔥 Acil</span>
+                                        {% elif ariza.oncelik == 'Yüksek' %}
+                                        <span class="badge bg-warning text-dark">⚠️ Yüksek</span>
+                                        {% else %}
+                                        <span class="badge bg-info text-dark">🔹 Normal</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if ariza.durum == 'Bekliyor' %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i>
+                                            Bekliyor</span>
+                                        {% elif ariza.durum == 'İşlemde' or ariza.durum == 'Devam Ediyor' %}
+                                        <span class="badge bg-primary"><i class="fas fa-cog fa-spin"></i>
+                                            İşlemde</span>
+                                        {% elif ariza.durum == 'Tamamlandı' %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i>
+                                            Tamamlandı</span>
+                                        {% elif ariza.durum == 'İptal Edildi' %}
+                                        <span class="badge bg-secondary"><i class="fas fa-ban"></i> İptal</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark border">{{ ariza.durum }}</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="fw-bold text-dark small">{{ ariza.konum }}</td>
+
+                                    <td>
+                                        <span class="d-block fw-bold text-dark">{{ ariza.baslik }}</span>
+                                        <small class="text-muted d-block text-truncate" style="max-width: 250px;">{{
+                                            ariza.aciklama }}</small>
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-dark small">{{ ariza.tarih.split(' ')[0]
+                                                }}</span>
+                                            <span class="text-muted small" style="font-size: 0.8em;">{{
+                                                ariza.tarih.split(' ')[1] if ' ' in ariza.tarih else '' }}</span>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user-circle text-secondary me-1"></i>
+                                            <span class="small fw-bold text-dark">
+                                                {{ ariza.bildiren if ariza.bildiren else 'Belirtilmedi' }}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    <td class="text-end">
+                                        {% if session['rol'] == 'teknik' or session['rol'] == 'admin' %}
+                                        <div class="btn-group">
+
+                                            <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle"
+                                                data-bs-toggle="dropdown" data-bs-container="body"> <i
+                                                    class="fas fa-tools me-3"></i> İşlem
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                <li>
+                                                    <h6 class="dropdown-header">Durum Değiştir</h6>
+                                                </li>
+
+                                                <li><a class="dropdown-item" href="#"
+                                                        onclick="durumModalAc('{{ ariza.id }}', 'İşlemde', '⚙️ İşleme Al')">⚙️
+                                                        İşleme Al</a></li>
+                                                <li><a class="dropdown-item" href="#"
+                                                        onclick="durumModalAc('{{ ariza.id }}', 'Parça Bekliyor', '🟠 Parça Bekliyor')">🟠
+                                                        Parça Bekliyor</a></li>
+
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+
+                                                <li><a class="dropdown-item text-success" href="#"
+                                                        onclick="durumModalAc('{{ ariza.id }}', 'Tamamlandı', '✅ Tamamlandı')">✅
+                                                        Tamamlandı</a></li>
+                                                <li><a class="dropdown-item text-secondary" href="#"
+                                                        onclick="durumModalAc('{{ ariza.id }}', 'İptal Edildi', '🚫 İptal Et')">🚫
+                                                        İptal Et</a></li>
+                                            </ul>
+
+                                            <button type="button" onclick="tekilArizaSilModalAc('{{ ariza.id }}')"
+                                                class="btn btn-outline-danger btn-sm ms-1" title="Kalıcı Olarak Sil">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
+
+                        {% if not arizalar %}
+                        <div class="text-center p-5 text-muted">
+                            <i class="fas fa-clipboard-check fa-3x mb-3 text-secondary opacity-50"></i>
+                            <p>Şu an görüntülenecek bir arıza veya talep bulunmuyor.</p>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% elif (ist_malzeme or ist_p_birim or (ist_kampus and ist_kampus != 'Tümü')) %}
-                    <div class="alert alert-warning text-center">Bu kriterlere uygun kayıt bulunamadı.</div>
-                    {% else %}
-                    <div class="text-center text-muted py-4 mb-4 border rounded bg-light">
-                        <i class="fas fa-filter fa-3x mb-2 text-secondary"></i>
-                        <p class="mb-0">Analiz yapmak için yukarıdan tür seçin ve filtreleyin.</p>
+                </form>
+            </div> {% if toplam_sayfa_ariza > 1 %}
+            <div class="d-flex justify-content-center align-items-center gap-2 p-3 mt-2">
+                <a href="/?sayfa_a={{ sayfa_a - 1 }}&tab=ariza&q={{ arama_terimi }}"
+                    class="btn btn-sm btn-outline-danger {% if sayfa_a == 1 %}disabled{% endif %}">
+                    <i class="fas fa-chevron-left"></i> Önceki
+                </a>
+                <span class="small fw-bold text-muted bg-white px-3 py-1 rounded border">Sayfa {{ sayfa_a }} / {{
+                    toplam_sayfa_ariza }}</span>
+                <a href="/?sayfa_a={{ sayfa_a + 1 }}&tab=ariza&q={{ arama_terimi }}"
+                    class="btn btn-sm btn-outline-danger {% if sayfa_a == toplam_sayfa_ariza %}disabled{% endif %}">
+                    Sonraki <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% if session['yetki_duzeyi'] >= 1 %}
+    <div class="tab-pane fade {% if aktif_tab == 'istatistik' %}show active{% endif %}" id="istatistik">
+        <div class="card p-4 shadow-sm border-0">
+            <div class="text-center mb-4">
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="analiz_secim" id="radioDemirbas" autocomplete="off"
+                        onchange="analizTuruDegis('demirbas')" {% if analiz_turu=='demirbas' %}checked{% endif %}>
+                    <label class="btn btn-outline-warning px-4 fw-bold" for="radioDemirbas">📦 Demirbaş
+                        Analizi</label>
+                    <input type="radio" class="btn-check" name="analiz_secim" id="radioPersonel" autocomplete="off"
+                        onchange="analizTuruDegis('personel')" {% if analiz_turu=='personel' %}checked{% endif %}>
+                    <label class="btn btn-outline-info px-4 fw-bold" for="radioPersonel">👥 Personel
+                        Analizi</label>
+                </div>
+            </div>
+
+            <div id="form-demirbas" class="bg-light p-4 rounded border mb-4" {% if analiz_turu=='personel'
+                %}style="display:none;" {% endif %}>
+                <h6 class="text-warning fw-bold mb-3"><i class="fas fa-boxes"></i> Malzeme Sayım Kriterleri</h6>
+                <form action="/" method="GET">
+                    <input type="hidden" name="tab" value="istatistik">
+                    <input type="hidden" name="analiz_turu" value="demirbas">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4"><label class="form-label small fw-bold">Malzeme Adı</label><input
+                                type="text" name="ist_malzeme" class="form-control" placeholder="Örn: Masa, Sandalye"
+                                value="{{ ist_malzeme }}"></div>
+                        <div class="col-md-3"><label class="form-label small fw-bold">Kampüs</label><select
+                                name="ist_kampus" class="form-select">
+                                <option value="Tümü">Tüm Kampüsler</option>{% for yer in yerleskeler %}<option
+                                    value="{{ yer }}" {% if ist_kampus==yer %}selected{% endif %}>{{ yer }}
+                                </option>{% endfor %}
+                            </select></div>
+                        <div class="col-md-3"><label class="form-label small fw-bold">Bina / Konum</label><input
+                                type="text" name="ist_konum" class="form-control" placeholder="Örn: Yurtlar"
+                                value="{{ ist_konum }}"></div>
+                        <div class="col-md-2"><button type="submit" name="islem" value="analiz"
+                                class="btn btn-warning w-100 fw-bold text-dark" onclick="showLoader()">
+                                <i class="fas fa-calculator"></i> Say / Analiz Et
+                            </button></div>
                     </div>
-                    {% endif %}
+                </form>
+            </div>
+
+            <div id="form-personel" class="bg-light p-4 rounded border mb-4" {% if analiz_turu=='demirbas'
+                %}style="display:none;" {% endif %}>
+                <h6 class="text-info fw-bold mb-3"><i class="fas fa-users"></i> Personel Analiz Kriterleri</h6>
+                <form action="/" method="GET">
+                    <input type="hidden" name="tab" value="istatistik">
+                    <input type="hidden" name="analiz_turu" value="personel">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3"><label class="form-label small fw-bold">Birim</label><input type="text"
+                                name="ist_p_birim" class="form-control" placeholder="Örn: Bilgi İşlem"
+                                value="{{ ist_p_birim }}"></div>
+                        <div class="col-md-3"><label class="form-label small fw-bold">Kampüs</label><select
+                                name="ist_p_kampus" class="form-select">
+                                <option value="Tümü">Tüm Kampüsler</option>{% for yer in yerleskeler %}<option
+                                    value="{{ yer }}" {% if ist_p_kampus==yer %}selected{% endif %}>{{ yer }}
+                                </option>{% endfor %}
+                            </select></div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">Ofis / Konum</label><input
+                                type="text" name="ist_p_ofis" class="form-control" placeholder="Örn: B-205"
+                                value="{{ ist_p_ofis }}"></div>
+                        <div class="col-md-2"><label class="form-label small fw-bold">Ad / Ünvan</label><input
+                                type="text" name="ist_p_ad" class="form-control" placeholder="Opsiyonel"
+                                value="{{ ist_p_ad }}"></div>
+                        <div class="col-md-2"><button type="submit" name="islem" value="analiz"
+                                class="btn btn-info w-100 fw-bold text-white" onclick="showLoader()">
+                                <i class="fas fa-search"></i> Listele / Analiz Et
+                            </button></div>
+                    </div>
+                </form>
+            </div>
+
+            <div id="analizSonuclariContainer" class="mb-5">
+                {% if analiz_sonuclari %}
+                <div class="card bg-light border-0 mb-4 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h6 class="text-secondary fw-bold mb-0"><i class="fas fa-chart-bar"></i> Görsel
+                                Analiz Sonucu</h6>
+                            <a href="{{ url_for('reports.rapor_analiz', analiz_turu=analiz_turu, ist_malzeme=ist_malzeme, ist_kampus=ist_kampus, ist_konum=ist_konum, ist_p_ad=ist_p_ad, ist_p_birim=ist_p_birim, ist_p_kampus=ist_p_kampus, ist_p_ofis=ist_p_ofis) }}"
+                                class="btn btn-success fw-bold shadow-sm download-btn" onclick="raporIndirLoading()">
+                                <i class="fas fa-file-excel"></i> Tam Listeyi İndir
+                            </a>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 border-end">
+                                <div style="height: 200px;"><canvas id="filterChart1"></canvas></div>
+                                <div class="text-center small text-muted mt-2">Kampüs Dağılımı</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div style="height: 200px;"><canvas id="filterChart2"></canvas></div>
+                                <div class="text-center small text-muted mt-2">{{ 'Unvan Dağılımı' if
+                                    analiz_turu == 'personel' else 'Blok/Konum Yoğunluğu' }}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="border-top pt-4 text-center">
-                    <button class="btn btn-outline-secondary btn-sm mb-3" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#genelOzetPanel">
-                        <i class="fas fa-chart-pie"></i> Genel Sistem Özetini Göster / Gizle
-                    </button>
-                    <div class="collapse" id="genelOzetPanel">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="card shadow-sm border-0 h-100">
-                                    <div class="card-header bg-white fw-bold text-center small">Kampüs Doluluk</div>
+                <div
+                    class="alert alert-success text-center border-0 shadow-sm d-flex justify-content-between align-items-center px-5">
+                    <div class="text-start">
+                        <small class="text-muted d-block text-uppercase fw-bold mb-1">Analiz Sonucu</small>
+                        <span class="fs-5"><i class="fas fa-check-circle"></i> Toplam: <span
+                                class="fw-bold display-6 mx-2">{{ analiz_toplam }}</span> {{ 'Kişi' if
+                            analiz_turu == 'personel' else 'Adet' }} Bulundu</span>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <a href="/rapor-analiz?analiz_turu={{ analiz_turu }}&ist_malzeme={{ ist_malzeme }}&ist_kampus={{ ist_kampus }}&ist_konum={{ ist_konum }}&ist_p_ad={{ ist_p_ad }}&ist_p_birim={{ ist_p_birim }}&ist_p_kampus={{ ist_p_kampus }}&ist_p_ofis={{ ist_p_ofis }}"
+                            class="btn btn-success fw-bold shadow-sm download-btn" onclick="raporIndirLoading()"> <i
+                                class="fas fa-file-excel"></i> Tam Listeyi İndir
+                        </a>
+                    </div>
+                </div>
 
-                                    <div class="card-body" style="position: relative; height: 200px;"><canvas
-                                            id="campusChart"></canvas></div>
-                                </div>
+                <div class="table-responsive-custom mt-3" style="max-height: 400px;">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-dark text-white" style="position: sticky; top: 0;">
+                            <tr>
+                                {% if analiz_turu == 'personel' %}
+                                <th>Ad Soyad</th>
+                                <th>Ünvan</th>
+                                <th>Birim</th>
+                                <th>Kampüs</th>
+                                <th>Ofis</th>
+                                {% else %}
+                                <th>Malzeme Adı</th>
+                                <th>Kampüs</th>
+                                <th>Konum / Ofis</th>
+                                <th class="text-center">Adet</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in analiz_sonuclari %}
+                            <tr>
+                                {% if analiz_turu == 'personel' %}
+                                <td class="fw-bold">{{ row.ad_soyad }}</td>
+                                <td>{{ row.unvan }}</td>
+                                <td><span class="badge bg-info text-dark">{{ row.birimi }}</span></td>
+                                <td class="small">{{ row.kampus }}</td>
+                                <td class="text-primary small">{{ row.ofis }}</td>
+                                {% else %}
+                                <td class="fw-bold">{{ row.ad }}</td>
+                                <td><span class="badge bg-secondary">{{ row.kampus }}</span></td>
+                                <td class="text-primary small">{{ row.konum }}</td>
+                                <td class="text-center fw-bold fs-5 text-success">{{ row.toplam_adet }}</td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% elif (ist_malzeme or ist_p_birim or (ist_kampus and ist_kampus != 'Tümü')) %}
+                <div class="alert alert-warning text-center">Bu kriterlere uygun kayıt bulunamadı.</div>
+                {% else %}
+                <div class="text-center text-muted py-4 mb-4 border rounded bg-light">
+                    <i class="fas fa-filter fa-3x mb-2 text-secondary"></i>
+                    <p class="mb-0">Analiz yapmak için yukarıdan tür seçin ve filtreleyin.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="border-top pt-4 text-center">
+                <button class="btn btn-outline-secondary btn-sm mb-3" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#genelOzetPanel">
+                    <i class="fas fa-chart-pie"></i> Genel Sistem Özetini Göster / Gizle
+                </button>
+                <div class="collapse" id="genelOzetPanel">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-white fw-bold text-center small">Kampüs Doluluk</div>
+
+                                <div class="card-body" style="position: relative; height: 200px;"><canvas
+                                        id="campusChart"></canvas></div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="card shadow-sm border-0 h-100">
-                                    <div class="card-header bg-white fw-bold text-center small">Malzeme Türü (Cinsi)
-                                    </div>
-                                    <div class="card-body" style="position: relative; height: 200px;"><canvas
-                                            id="turChart"></canvas></div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-white fw-bold text-center small">Malzeme Türü (Cinsi)
                                 </div>
+                                <div class="card-body" style="position: relative; height: 200px;"><canvas
+                                        id="turChart"></canvas></div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="card shadow-sm border-0 h-100">
-                                    <div class="card-header bg-white fw-bold text-center small">En Çok Malzemeler
-                                    </div>
-                                    <div class="card-body" style="position: relative; height: 200px;"><canvas
-                                            id="itemChart"></canvas></div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-white fw-bold text-center small">En Çok Malzemeler
                                 </div>
+                                <div class="card-body" style="position: relative; height: 200px;"><canvas
+                                        id="itemChart"></canvas></div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="card shadow-sm border-0 h-100">
-                                    <div class="card-header bg-white fw-bold text-center small">Personel Birim</div>
-                                    <div class="card-body" style="position: relative; height: 200px;"><canvas
-                                            id="personnelChart"></canvas></div>
-                                </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-white fw-bold text-center small">Personel Birim</div>
+                                <div class="card-body" style="position: relative; height: 200px;"><canvas
+                                        id="personnelChart"></canvas></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div> {% endif %}
+        </div>
+    </div> {% endif %}
     </div>
     </div>
 
@@ -1507,20 +1589,16 @@
             <div class="modal-content border-0 shadow-lg">
 
                 <div class="modal-header bg-secondary text-white d-flex justify-content-between align-items-center">
-
-                    <h5 class="modal-title mb-0 fw-bold">
+                    <h5 class="modal-title mb-0 fw-bold" id="userModalLabel">
                         <i class="fas fa-users-cog"></i> Kullanıcı Yönetimi
                     </h5>
-
                     <div class="d-flex align-items-center">
-
                         {% if session['rol'] == 'admin' %}
                         <a href="{{ url_for('main.islem_gecmisi') }}"
                             class="btn btn-dark text-white btn-sm me-2 shadow-sm">
                             <i class="fas fa-clipboard-list"></i> Geçmiş / Loglar
                         </a>
                         {% endif %}
-
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                             aria-label="Kapat"></button>
                     </div>
@@ -1530,33 +1608,36 @@
 
                     <div class="card card-body bg-white mb-4 border shadow-sm">
                         <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
-                            <i class="fas fa-user-plus"></i> Yeni Kullanıcı Oluştur
+                            <i class="fas fa-user-plus"></i> Kullanıcı Ekle / Düzenle
                         </h6>
-                        <form action="{{ url_for('auth.ekle_kullanici') }}" method="POST"
-                            class="row g-2 align-items-end">
 
+                        <form id="userForm" action="{{ url_for('auth.ekle_kullanici') }}" method="POST"
+                            class="row g-2 align-items-end">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <input type="hidden" name="kullanici_id" id="editUserId">
 
                             <div class="col-md-3">
                                 <label class="small fw-bold text-muted">Kullanıcı Adı</label>
-                                <input type="text" name="kullanici_adi" class="form-control form-control-sm"
-                                    placeholder="Giriş Adı" required>
+                                <input type="text" name="kullanici_adi" id="inputKadi"
+                                    class="form-control form-control-sm" placeholder="Giriş Adı" required>
                             </div>
 
                             <div class="col-md-3">
                                 <label class="small fw-bold text-muted">Ad Soyad</label>
-                                <input type="text" name="ad_soyad" class="form-control form-control-sm"
-                                    placeholder="Personel Adı" required>
+                                <input type="text" name="ad_soyad" id="inputAdSoyad"
+                                    class="form-control form-control-sm" placeholder="Personel Adı" required>
                             </div>
 
                             <div class="col-md-3">
                                 <label class="small fw-bold text-muted">Şifre</label>
-                                <input type="text" name="sifre" class="form-control form-control-sm" required>
+                                <input type="text" name="sifre" id="inputSifre" class="form-control form-control-sm"
+                                    placeholder="Boş bırakırsan değişmez">
                             </div>
 
                             <div class="col-md-3">
                                 <label class="small fw-bold text-muted">Birim</label>
-                                <select name="birim" class="form-select form-select-sm" required>
+                                <select name="birim" id="inputBirim" class="form-select form-select-sm" required>
                                     <option value="" selected disabled>Seçiniz...</option>
                                     {% for b in birimler %}
                                     <option value="{{ b }}">{{ b }}</option>
@@ -1566,7 +1647,7 @@
 
                             <div class="col-md-4 mt-3">
                                 <label class="small fw-bold text-muted">Sistem Rolü</label>
-                                <select name="rol" class="form-select form-select-sm">
+                                <select name="rol" id="selectRol" class="form-select form-select-sm">
                                     <option value="personel" selected>Personel</option>
                                     <option value="teknik">Teknik Servis</option>
                                     <option value="admin">Yönetici (Admin)</option>
@@ -1575,7 +1656,7 @@
 
                             <div class="col-md-4 mt-3">
                                 <label class="small fw-bold text-muted">Yetki Düzeyi (0-3)</label>
-                                <select name="yetki_duzeyi" class="form-select form-select-sm">
+                                <select name="yetki_duzeyi" id="inputYetki" class="form-select form-select-sm">
                                     <option value="0" selected>0 - İzleyici</option>
                                     <option value="1">1 - Sorumlu</option>
                                     <option value="2">2 - Denetleyici</option>
@@ -1583,10 +1664,14 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4 mt-3">
-                                <button type="submit" class="btn btn-success btn-sm w-100 fw-bold shadow-sm"
-                                    onclick="showLoader()">
+                            <div class="col-md-4 mt-3 d-flex gap-2">
+                                <button type="submit" id="userSubmitBtn"
+                                    class="btn btn-success btn-sm w-100 fw-bold shadow-sm">
                                     <i class="fas fa-save"></i> Kaydet
+                                </button>
+                                <button type="button" onclick="formSifirla()" class="btn btn-outline-secondary btn-sm"
+                                    title="Formu Temizle">
+                                    <i class="fas fa-eraser"></i>
                                 </button>
                             </div>
                         </form>
@@ -1629,15 +1714,16 @@
                                             {% if u.kullanici_adi != 'admin' and u.kullanici_adi !=
                                             session['kullanici_adi'] %}
 
-                                            <button class="btn btn-outline-primary btn-sm py-0 me-1" title="Düzenle">
+                                            <button class="btn btn-outline-primary btn-sm py-0 me-1" title="Düzenle"
+                                                onclick="duzenleModalAc('{{ u.id }}', '{{ u.kullanici_adi }}', '{{ u.ad_soyad }}', '{{ u.rol }}', '{{ u.birim }}', '{{ u.yetki_duzeyi }}')">
                                                 <i class="fas fa-edit"></i>
                                             </button>
 
-                                            <a href="{{ url_for('auth.sil_kullanici', id=u.id) }}"
-                                                class="btn btn-outline-danger btn-sm py-0"
-                                                onclick="return confirm('Silmek istediğine emin misin?')">
+                                            <button class="btn btn-outline-danger btn-sm py-0" title="Sil"
+                                                onclick="silModalAc('{{ u.id }}', '{{ u.ad_soyad }}')">
                                                 <i class="fas fa-trash"></i>
-                                            </a>
+                                            </button>
+
                                             {% else %}
                                             <i class="fas fa-lock text-muted opacity-50 pe-2"
                                                 title="İşlem Yapılamaz"></i>
@@ -2331,6 +2417,26 @@
         <div style="font-size: 14px; opacity: 0.8;">Hedef Sayfa</div>
         <div id="pageNavNumber" style="font-size: 40px; font-weight: bold;">1</div>
         <div style="font-size: 12px; margin-top: 5px; color: #ffc107;">Tuşu Bırak ve Git</div>
+    </div>
+
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Silme Onayı</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <p class="mb-0 fw-bold fs-5" id="silinecekKullaniciAdi"></p>
+                    <p class="text-muted">isimli kullanıcıyı silmek istediğinize emin misiniz?</p>
+                    <small class="text-danger">Bu işlem geri alınamaz!</small>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                    <a href="#" id="btnSilOnay" class="btn btn-danger fw-bold">Evet, Sil</a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -3048,6 +3154,57 @@
                         btn.innerHTML = 'Güncelle';
                     }
                 });
+        }
+
+        // --- SİLME İŞLEMİ ---
+        function silModalAc(id, ad) {
+            // Modal içindeki metni güncelle
+            document.getElementById('silinecekKullaniciAdi').innerText = ad;
+
+            // Silme butonunun linkini ayarla
+            document.getElementById('btnSilOnay').href = "/sil-kullanici/" + id;
+
+            // Modalı aç
+            var myModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            myModal.show();
+        }
+
+        // --- DÜZENLEME İŞLEMİ (DÜZELTİLMİŞ HALİ) ---
+        function duzenleModalAc(id, kadi, adsoyad, rol, birim, yetki) {
+            // 1. Başlıkları ve Butonu Değiştir
+            document.getElementById('userModalLabel').innerText = "Kullanıcı Düzenle";
+            document.getElementById('userSubmitBtn').innerText = "Güncelle";
+
+            // 2. Formun Gideceği Adresi Değiştir
+            document.getElementById('userForm').action = "/guncelle-kullanici";
+
+            // 3. Verileri Kutulara Doldur
+            document.getElementById('editUserId').value = id;
+            document.getElementById('inputKadi').value = kadi;
+            document.getElementById('inputAdSoyad').value = adsoyad;
+            document.getElementById('selectRol').value = rol;
+            document.getElementById('inputBirim').value = birim;
+            document.getElementById('inputYetki').value = yetki;
+
+            // Şifre zorunluluğunu kaldır (Boş bırakabilirsin demek için)
+            document.getElementById('inputSifre').required = false;
+
+            // --- KRİTİK DÜZELTME BURADA ---
+            // Modalı tekrar açmıyoruz (zaten açık), sadece formun olduğu en tepeye kaydırıyoruz.
+            document.getElementById('userModal').querySelector('.modal-body').scrollTop = 0;
+            // Veya formu görünür kıl:
+            document.getElementById('userForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // "Yeni Kullanıcı Ekle" butonuna basınca formu sıfırlamak için bunu da ekle
+        // (Kullanıcı Ekle butonuna onclick="formSifirla()" eklemeyi unutma)
+        function formSifirla() {
+            document.getElementById('userForm').reset();
+            document.getElementById('userModalLabel').innerText = "Yeni Kullanıcı Ekle";
+            document.getElementById('userSubmitBtn').innerText = "Kaydet";
+            document.getElementById('userForm').action = "{{ url_for('auth.ekle_kullanici') }}";
+            document.getElementById('editUserId').value = "";
+            document.getElementById('inputSifre').required = true;
         }
     </script>
 </body>
