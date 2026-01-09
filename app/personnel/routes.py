@@ -203,16 +203,7 @@ def personel_detay(id):
     kisi = Personel.query.get_or_404(id)
     arkadaslar = Personel.query.filter(Personel.ofis == kisi.ofis, Personel.id != id).all()
     
-    # Jules Fix: Sağlam Normalizasyon Kullanımı
-    if kisi.ofis:
-        # Hem veritabanındaki konumu hem de aranan ofisi normalize edip karşılaştırıyoruz (Büyük/Küçük harf duyarsız)
-        aranan_ofis = turkce_normalize(kisi.ofis)
-        esyalar = Demirbas.query.filter(
-            func.NORMALIZE(Demirbas.konum).like(f"%{aranan_ofis}%")
-        ).all()
-    else:
-        esyalar = []
-        
+
     return render_template('personel_detay.html', kisi=kisi, arkadaslar=arkadaslar, esyalar=esyalar)
 
 @bp.route('/tasi-personel', methods=['POST'])
