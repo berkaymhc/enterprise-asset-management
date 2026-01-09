@@ -3,11 +3,10 @@ from flask_login import UserMixin
 from datetime import datetime
 
 # ----------------------------------------------------
-# 1. KULLANICI MODELİ (TEK VE TEMİZ HALİ)
+# 1. KULLANICI MODELİ
 # ----------------------------------------------------
 class Kullanici(UserMixin, db.Model):
     __tablename__ = 'kullanici'
-    # extend_existing hatasını önlemek için gerekirse bu kalabilir
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
@@ -17,7 +16,6 @@ class Kullanici(UserMixin, db.Model):
     ad_soyad = db.Column(db.String(100))
     birim = db.Column(db.String(100))
     
-    # YETKİLENDİRME İÇİN KRİTİK ALANLAR
     # Rol: 'admin', 'personel', 'teknik'
     rol = db.Column(db.String(20), default='personel') 
     # Yetki Düzeyi: 0 (İzleyici), 1 (Sorumlu), 2 (Denetçi), 3 (Tam Yetki)
@@ -50,7 +48,11 @@ class Demirbas(db.Model):
     model = db.Column(db.String(50))
     seri_no = db.Column(db.String(50), unique=True)
     demirbas_no = db.Column(db.String(50), unique=True, nullable=False)
-    cinsi = db.Column(db.String(50)) # Kategori yerine Cinsi kullanılıyor olabilir
+    
+    # EKSİK OLAN SÜTUNLAR EKLENDİ
+    cinsi = db.Column(db.String(50)) 
+    alim_tarihi = db.Column(db.String(20)) # 'YYYY-MM-DD' formatında tutuyoruz
+    
     kategori = db.Column(db.String(50))
     konum = db.Column(db.String(100))
     kampus = db.Column(db.String(100))
@@ -94,15 +96,18 @@ class Ariza(db.Model):
     baslik = db.Column(db.String(100), nullable=False)
     aciklama = db.Column(db.Text, nullable=False)
     durum = db.Column(db.String(20), default='Beklemede')
-    oncelik = db.Column(db.String(20), default='Normal') # Öncelik eklendi
+    
+    # EKSİK OLAN SÜTUNLAR EKLENDİ
+    oncelik = db.Column(db.String(20), default='Normal') 
+    konum = db.Column(db.String(100)) 
+    
     tarih = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Kullanıcı değil string olarak bildiren kişi (Formdan gelen)
+    # Kullanıcı değil string olarak bildiren kişi (Opsiyonel, kullanici_id var zaten)
     bildiren = db.Column(db.String(100)) 
-    konum = db.Column(db.String(100))
 
-    demirbas_id = db.Column(db.Integer, db.ForeignKey('demirbas.id'), nullable=True) # Opsiyonel olabilir
-    kullanici_id = db.Column(db.Integer, db.ForeignKey('kullanici.id'), nullable=True)
+    demirbas_id = db.Column(db.Integer, db.ForeignKey('demirbas.id'), nullable=False)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('kullanici.id'), nullable=False)
 
 # ----------------------------------------------------
 # 5. YÜKLEME GEÇMİŞİ

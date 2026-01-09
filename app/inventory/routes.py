@@ -1,11 +1,10 @@
 from flask import redirect, url_for, request, session, flash, jsonify, render_template
 from app.inventory import bp
 from app import db
-from app.models import Demirbas, YuklemeGecmisi
-from datetime import datetime  # <--- BU SATIRI EKLE
+from app.models import Demirbas, YuklemeGecmisi, Ariza
+from datetime import datetime
 from flask_login import login_required, current_user
-from app.utils import turkce_normalize, tr_upper, tr_title # Kendi utils fonksiyonun burada kalsınfrom datetime import datetime
-from app.models import Ariza, Demirbas # Demirbas zaten vardır, Ariza'yı yanına ekle
+from app.utils import turkce_normalize, tr_upper, tr_title
 import openpyxl
 import os
 
@@ -47,7 +46,7 @@ def ekle_demirbas():
         kampus=kampus,
         konum=konum,
         adet=adet,
-        alim_tarihi=datetime.now().strftime("%Y-%m-%d") # DOĞRU SÜTUN İSMİ
+        alim_tarihi=datetime.now().strftime("%Y-%m-%d")
     )
     
     db.session.add(yeni_demirbas)
@@ -132,10 +131,6 @@ def sifirla_demirbas():
         db.session.query(Demirbas).delete()
         db.session.commit()
         
-        # SQLite Sequence sıfırlama (ID'yi 1'e çekmek için - Opsiyonel)
-        # db.session.execute("DELETE FROM sqlite_sequence WHERE name='demirbaslar'")
-        # db.session.commit()
-        
         log_kaydet("Tüm Liste Silindi", "Veritabanı Sıfırlama", "Sıfırlama")
         flash("Tüm demirbaş listesi temizlendi.", "danger")
     except Exception as e:
@@ -161,7 +156,6 @@ def toplu_tasi_demirbas():
         return redirect(url_for('main.index', tab='demirbas'))
 
     # SQLAlchemy ile toplu güncelleme
-    # Demirbas.id IN (1, 2, 3) olanları filtrele
     query = Demirbas.query.filter(Demirbas.id.in_(secilen_ids))
     
     count = 0
@@ -214,7 +208,6 @@ def yukle_demirbas():
             wb = openpyxl.load_workbook(dosya)
             for ws in wb.worksheets:
                 # Konum birleştirme: Bina/Kat + Dosya Adı + Sayfa Adı
-                # List comprehension ile boş olanları filtreliyoruz
                 tam_konum = " / ".join([p for p in [bina_kat, dosya_adi_temiz, ws.title] if p])
                 
                 for row in ws.iter_rows(min_row=2, values_only=True):
@@ -238,7 +231,8 @@ def yukle_demirbas():
                             kampus=hedef_kampus,
                             konum=tam_konum,
                             adet=adet,
-alim_tarihi=datetime.now().strftime("%Y-%m-%d")                        )
+                            alim_tarihi=datetime.now().strftime("%Y-%m-%d")
+                        )
                         db.session.add(yeni)
                         toplam_eklenen += 1
                         islem_yapildi = True
@@ -260,8 +254,6 @@ alim_tarihi=datetime.now().strftime("%Y-%m-%d")                        )
 @bp.route('/yukle-klasor', methods=['POST'])
 @login_required
 def yukle_klasor():
-    # --- DEBUG İÇİN EKLE ---
-    print(">>> Klasör Yükleme Rotasına Girildi!")
     if 'dosya' not in request.files: return redirect(url_for('main.index'))
     dosyalar = request.files.getlist('dosya')
     

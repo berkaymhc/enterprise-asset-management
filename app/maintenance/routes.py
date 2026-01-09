@@ -28,30 +28,41 @@ def log_kaydet(baslik, detay, tur):
 @bp.route('/ekle-ariza', methods=['POST'])
 @login_required
 def ekle_ariza():
-    konum = request.form.get('konum')
-    baslik = request.form.get('baslik')
-    aciklama = request.form.get('aciklama')
-    bildiren = request.form.get('bildiren')
-    oncelik = request.form.get('oncelik')
-    d_id = request.form.get('demirbas_id') 
+    try:
+        # Formdan gelen veriler
+        konum = request.form.get('konum')
+        baslik = request.form.get('baslik')
+        aciklama = request.form.get('aciklama')
+        oncelik = request.form.get('oncelik')
+        d_id = request.form.get('demirbas_id') 
+        
+        # Demirbaş ID kontrolü (Boş gelirse hata vermesin)
+        if not d_id or not d_id.isdigit():
+            flash("Geçersiz Demirbaş ID! Lütfen listeden seçin veya doğru ID girin.", "danger")
+            return redirect(url_for('main.index', tab='ariza'))
 
-    yeni_ariza = Ariza(
-        konum=konum,
-        baslik=baslik,
-        aciklama=aciklama,
-        bildiren=bildiren,
-        durum="Bekliyor",
-        oncelik=oncelik,
-        demirbas_id=d_id, 
-        tarih=datetime.now().strftime("%d-%m-%Y %H:%M")
-    )
+        yeni_ariza = Ariza(
+            konum=konum,
+            baslik=baslik,
+            aciklama=aciklama,
+            durum="Beklemede",
+            oncelik=oncelik,
+            demirbas_id=int(d_id),
+            kullanici_id=current_user.id, # <-- Giriş yapan kullanıcıyı bağlıyoruz
+            tarih=datetime.now()          # <-- DateTime nesnesi olarak kaydediyoruz
+        )
 
-    db.session.add(yeni_ariza)
-    db.session.commit()
-    
-    log_kaydet(f"Yeni Arıza Kaydı: {baslik}", f"Konum: {konum}", "Arıza")
-    
-    flash("Arıza kaydı oluşturuldu.", "success")
+        db.session.add(yeni_ariza)
+        db.session.commit()
+        
+        log_kaydet(f"Yeni Arıza: {baslik}", f"Konum: {konum}", "Arıza")
+        flash("Arıza kaydı başarıyla oluşturuldu.", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"HATA: {e}")
+        flash(f"Kayıt sırasında hata oluştu: {str(e)}", "danger")
+
     return redirect(url_for('main.index', tab='ariza'))
 
 @bp.route('/guncelle-ariza-durum', methods=['POST'])

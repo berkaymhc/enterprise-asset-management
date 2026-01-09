@@ -109,45 +109,45 @@ def index():
     personeller = query_p.order_by(Personel.ofis.asc()).paginate(page=sayfa_p, per_page=limit, error_out=False).items
 
     # ==========================================
-    # 5. ARIZA SORGUSU
+    # 5. ARIZA SORGUSU (GÜNCELLENDİ: AKTİF / GEÇMİŞ AYRIMI)
     # ==========================================
-    query_a = Ariza.query
     
-    # Normal kullanıcı sadece kendi bildirdiklerini görür
+    # Gruplar
+    aktif_durumlar = ['Beklemede', 'İşlemde', 'Parça Bekleniyor']
+    gecmis_durumlar = ['Tamamlandı', 'İptal Edildi']
+
+    # Temel Sorgular
+    q_aktif = Ariza.query.filter(Ariza.durum.in_(aktif_durumlar))
+    q_gecmis = Ariza.query.filter(Ariza.durum.in_(gecmis_durumlar))
+    
+    # Yetki Filtresi: Personel sadece kendi bildirdiklerini görür
+    # Admin ve Teknik Servis HER ŞEYİ görür
     if kullanici_rol not in ['admin', 'teknik'] and kullanici_yetki < 3:
-        query_a = query_a.filter(Ariza.kullanici_id == current_user.id)
+        q_aktif = q_aktif.filter(Ariza.kullanici_id == current_user.id)
+        q_gecmis = q_gecmis.filter(Ariza.kullanici_id == current_user.id)
         
+    # Arama Filtresi (Varsa her iki listeyi de filtrele)
     if arama_terimi and aktif_tab == 'ariza':
         t = f"%{turkce_normalize(arama_terimi)}%"
-        query_a = query_a.filter(
-            or_(
-                func.NORMALIZE(Ariza.baslik).like(t),
-                func.NORMALIZE(Ariza.konum).like(t)
-            )
+        filtre = or_(
+            func.NORMALIZE(Ariza.baslik).like(t),
+            func.NORMALIZE(Ariza.konum).like(t)
         )
+        q_aktif = q_aktif.filter(filtre)
+        q_gecmis = q_gecmis.filter(filtre)
 
-    # Bildirim Rozeti
+    # Bildirim Rozeti (Sadece Bekleyen İşler)
     if kullanici_rol in ['admin', 'teknik']:
         bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor').count()
     else:
         bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor', kullanici_id=current_user.id).count()
-        
-    # Sıralama
-    ozel_siralama = case(
-        (Ariza.durum == 'Bekliyor', 1),
-        (Ariza.durum == 'İşlemde', 2),
-        else_=3
-    )
-    
-    sayfa_a = request.args.get('sayfa_a', 1, type=int)
-    limit_ariza = 5
-    total_ariza = query_a.count()
-    toplam_sayfa_ariza = math.ceil(total_ariza / limit_ariza)
-    
-    arizalar = query_a.order_by(ozel_siralama, Ariza.id.desc()).paginate(page=sayfa_a, per_page=limit_ariza, error_out=False).items
+
+    # Verileri Çek (En Yeni En Üstte)
+    arizalar_aktif = q_aktif.order_by(Ariza.tarih.desc()).all()
+    arizalar_gecmis = q_gecmis.order_by(Ariza.tarih.desc()).all()
 
     # ==========================================
-    # 6. DİĞER VERİLER
+    # 6. DİĞER VERİLER (AYNI KALSIN)
     # ==========================================
     son_yukleme = YuklemeGecmisi.query.filter_by(tur='Yükleme').order_by(YuklemeGecmisi.id.desc()).first()
     tum_gecmis = YuklemeGecmisi.query.order_by(YuklemeGecmisi.id.desc()).limit(100).all()
@@ -236,22 +236,46 @@ def index():
             f_values_1 = list(temp_kampus.values())
             f_labels_2 = list(temp_konum.keys())
             f_values_2 = list(temp_konum.values())
-
+# ==========================================
+    # 7.5 ZİMMETLİ EŞYA LİSTESİ (YENİ ÖZELLİK)
     # ==========================================
-    # 8. RENDER TEMPLATE
+    zimmetli_esya_listesi = []
+    
+    # Eğer giriş yapan kişi personel veya teknik ise, kendi ofisindeki eşyaları çekelim
+    if current_user.is_authenticated and session.get('rol') != 'admin':
+        # Kullanıcının ofis bilgisini bul (Personel tablosundan)
+        mevcut_personel = Personel.query.filter_by(email=current_user.email).first()
+        
+        # Eğer personelin ofisi varsa, o ofisteki demirbaşları bul
+        if mevcut_personel and mevcut_personel.ofis:
+            zimmetli_esya_listesi = Demirbas.query.filter(
+                func.NORMALIZE(Demirbas.konum).like(f"%{turkce_normalize(mevcut_personel.ofis)}%")
+            ).all()
+            
+            # Ofis bilgisini forma otomatik basmak için session'a da atabiliriz (Gerekirse)
+            session['personel_ofis'] = mevcut_personel.ofis
+    
+    # Admin ise tüm eşyaları görmesin (Çok kasar), boş kalsın veya arama ile bulsun.
+    # Ama test için Admin'e de rastgele 10 tane gösterelim mi? Gerek yok, admin ID girebilir.
+    # ==========================================
+    # 8. RENDER TEMPLATE (GÜNCELLENDİ)
     # ==========================================
     return render_template('index.html',
                            aktif_tab=aktif_tab,
                            arama_terimi=arama_terimi,
                            demirbaslar=demirbaslar,
                            personeller=personeller,
-                           arizalar=arizalar,
+                           
+                           # YENİ DEĞİŞKENLERİMİZ BURADA:
+                           arizalar_aktif=arizalar_aktif,
+                           arizalar_gecmis=arizalar_gecmis,
+                           zimmetli_esya_listesi=zimmetli_esya_listesi,
                            bildirim_sayisi=bildirim_sayisi,
                            
                            sayfa_d=sayfa_d, toplam_sayfa_demirbas=toplam_sayfa_demirbas,
                            sayfa_p=sayfa_p, toplam_sayfa_personel=toplam_sayfa_personel,
-                           sayfa_a=sayfa_a, toplam_sayfa_ariza=toplam_sayfa_ariza,
-
+                           # Arıza sayfalama backend'den kalktı, frontend'de liste olarak gidiyor
+                           
                            chart_kampus_labels=chart_kampus_labels, chart_kampus_values=chart_kampus_values,
                            chart_esya_labels=chart_esya_labels, chart_esya_values=chart_esya_values,
                            chart_personel_labels=chart_personel_labels, chart_personel_values=chart_personel_values,
@@ -270,7 +294,6 @@ def index():
                            f_labels_2=f_labels_2, f_values_2=f_values_2,
                            open_modal=request.args.get('open_modal', None)
                            )
-
 @bp.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(bp.root_path, '../../static'),
