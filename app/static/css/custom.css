@@ -1,0 +1,111 @@
+/* --- YENİ RENK PALETİ TANIMLARI --- */
+:root {
+    --uni-dark: #092442;   /* Koyu Lacivert */
+    --uni-action: #1d61a9; /* Parlak Mavi */
+    --uni-accent: #8dd4e3; /* Açık Mavi */
+    --uni-bg: #f6f2e7;     /* Krem Zemin */
+    --uni-orange: #F39C12; /* Turuncu */
+}
+
+/* GENEL SAYFA YAPISI */
+body {
+    background-color: var(--uni-bg) !important;
+    color: #333;
+}
+
+/* 1. PRIMARY -> KOYU LACİVERT (Logo, Başlıklar) */
+.bg-primary { background-color: var(--uni-dark) !important; }
+.text-primary { color: var(--uni-dark) !important; }
+.border-primary { border-color: var(--uni-dark) !important; }
+/* Logo Alanı Gradyan */
+.bg-primary.rounded-circle { background: linear-gradient(135deg, var(--uni-dark) 0%, #05162b 100%) !important; }
+
+/* 2. BUTONLAR -> PARLAK MAVİ */
+.btn-primary { background-color: var(--uni-action) !important; border-color: var(--uni-action) !important; }
+.btn-primary:hover { background-color: var(--uni-dark) !important; border-color: var(--uni-dark) !important; }
+.btn-outline-primary { color: var(--uni-action) !important; border-color: var(--uni-action) !important; }
+.btn-outline-primary:hover { background-color: var(--uni-action) !important; color: #fff !important; }
+
+/* 3. WARNING (Turuncu) */
+.bg-warning { background-color: var(--uni-orange) !important; color: #fff !important; }
+.text-warning { color: var(--uni-orange) !important; }
+.btn-warning { background-color: var(--uni-orange) !important; border-color: var(--uni-orange) !important; color: #fff !important; }
+.btn-warning:hover { background-color: #d35400 !important; color: #fff !important; }
+
+/* 4. INFO -> AÇIK MAVİ */
+.bg-info { background-color: var(--uni-accent) !important; color: var(--uni-dark) !important; }
+.text-info { color: var(--uni-action) !important; }
+.btn-info { background-color: var(--uni-accent) !important; border-color: var(--uni-accent) !important; color: var(--uni-dark) !important; font-weight: bold; }
+.btn-info:hover { background-color: #7bc0cf !important; }
+
+/* 5. SEKMELER (TABS) */
+.nav-tabs .nav-link.active {
+    color: var(--uni-action) !important;
+    border-top: 3px solid var(--uni-action) !important;
+    background-color: #fff;
+    font-weight: bold;
+}
+.nav-link { color: #666; }
+.nav-link:hover { color: var(--uni-action); }
+
+/* KARTLAR VE TABLOLAR */
+.card { border: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); background-color: #ffffff; }
+.table-responsive-custom thead th {
+    position: sticky;
+    top: 0;
+    background-color: var(--uni-dark) !important;
+    color: white;
+    z-index: 10;
+}
+#personel .table thead th { background-color: var(--uni-action) !important; }
+.table-hover tbody tr { transition: background-color 0.2s ease-in-out; }
+.table-hover tbody tr:hover { background-color: #eef6fc !important; }
+.table td, .table th { padding: 12px 10px !important; }
+th.sortable { cursor: pointer; transition: all 0.2s ease-in-out; user-select: none; }
+th.sortable:hover { background-color: var(--uni-action) !important; }
+.highlight { background-color: var(--uni-accent); color: var(--uni-dark); font-weight: bold; border-radius: 3px; padding: 0 2px; }
+.page-input { width: 60px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 4px; font-weight: bold; }
+
+/* TABLO MENÜ VE SCROLL DÜZELTMELERİ */
+.table-responsive-custom {
+    max-height: 65vh;
+    overflow-y: auto;
+    border-bottom: 1px solid #dee2e6;
+    min-height: 65vh;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.table-responsive { overflow: visible !important; min-height: 250px; }
+.table td { position: relative; white-space: normal !important; word-wrap: break-word; max-width: 300px; vertical-align: middle; }
+.table td:last-child { white-space: nowrap !important; width: 1px; }
+.btn-group, .dropdown { position: static !important; }
+.dropdown-menu { z-index: 9999 !important; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); }
+.dropdown-menu.animate { animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.dropdown-item:hover { background-color: var(--uni-bg); color: var(--uni-action); }
+.dropdown-item:active { background-color: var(--uni-action); color: white; }
+
+/* YÜZEN PANEL */
+.yuzen-panel {
+    z-index: 1040 !important; pointer-events: auto; position: absolute; top: -55px; left: 12px; right: 12px; height: 45px;
+    background-color: #fff; border: 2px solid var(--uni-action); border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    display: none; align-items: center; padding: 0 15px; animation: slideDown 0.3s ease-out;
+}
+.yuzen-panel.active { display: flex !important; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* DİĞER */
+.check-center { display: flex; justify-content: center; align-items: center; height: 100%; }
+.empty-state { text-align: center; padding: 50px 20px; background-color: #fff; border-radius: 10px; border: 2px dashed #dee2e6; color: #6c757d; margin-top: 20px; }
+#nprogress .bar { background: var(--uni-action) !important; height: 4px !important; }
+
+/* MOBİL UYUMLULUK */
+@media (max-width: 768px) {
+    .table-responsive-custom { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    .table td:last-child { min-width: 120px; white-space: nowrap !important; }
+    .table { font-size: 0.85rem; }
+    .btn-sm { padding: 0.2rem 0.4rem; font-size: 0.75rem; }
+    .nav-tabs { flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden; white-space: nowrap; -webkit-overflow-scrolling: touch; border-bottom: 2px solid #dee2e6; }
+    .nav-tabs .nav-link { white-space: nowrap; font-size: 0.9rem; padding: 0.5rem 1rem; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+}
