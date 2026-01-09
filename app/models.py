@@ -35,6 +35,12 @@ def load_user(user_id):
 # 3. DİĞER MODELLER (AYNEN KALIYOR)
 # ----------------------------------------------------
 class Demirbas(db.Model):
+    __tablename__ = 'demirbas'
+    __table_args__ = (
+        db.Index('idx_demirbas_kampus', 'kampus'),
+        db.Index('idx_demirbas_ad', 'ad'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     ad = db.Column(db.String(100))
     marka = db.Column(db.String(100))
@@ -64,6 +70,12 @@ class Personel(db.Model):
     kampus = db.Column(db.String(100))
 
 class Ariza(db.Model):
+    __tablename__ = 'ariza'
+    __table_args__ = (
+        db.Index('idx_ariza_demirbas_id', 'demirbas_id'),
+        db.Index('idx_ariza_durum', 'durum'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     demirbas_id = db.Column(db.Integer)
     baslik = db.Column(db.String(200))
