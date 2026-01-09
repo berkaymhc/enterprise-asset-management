@@ -26,6 +26,7 @@ class Config:
     # --- NATRO HOSTING MAIL AYARLARI ---
     # Genellikle 'mail.alanadi.com' olur. Kendi domainini yaz.
     MAIL_SERVER = 'smtp.office365.com'
+    MAIL_DOMAIN = os.environ.get('MAIL_DOMAIN') or 'avrasya.edu.tr'
     MAIL_PORT = 587
     MAIL_USE_TLS = True   # TLS Açık
     MAIL_USE_SSL = False  # SSL Kapalı

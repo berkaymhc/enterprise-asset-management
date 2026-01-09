@@ -5,6 +5,7 @@ from app.models import Demirbas, YuklemeGecmisi, Ariza
 from datetime import datetime
 from flask_login import login_required, current_user
 from app.utils import turkce_normalize, tr_upper, tr_title
+from sqlalchemy import text
 import openpyxl
 import os
 
@@ -129,6 +130,15 @@ def sifirla_demirbas():
     try:
         # Tüm tabloyu sil (ORM Yöntemi)
         db.session.query(Demirbas).delete()
+
+        # SQLite Sequence sıfırlama (ID'yi 1'e çekmek için)
+        if db.engine.name == 'sqlite':
+            try:
+                db.session.execute(text("DELETE FROM sqlite_sequence WHERE name='demirbas'"))
+            except Exception:
+                # sqlite_sequence tablosu olmayabilir, görmezden gel
+                pass
+
         db.session.commit()
         
         log_kaydet("Tüm Liste Silindi", "Veritabanı Sıfırlama", "Sıfırlama")

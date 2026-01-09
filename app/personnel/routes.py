@@ -1,11 +1,12 @@
 # app/personnel/routes.py
 
 import openpyxl
-from flask import redirect, url_for, request, session, flash, render_template
+from flask import redirect, url_for, request, session, flash, render_template, current_app
 from app.personnel import bp
 from app import db
 from app.models import Personel, YuklemeGecmisi, Demirbas
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from app.utils import tr_upper, format_telefon, turkce_normalize
 from datetime import datetime
 
@@ -89,8 +90,8 @@ def ekle_personel():
     
     # Email oluşturma (Prefix + Domain)
     email_prefix = request.form.get('email_prefix')
-    email = f"{email_prefix}@avrasya.edu.tr" if email_prefix else ""
-
+    domain = current_app.config.get('MAIL_DOMAIN', 'avrasya.edu.tr')
+    email = f"{email_prefix}@{domain}" if email_prefix else ""
     # Veritabanı Nesnesi
     yeni_p = Personel(
         ad_soyad=ad_soyad, # <--- DÜZELTİLDİ (Direkt gelen veriyi kaydet)
@@ -200,16 +201,9 @@ def toplu_tasi_personel():
 @login_required
 def personel_detay(id):
     kisi = Personel.query.get_or_404(id)
-    
-    # Aynı ofisteki arkadaşları
     arkadaslar = Personel.query.filter(Personel.ofis == kisi.ofis, Personel.id != id).all()
     
-    # Zimmet Mantığı (Ofis eşleşmesiyle çalışıyor şimdilik)
-    # ORM'de LIKE sorgusu için .like() kullanıyoruz
-    k_ofis = kisi.ofis.replace('i', 'İ').upper() # Basit bir normalize (Geliştirilebilir)
-    
-    esyalar = Demirbas.query.filter(Demirbas.konum.contains(kisi.ofis)).all()
-    
+
     return render_template('personel_detay.html', kisi=kisi, arkadaslar=arkadaslar, esyalar=esyalar)
 
 @bp.route('/tasi-personel', methods=['POST'])
