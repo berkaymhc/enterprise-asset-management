@@ -132,9 +132,16 @@ def sifirla_demirbas():
         db.session.query(Demirbas).delete()
         db.session.commit()
         
-        # SQLite Sequence sıfırlama (ID'yi 1'e çekmek için - Opsiyonel)
-        # db.session.execute("DELETE FROM sqlite_sequence WHERE name='demirbaslar'")
-        # db.session.commit()
+        # SQLite Sequence sıfırlama (ID'yi 1'e çekmek için)
+        if db.engine.name == 'sqlite':
+            from sqlalchemy import text
+            try:
+                # sqlite_sequence tablosunun varlığını kontrol etmeye gerek yok
+                # Eğer AUTOINCREMENT kullanılmıyorsa bu işlem hata verebilir, yutuyoruz.
+                db.session.execute(text("DELETE FROM sqlite_sequence WHERE name='demirbas'"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         
         log_kaydet("Tüm Liste Silindi", "Veritabanı Sıfırlama", "Sıfırlama")
         flash("Tüm demirbaş listesi temizlendi.", "danger")
