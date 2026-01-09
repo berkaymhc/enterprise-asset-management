@@ -86,9 +86,11 @@ def index():
             )
         )
     
-    total_d = query_d.count()
-    toplam_sayfa_demirbas = math.ceil(total_d / limit)
-    demirbaslar = query_d.order_by(Demirbas.id.desc()).paginate(page=sayfa_d, per_page=limit, error_out=False).items
+    # ⚡ Bolt Optimization: Use pagination object for total/pages to avoid redundant count query
+    pagination_d = query_d.order_by(Demirbas.id.desc()).paginate(page=sayfa_d, per_page=limit, error_out=False)
+    demirbaslar = pagination_d.items
+    total_d = pagination_d.total
+    toplam_sayfa_demirbas = pagination_d.pages
 
     # ==========================================
     # 4. PERSONEL SORGUSU
@@ -103,10 +105,12 @@ def index():
                 func.NORMALIZE(Personel.ofis).like(t)
             )
         )
-        
-    total_p = query_p.count()
-    toplam_sayfa_personel = math.ceil(total_p / limit)
-    personeller = query_p.order_by(Personel.ofis.asc()).paginate(page=sayfa_p, per_page=limit, error_out=False).items
+
+    # ⚡ Bolt Optimization: Use pagination object for total/pages to avoid redundant count query
+    pagination_p = query_p.order_by(Personel.ofis.asc()).paginate(page=sayfa_p, per_page=limit, error_out=False)
+    personeller = pagination_p.items
+    total_p = pagination_p.total
+    toplam_sayfa_personel = pagination_p.pages
 
     # ==========================================
     # 5. ARIZA SORGUSU (GÜNCELLENDİ: AKTİF / GEÇMİŞ AYRIMI)
