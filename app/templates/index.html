@@ -60,16 +60,17 @@
                 <div class="mx-auto my-2 my-lg-0 w-100 d-flex justify-content-center">
                     {% if session.get('rol') != 'teknik' and aktif_tab != 'istatistik' and aktif_tab != 'ariza' %}
                     <form action="/" method="GET" class="d-flex bg-white rounded-pill overflow-hidden shadow-sm"
-                        style="max-width: 500px; width: 100%;">
+                        style="max-width: 500px; width: 100%;" role="search">
                         <input type="hidden" name="tab" value="{{ aktif_tab }}">
-                        <input class="form-control border-0 ps-3 shadow-none" type="search" name="q"
-                            placeholder="Detaylı arama yap..." value="{{ arama_terimi if arama_terimi else '' }}">
-                        <button class="btn btn-white border-start px-3 text-primary" type="submit">
-                            <i class="fas fa-search"></i>
+                        <label for="searchInput" class="visually-hidden">Detaylı arama</label>
+                        <input id="searchInput" class="form-control border-0 ps-3 shadow-none" type="search" name="q"
+                            placeholder="Detaylı arama yap..." value="{{ arama_terimi if arama_terimi else '' }}" aria-label="Arama">
+                        <button class="btn btn-white border-start px-3 text-primary" type="submit" aria-label="Ara" title="Ara">
+                            <i class="fas fa-search" aria-hidden="true"></i>
                         </button>
                         {% if arama_terimi %}
-                        <a href="/?tab={{ aktif_tab }}" class="btn btn-white border-start px-3 text-danger">
-                            <i class="fas fa-times"></i>
+                        <a href="/?tab={{ aktif_tab }}" class="btn btn-white border-start px-3 text-danger" aria-label="Aramayı temizle" title="Aramayı temizle">
+                            <i class="fas fa-times" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                     </form>
