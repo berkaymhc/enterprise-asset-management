@@ -34,3 +34,6 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = ('Envanter Sistemi', MAIL_USERNAME)
+
+    # Email Domain Configuration
+    EMAIL_DOMAIN = os.environ.get('EMAIL_DOMAIN') or 'avrasya.edu.tr'

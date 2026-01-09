@@ -1,7 +1,7 @@
 # app/personnel/routes.py
 
 import openpyxl
-from flask import redirect, url_for, request, session, flash, render_template
+from flask import redirect, url_for, request, session, flash, render_template, current_app
 from app.personnel import bp
 from app import db
 from app.models import Personel, YuklemeGecmisi, Demirbas
@@ -89,7 +89,7 @@ def ekle_personel():
     
     # Email oluşturma (Prefix + Domain)
     email_prefix = request.form.get('email_prefix')
-    email = f"{email_prefix}@avrasya.edu.tr" if email_prefix else ""
+    email = f"{email_prefix}@{current_app.config['EMAIL_DOMAIN']}" if email_prefix else ""
 
     # Veritabanı Nesnesi
     yeni_p = Personel(
