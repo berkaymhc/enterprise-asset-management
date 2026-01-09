@@ -1,11 +1,10 @@
 from flask import redirect, url_for, request, session, flash, jsonify, render_template
 from app.inventory import bp
 from app import db
-from app.models import Demirbas, YuklemeGecmisi
-from datetime import datetime  # <--- BU SATIRI EKLE
+from app.models import Demirbas, YuklemeGecmisi, Ariza
+from datetime import datetime
 from flask_login import login_required, current_user
-from app.utils import turkce_normalize, tr_upper, tr_title # Kendi utils fonksiyonun burada kalsınfrom datetime import datetime
-from app.models import Ariza, Demirbas # Demirbas zaten vardır, Ariza'yı yanına ekle
+from app.utils import turkce_normalize, tr_upper, tr_title
 import openpyxl
 import os
 
