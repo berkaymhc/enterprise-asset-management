@@ -1,6 +1,9 @@
 import os
 import secrets  # EKLENDİ
 import sys      # EKLENDİ
+=======
+import secrets
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,6 +21,13 @@ class Config:
             "Her yeniden başlatmada oturumlar sonlanabilir.", 
             file=sys.stderr
         )
+    # Check if SECRET_KEY is set, otherwise generate a random one and warn
+    if os.environ.get('SECRET_KEY'):
+        SECRET_KEY = os.environ.get('SECRET_KEY')
+    else:
+        SECRET_KEY = secrets.token_hex(32)
+        print("WARNING: SECRET_KEY not set. Using a generated random key. Sessions will be invalid on restart.", file=sys.stderr)
+   
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'demirbas.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
