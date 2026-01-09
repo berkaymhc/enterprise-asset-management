@@ -60,6 +60,11 @@ def ekle_demirbas():
 @bp.route('/guncelle-demirbas', methods=['POST'])
 @login_required
 def guncelle_demirbas():
+    # Yetki: Seviye 0 güncelleme yapamaz
+    if int(session.get('yetki_duzeyi', 0)) < 1:
+        flash("Yetkisiz işlem.", "danger")
+        return redirect(url_for('main.index', tab='demirbas'))
+
     d_id = request.form.get('id')
     
     # Güncellenecek kaydı bul
