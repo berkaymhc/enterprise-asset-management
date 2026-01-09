@@ -1,7 +1,7 @@
 # app/personnel/routes.py
 
 import openpyxl
-from flask import redirect, url_for, request, session, flash, render_template
+from flask import redirect, url_for, request, session, flash, render_template, current_app
 from app.personnel import bp
 from app import db
 from app.models import Personel, YuklemeGecmisi, Demirbas
@@ -21,7 +21,9 @@ def log_kaydet(baslik, detay, tur):
         )
         db.session.add(log)
         db.session.commit()
-    except: pass
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Log Error: {e}")
 
 # --- EXCEL YÜKLEME ---
 @bp.route('/yukle-personel', methods=['POST'])
