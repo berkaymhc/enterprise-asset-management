@@ -115,7 +115,7 @@ def index():
     
     # Normal kullanıcı sadece kendi bildirdiklerini görür
     if kullanici_rol not in ['admin', 'teknik'] and kullanici_yetki < 3:
-        query_a = query_a.filter(Ariza.bildiren == mevcut_kisi)
+        query_a = query_a.filter(Ariza.kullanici_id == current_user.id)
         
     if arama_terimi and aktif_tab == 'ariza':
         t = f"%{turkce_normalize(arama_terimi)}%"
@@ -130,7 +130,7 @@ def index():
     if kullanici_rol in ['admin', 'teknik']:
         bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor').count()
     else:
-        bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor', bildiren=mevcut_kisi).count()
+        bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor', kullanici_id=current_user.id).count()
         
     # Sıralama
     ozel_siralama = case(
@@ -321,7 +321,7 @@ def get_all_ids():
         query = Ariza.query
         if rol not in ['admin', 'teknik'] and yetki < 3:
             mevcut_kisi = session.get('ad_soyad', '')
-            query = query.filter(Ariza.bildiren == mevcut_kisi)
+            query_a = query_a.filter(Ariza.kullanici_id == current_user.id)
         
         if q:
             t = f"%{turkce_normalize(q)}%"

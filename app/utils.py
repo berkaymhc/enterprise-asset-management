@@ -40,14 +40,20 @@ def tr_title(text):
         yeni_kelimeler.append(ilk + kalan)
     return " ".join(yeni_kelimeler)
 
-def get_reset_token(user_id, expires_sec=1800): # 30 Dakika geçerli
+def get_reset_token(user_id, expires_sec=1800):
+    """Şifre sıfırlama için güvenli token oluşturur (30 dk geçerli)"""
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     return s.dumps(user_id, salt='sifre-sifirlama-tuzu')
 
 def verify_reset_token(token):
+    """Gelen tokenı doğrular ve user_id döndürür"""
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         user_id = s.loads(token, salt='sifre-sifirlama-tuzu', max_age=1800)
     except:
         return None
     return user_id
+
+def save_picture(form_picture, folder='profile_pics'):
+    """Resim yükleme fonksiyonu (Varsa kalsın)"""
+    pass # Mevcut resim yükleme kodun varsa buraya ekleyebilirsin
