@@ -388,3 +388,47 @@ def page_not_found(e):
 def internal_server_error(e):
     db.session.rollback()
     return render_template('500.html'), 500
+
+# --- BU KISMI app/main/routes.py DOSYASINA EKLE ---
+
+@bp.route('/guncelle-ariza-durum', methods=['POST'])
+@login_required
+def guncelle_ariza_durum():
+    # Garanti olması için importları burada yapıyoruz
+    from datetime import datetime
+    from flask import jsonify, request, session
+    from app import db
+    from app.models import Ariza
+
+    try:
+        # 1. Verileri Al
+        ariza_id = request.form.get('id')
+        yeni_durum = request.form.get('durum')
+        aciklama = request.form.get('aciklama')
+
+        # 2. Kaydı Bul
+        ariza = Ariza.query.get(ariza_id)
+        if not ariza:
+            return jsonify({'status': 'error', 'msg': 'Kayıt bulunamadı'}), 404
+
+        # 3. Durumu Güncelle
+        ariza.durum = yeni_durum
+
+        # 4. Açıklama Varsa Tarihçeye Ekle
+        if aciklama:
+            zaman = datetime.now().strftime("%d.%m %H:%M")
+            yapan = session.get('ad_soyad', 'Sistem')
+            # Mevcut açıklamaya (yoksa boşluğa) yenisini ekle
+            yeni_not = f"\n[{zaman} - {yapan} - {yeni_durum}]: {aciklama}"
+            ariza.aciklama = (ariza.aciklama or "") + yeni_not
+
+        # 5. Kaydet
+        db.session.commit()
+        return jsonify({'status': 'success'})
+
+    except Exception as e:
+        db.session.rollback()
+        # Hatayı konsola da yaz ki görelim
+        print(f"HATA DETAYI: {str(e)}")
+        # Hatayı frontend'e gönder
+        return jsonify({'status': 'error', 'msg': f"Sunucu Hatası: {str(e)}"}), 500

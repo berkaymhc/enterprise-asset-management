@@ -2841,24 +2841,31 @@
             }
         }
 
-        // 2. Kaydet Butonu (CSRF Güvenlikli)
+        // 2. Kaydet Butonu (Gelişmiş Hata Yakalama)
         function durumKaydet() {
             const id = document.getElementById('modalArizaId').value;
             const durum = document.getElementById('modalYeniDurum').value;
             const txtAciklama = document.getElementById('modalAciklama');
             const not = txtAciklama ? txtAciklama.value.trim() : "";
 
-            // İptal durumunda zorunluluk kontrolü
+            // İPTAL İÇİN BOŞ KONTROLÜ
             if (durum === 'İptal Edildi' && not === "") {
                 if (txtAciklama) txtAciklama.classList.add('is-invalid');
-                alert("İptal işlemi için bir açıklama girmelisiniz!");
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Açıklama Şart!',
+                    text: 'İptal işlemi için lütfen bir gerekçe yazınız.',
+                    confirmButtonColor: '#f39c12'
+                });
                 return;
             }
 
+            // Butonu kilitle
             const btn = document.querySelector('#durumModal .btn-primary');
+            const originalText = btn ? btn.innerHTML : 'Güncelle';
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> İşleniyor...';
             }
 
             const formData = new FormData();
@@ -2868,30 +2875,47 @@
 
             fetch('/guncelle-ariza-durum', {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.getElementById('csrf_token_global').value
-                },
+                headers: { 'X-CSRFToken': document.getElementById('csrf_token_global').value },
                 body: formData
             })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        alert("Sunucu hatası oluştu.");
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.innerHTML = 'Güncelle';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Hata:', error);
-                    alert("Bağlantı hatası.");
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerHTML = 'Güncelle';
-                    }
+            .then(async response => {
+                // Önce yanıtı JSON olarak al
+                const data = await response.json();
+                
+                // Eğer hata varsa (ok değilse) fırlat ama mesajı backend'den al
+                if (!response.ok) { 
+                    throw new Error(data.msg || "Bilinmeyen Sunucu Hatası"); 
+                }
+                return data;
+            })
+            .then(data => {
+                // BAŞARILI
+                var modalEl = document.getElementById('durumModal');
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Başarılı',
+                    text: 'Durum güncellendi.',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => window.location.reload());
+            })
+            .catch(error => {
+                // HATA GÖSTERİMİ
+                console.error('Hata:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Bir Hata Oluştu',
+                    text: error.message // Backend'den gelen gerçek hatayı burada göreceğiz
                 });
+                
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            });
         }
 
         // --- SİLME İŞLEMİ ---
