@@ -260,8 +260,6 @@ alim_tarihi=datetime.now().strftime("%Y-%m-%d")                        )
 @bp.route('/yukle-klasor', methods=['POST'])
 @login_required
 def yukle_klasor():
-    # --- DEBUG İÇİN EKLE ---
-    print(">>> Klasör Yükleme Rotasına Girildi!")
     if 'dosya' not in request.files: return redirect(url_for('main.index'))
     dosyalar = request.files.getlist('dosya')
     
