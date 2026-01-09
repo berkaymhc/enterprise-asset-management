@@ -1649,8 +1649,14 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="small fw-bold text-muted">Şifre</label>
-                                <input type="text" name="sifre" id="inputSifre" class="form-control form-control-sm"
-                                    placeholder="Boş bırakırsan değişmez">
+                                <div class="input-group input-group-sm">
+                                    <input type="password" name="sifre" id="inputSifre" class="form-control"
+                                        placeholder="Boş ise değişmez">
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="sifreGosterGizle()">
+                                        <i class="fas fa-eye" id="eyeIcon"></i>
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="col-md-3">
@@ -2889,34 +2895,33 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted">Arızalı Konum / Ofis</label>
-                            <input type="text" name="konum" class="form-control bg-light" 
-                                   value="{{ session.get('personel_ofis', '') }}" 
-                                   {% if session.get('personel_ofis') %}readonly{% endif %} 
-                                   placeholder="Ofis bilgisi bulunamadı, elle giriniz." required>
+                            <input type="text" name="konum" class="form-control bg-light"
+                                value="{{ session.get('personel_ofis', '') }}" {% if session.get('personel_ofis')
+                                %}readonly{% endif %} placeholder="Ofis bilgisi bulunamadı, elle giriniz." required>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-danger">Arızalı Cihaz / Eşya</label>
-                            
+
                             {% if zimmetli_esya_listesi %}
-                                <select name="demirbas_id" class="form-select border-danger" required>
-                                    <option value="" selected disabled>Lütfen listeden seçiniz...</option>
-                                    {% for esya in zimmetli_esya_listesi %}
-                                        <option value="{{ esya.id }}">
-                                            {{ esya.ad }} ({{ esya.marka if esya.marka else 'Markasız' }})
-                                        </option>
-                                    {% endfor %}
-                                    <option value="manuel">➕ Listede Yok / ID ile Gireceğim</option>
-                                </select>
+                            <select name="demirbas_id" class="form-select border-danger" required>
+                                <option value="" selected disabled>Lütfen listeden seçiniz...</option>
+                                {% for esya in zimmetli_esya_listesi %}
+                                <option value="{{ esya.id }}">
+                                    {{ esya.ad }} ({{ esya.marka if esya.marka else 'Markasız' }})
+                                </option>
+                                {% endfor %}
+                                <option value="manuel">➕ Listede Yok / ID ile Gireceğim</option>
+                            </select>
                             {% else %}
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light text-muted">ID</span>
-                                    <input type="number" name="demirbas_id" class="form-control border-danger" 
-                                           placeholder="Cihaz üzerindeki Barkod No (ID)" required>
-                                </div>
-                                <div class="form-text small text-muted">
-                                    Ofisinizde kayıtlı eşya bulunamadı. Lütfen cihaz üzerindeki ID numarasını giriniz.
-                                </div>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">ID</span>
+                                <input type="number" name="demirbas_id" class="form-control border-danger"
+                                    placeholder="Cihaz üzerindeki Barkod No (ID)" required>
+                            </div>
+                            <div class="form-text small text-muted">
+                                Ofisinizde kayıtlı eşya bulunamadı. Lütfen cihaz üzerindeki ID numarasını giriniz.
+                            </div>
                             {% endif %}
                         </div>
 
@@ -2927,14 +2932,14 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Arıza Başlığı</label>
-                            <input type="text" name="baslik" class="form-control" 
-                                   placeholder="Örn: Bilgisayar Açılmıyor" required>
+                            <input type="text" name="baslik" class="form-control"
+                                placeholder="Örn: Bilgisayar Açılmıyor" required>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Açıklama</label>
-                            <textarea name="aciklama" class="form-control" rows="3" 
-                                      placeholder="Sorunu detaylıca anlatınız..." required></textarea>
+                            <textarea name="aciklama" class="form-control" rows="3"
+                                placeholder="Sorunu detaylıca anlatınız..." required></textarea>
                         </div>
 
                         <div class="mb-3">
@@ -2955,14 +2960,14 @@
         </div>
     </div>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             const selectBox = document.querySelector('select[name="demirbas_id"]');
             const manuelDiv = document.getElementById('manuelIdInputDiv');
             const manuelInput = document.getElementById('manuelIdInput');
 
-            if(selectBox) {
-                selectBox.addEventListener('change', function() {
-                    if(this.value === 'manuel') {
+            if (selectBox) {
+                selectBox.addEventListener('change', function () {
+                    if (this.value === 'manuel') {
                         manuelDiv.classList.remove('d-none');
                         manuelInput.setAttribute('name', 'demirbas_id'); // ID buna geçsin
                         this.removeAttribute('name'); // Select'ten name'i kaldır
@@ -3302,6 +3307,21 @@
             document.getElementById('userForm').action = "{{ url_for('auth.ekle_kullanici') }}";
             document.getElementById('editUserId').value = "";
             document.getElementById('inputSifre').required = true;
+        }
+        // --- ŞİFRE GÖSTER / GİZLE ---
+        function sifreGosterGizle() {
+            const input = document.getElementById('inputSifre');
+            const icon = document.getElementById('eyeIcon');
+
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = "password";
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
         }
     </script>
 </body>
