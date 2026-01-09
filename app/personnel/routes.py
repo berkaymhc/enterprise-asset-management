@@ -206,7 +206,7 @@ def personel_detay(id):
     
     # Zimmet Mantığı (Ofis eşleşmesiyle çalışıyor şimdilik)
     # ORM'de LIKE sorgusu için .like() kullanıyoruz
-    k_ofis = kisi.ofis.replace('i', 'İ').upper() # Basit bir normalize (Geliştirilebilir)
+    k_ofis = tr_upper(kisi.ofis) # Basit bir normalize (Geliştirilebilir)
     
     esyalar = Demirbas.query.filter(Demirbas.konum.contains(kisi.ofis)).all()
     
