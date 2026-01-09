@@ -1,15 +1,13 @@
-# app/main/routes.py - FİNAL TEMİZ VERSİYON
+# app/main/routes.py - FINAL OPTIMIZE EDILMIS VERSİYON
 
 import os
-import math
+# import math <-- GEREK KALMADI!
 from datetime import datetime
 from flask import render_template, request, session, redirect, url_for, jsonify, send_from_directory, flash, send_file
-from sqlalchemy import func, or_, case
-# YENİ IMPORT: Flask-Login kullanıyoruz
+from sqlalchemy import func, or_
 from flask_login import login_required, current_user
 from app.main import bp
 from app.models import Demirbas, Personel, Ariza, YuklemeGecmisi, Kullanici
-# app.utils içindeki login_required'ı ARTIK KULLANMIYORUZ, sadece turkce_normalize kaldı
 from app.utils import turkce_normalize
 from app import db
 
@@ -27,9 +25,7 @@ def index():
     arama_terimi = request.args.get('q', '').strip()
     
     kullanici_yetki = int(session.get('yetki_duzeyi', 0))
-    kullanici_birim = session.get('birim', 'Genel')
     kullanici_rol = session.get('rol')
-    mevcut_kisi = session.get('ad_soyad', '')
 
     # Yetkiye göre varsayılan tab
     if not request.args.get('tab'):
@@ -71,7 +67,7 @@ def index():
         chart_tur_values = [r[1] for r in res_tur]
 
     # ==========================================
-    # 3. DEMİRBAŞ SORGUSU
+    # 3. DEMİRBAŞ SORGUSU (OPTIMIZE EDİLDİ ⚡)
     # ==========================================
     query_d = Demirbas.query
     
@@ -86,12 +82,16 @@ def index():
             )
         )
     
-    total_d = query_d.count()
-    toplam_sayfa_demirbas = math.ceil(total_d / limit)
-    demirbaslar = query_d.order_by(Demirbas.id.desc()).paginate(page=sayfa_d, per_page=limit, error_out=False).items
+    # Eskiden burada .count() ve math.ceil() vardı. 
+    # Şimdi direkt pagination objesini kullanıyoruz.
+    pagination_d = query_d.order_by(Demirbas.id.desc()).paginate(page=sayfa_d, per_page=limit, error_out=False)
+    
+    demirbaslar = pagination_d.items
+    total_d = pagination_d.total       # Toplam kayıt sayısı (Otomatik gelir)
+    toplam_sayfa_demirbas = pagination_d.pages # Toplam sayfa sayısı (Otomatik gelir)
 
     # ==========================================
-    # 4. PERSONEL SORGUSU
+    # 4. PERSONEL SORGUSU (OPTIMIZE EDİLDİ ⚡)
     # ==========================================
     query_p = Personel.query
     
@@ -104,29 +104,25 @@ def index():
             )
         )
         
-    total_p = query_p.count()
-    toplam_sayfa_personel = math.ceil(total_p / limit)
-    personeller = query_p.order_by(Personel.ofis.asc()).paginate(page=sayfa_p, per_page=limit, error_out=False).items
+    pagination_p = query_p.order_by(Personel.ofis.asc()).paginate(page=sayfa_p, per_page=limit, error_out=False)
+    
+    personeller = pagination_p.items
+    total_p = pagination_p.total
+    toplam_sayfa_personel = pagination_p.pages
 
     # ==========================================
-    # 5. ARIZA SORGUSU (GÜNCELLENDİ: AKTİF / GEÇMİŞ AYRIMI)
+    # 5. ARIZA SORGUSU
     # ==========================================
-    
-    # Gruplar
     aktif_durumlar = ['Beklemede', 'İşlemde', 'Parça Bekleniyor']
     gecmis_durumlar = ['Tamamlandı', 'İptal Edildi']
 
-    # Temel Sorgular
     q_aktif = Ariza.query.filter(Ariza.durum.in_(aktif_durumlar))
     q_gecmis = Ariza.query.filter(Ariza.durum.in_(gecmis_durumlar))
     
-    # Yetki Filtresi: Personel sadece kendi bildirdiklerini görür
-    # Admin ve Teknik Servis HER ŞEYİ görür
     if kullanici_rol not in ['admin', 'teknik'] and kullanici_yetki < 3:
         q_aktif = q_aktif.filter(Ariza.kullanici_id == current_user.id)
         q_gecmis = q_gecmis.filter(Ariza.kullanici_id == current_user.id)
         
-    # Arama Filtresi (Varsa her iki listeyi de filtrele)
     if arama_terimi and aktif_tab == 'ariza':
         t = f"%{turkce_normalize(arama_terimi)}%"
         filtre = or_(
@@ -136,18 +132,16 @@ def index():
         q_aktif = q_aktif.filter(filtre)
         q_gecmis = q_gecmis.filter(filtre)
 
-    # Bildirim Rozeti (Sadece Bekleyen İşler)
     if kullanici_rol in ['admin', 'teknik']:
         bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor').count()
     else:
         bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor', kullanici_id=current_user.id).count()
 
-    # Verileri Çek (En Yeni En Üstte)
     arizalar_aktif = q_aktif.order_by(Ariza.tarih.desc()).all()
     arizalar_gecmis = q_gecmis.order_by(Ariza.tarih.desc()).all()
 
     # ==========================================
-    # 6. DİĞER VERİLER (AYNI KALSIN)
+    # 6. DİĞER VERİLER
     # ==========================================
     son_yukleme = YuklemeGecmisi.query.filter_by(tur='Yükleme').order_by(YuklemeGecmisi.id.desc()).first()
     tum_gecmis = YuklemeGecmisi.query.order_by(YuklemeGecmisi.id.desc()).limit(100).all()
@@ -166,7 +160,6 @@ def index():
     analiz_turu = request.args.get('analiz_turu', 'demirbas')
     islem_turu = request.args.get('islem') 
 
-    # Filtre Parametreleri
     ist_malzeme = request.args.get('ist_malzeme', '').strip()
     ist_kampus = request.args.get('ist_kampus', '')
     ist_konum = request.args.get('ist_konum', '').strip()
@@ -179,7 +172,6 @@ def index():
     f_labels_2, f_values_2 = [], []
 
     if aktif_tab == 'istatistik' and islem_turu == 'analiz':
-        
         if analiz_turu == 'personel':
             q = Personel.query
             if ist_p_ad:
@@ -236,29 +228,22 @@ def index():
             f_values_1 = list(temp_kampus.values())
             f_labels_2 = list(temp_konum.keys())
             f_values_2 = list(temp_konum.values())
-# ==========================================
-    # 7.5 ZİMMETLİ EŞYA LİSTESİ (YENİ ÖZELLİK)
+
+    # ==========================================
+    # 7.5 ZİMMETLİ EŞYA LİSTESİ
     # ==========================================
     zimmetli_esya_listesi = []
     
-    # Eğer giriş yapan kişi personel veya teknik ise, kendi ofisindeki eşyaları çekelim
     if current_user.is_authenticated and session.get('rol') != 'admin':
-        # Kullanıcının ofis bilgisini bul (Personel tablosundan)
         mevcut_personel = Personel.query.filter_by(email=current_user.email).first()
-        
-        # Eğer personelin ofisi varsa, o ofisteki demirbaşları bul
         if mevcut_personel and mevcut_personel.ofis:
             zimmetli_esya_listesi = Demirbas.query.filter(
                 func.NORMALIZE(Demirbas.konum).like(f"%{turkce_normalize(mevcut_personel.ofis)}%")
             ).all()
-            
-            # Ofis bilgisini forma otomatik basmak için session'a da atabiliriz (Gerekirse)
             session['personel_ofis'] = mevcut_personel.ofis
     
-    # Admin ise tüm eşyaları görmesin (Çok kasar), boş kalsın veya arama ile bulsun.
-    # Ama test için Admin'e de rastgele 10 tane gösterelim mi? Gerek yok, admin ID girebilir.
     # ==========================================
-    # 8. RENDER TEMPLATE (GÜNCELLENDİ)
+    # 8. RENDER TEMPLATE
     # ==========================================
     return render_template('index.html',
                            aktif_tab=aktif_tab,
@@ -266,7 +251,6 @@ def index():
                            demirbaslar=demirbaslar,
                            personeller=personeller,
                            
-                           # YENİ DEĞİŞKENLERİMİZ BURADA:
                            arizalar_aktif=arizalar_aktif,
                            arizalar_gecmis=arizalar_gecmis,
                            zimmetli_esya_listesi=zimmetli_esya_listesi,
@@ -274,7 +258,6 @@ def index():
                            
                            sayfa_d=sayfa_d, toplam_sayfa_demirbas=toplam_sayfa_demirbas,
                            sayfa_p=sayfa_p, toplam_sayfa_personel=toplam_sayfa_personel,
-                           # Arıza sayfalama backend'den kalktı, frontend'de liste olarak gidiyor
                            
                            chart_kampus_labels=chart_kampus_labels, chart_kampus_values=chart_kampus_values,
                            chart_esya_labels=chart_esya_labels, chart_esya_values=chart_esya_values,
@@ -294,6 +277,7 @@ def index():
                            f_labels_2=f_labels_2, f_values_2=f_values_2,
                            open_modal=request.args.get('open_modal', None)
                            )
+
 @bp.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(bp.root_path, '../../static'),
@@ -343,8 +327,7 @@ def get_all_ids():
     elif tab == 'ariza':
         query = Ariza.query
         if rol not in ['admin', 'teknik'] and yetki < 3:
-            mevcut_kisi = session.get('ad_soyad', '')
-            query_a = query_a.filter(Ariza.kullanici_id == current_user.id)
+            query = query.filter(Ariza.kullanici_id == current_user.id)
         
         if q:
             t = f"%{turkce_normalize(q)}%"
@@ -358,9 +341,6 @@ def get_all_ids():
 
     return jsonify(ids)
 
-# ----------------------------------------------------
-# İŞLEM GEÇMİŞİ (LOGLAR)
-# ----------------------------------------------------
 @bp.route('/islem-gecmisi')
 @login_required
 def islem_gecmisi():
@@ -386,16 +366,12 @@ def loglari_temizle():
         
     return redirect(url_for('main.islem_gecmisi'))
 
-# ----------------------------------------------------
-# YEDEK ALMA (BACKUP)
-# ----------------------------------------------------
 @bp.route('/yedek-al')
 @login_required
 def yedek_al():
     if session.get('rol') != 'admin':
         return redirect(url_for('main.index'))
     
-    # Proje ana dizinindeki demirbas.db dosyasını hedefle
     db_file = os.path.join(os.getcwd(), 'demirbas.db')
     
     try:
@@ -403,16 +379,12 @@ def yedek_al():
     except Exception as e:
         flash(f"Yedek alma hatası: {str(e)}", "danger")
         return redirect(url_for('main.islem_gecmisi'))
-    
-    # app/main/routes.py dosyasının en altı
 
 @bp.app_errorhandler(404)
 def page_not_found(e):
-    # Kullanıcı giriş yapmışsa index şablonunu, yapmamışsa login şablonunu baz alabiliriz
-    # ama en temizi basit, bağımsız bir HTML döndürmektir.
     return render_template('404.html'), 404
 
 @bp.app_errorhandler(500)
 def internal_server_error(e):
-    db.session.rollback() # Hata durumunda veritabanını kilitlemesin
+    db.session.rollback()
     return render_template('500.html'), 500

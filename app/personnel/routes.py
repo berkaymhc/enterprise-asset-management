@@ -5,10 +5,10 @@ from flask import redirect, url_for, request, session, flash, render_template, c
 from app.personnel import bp
 from app import db
 from app.models import Personel, YuklemeGecmisi, Demirbas
-from flask_login import login_required, current_user
-from sqlalchemy import func
-from app.utils import tr_upper, format_telefon, turkce_normalize
+from flask_login import login_required
+from app.utils import format_telefon, turkce_normalize
 from datetime import datetime
+from sqlalchemy import func
 
 # --- LOG FONKSİYONU ---
 def log_kaydet(baslik, detay, tur):
@@ -22,7 +22,11 @@ def log_kaydet(baslik, detay, tur):
         )
         db.session.add(log)
         db.session.commit()
-    except: pass
+    except Exception as e:
+        db.session.rollback()
+        # Hata olsa bile sistemi durdurma ama logla (Development için)
+        if current_app:
+            current_app.logger.error(f"Log Error: {e}")
 
 # --- EXCEL YÜKLEME ---
 @bp.route('/yukle-personel', methods=['POST'])
@@ -49,7 +53,7 @@ def yukle_personel():
                 
                 # Telefon ve Email (Hata düzeltmeleriyle)
                 raw_tel = str(row[5]) if len(row) > 5 and row[5] else ""
-                telefon = format_telefon(raw_tel) # utils'den gelen fonksiyon
+                telefon = format_telefon(raw_tel)
                 
                 email = row[6] if len(row) > 6 and row[6] else ""
                 
@@ -88,13 +92,15 @@ def ekle_personel():
     ofis = request.form.get('ofis')
     telefon = request.form.get('telefon')
     
-    # Email oluşturma (Prefix + Domain)
+    # Email oluşturma (Ayarlanabilir Domain)
     email_prefix = request.form.get('email_prefix')
+    # Domain ayarını Config'den al, yoksa varsayılanı kullan
     domain = current_app.config.get('MAIL_DOMAIN', 'avrasya.edu.tr')
     email = f"{email_prefix}@{domain}" if email_prefix else ""
+
     # Veritabanı Nesnesi
     yeni_p = Personel(
-        ad_soyad=ad_soyad, # <--- DÜZELTİLDİ (Direkt gelen veriyi kaydet)
+        ad_soyad=ad_soyad,
         unvan=unvan,
         birimi=birimi,
         kampus=kampus,
@@ -201,18 +207,21 @@ def toplu_tasi_personel():
 @login_required
 def personel_detay(id):
     kisi = Personel.query.get_or_404(id)
+    
+    # Aynı ofisteki arkadaşları
     arkadaslar = Personel.query.filter(Personel.ofis == kisi.ofis, Personel.id != id).all()
     
-    # Jules Fix: Sağlam Normalizasyon Kullanımı
+    # Zimmet Mantığı (Jules Fix: Sağlam Karakter Normalizasyonu)
+    esyalar = []
     if kisi.ofis:
-        # Hem veritabanındaki konumu hem de aranan ofisi normalize edip karşılaştırıyoruz (Büyük/Küçük harf duyarsız)
+        # Hem arananı hem de veritabanındaki veriyi normalize et
         aranan_ofis = turkce_normalize(kisi.ofis)
+        
+        # Veritabanında arama yaparken de normalize fonksiyonunu kullan
         esyalar = Demirbas.query.filter(
             func.NORMALIZE(Demirbas.konum).like(f"%{aranan_ofis}%")
         ).all()
-    else:
-        esyalar = []
-        
+    
     return render_template('personel_detay.html', kisi=kisi, arkadaslar=arkadaslar, esyalar=esyalar)
 
 @bp.route('/tasi-personel', methods=['POST'])
