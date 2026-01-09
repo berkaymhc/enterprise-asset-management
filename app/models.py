@@ -36,20 +36,30 @@ def load_user(user_id):
 # ----------------------------------------------------
 class Demirbas(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    ad = db.Column(db.String(100))
-    marka = db.Column(db.String(100))
-    model = db.Column(db.String(100))
-    seri_no = db.Column(db.String(100))
-    adet = db.Column(db.Integer)
-    alim_tarihi = db.Column(db.String(20))
-    garanti_bitis = db.Column(db.String(20))
+    ad = db.Column(db.String(100), nullable=False)
+    marka = db.Column(db.String(50))
+    model = db.Column(db.String(50))
+    seri_no = db.Column(db.String(50), unique=True)
+    demirbas_no = db.Column(db.String(50), unique=True, nullable=False)
+    kategori = db.Column(db.String(50))
     konum = db.Column(db.String(100))
-    zimmetli_kisi = db.Column(db.String(100))
-    durum = db.Column(db.String(50))
-    aciklama = db.Column(db.Text)
-    barkod = db.Column(db.String(50))
     kampus = db.Column(db.String(100))
-    cinsi = db.Column(db.String(50))
+    birim = db.Column(db.String(100))
+    adet = db.Column(db.Integer, default=1)
+    durum = db.Column(db.String(20), default='Aktif')
+    kayit_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    qr_kod = db.Column(db.String(200))
+    fotograf = db.Column(db.String(100))
+    
+    # İlişkiler
+    arizalar = db.relationship('Ariza', backref='demirbas', lazy=True)
+
+    # --- PERFORMANS GÜNCELLEMESİ (İndeksler) ---
+    __table_args__ = (
+        db.Index('idx_demirbas_kampus', 'kampus'),
+        db.Index('idx_demirbas_konum', 'konum'),
+        db.Index('idx_demirbas_ad', 'ad'),
+    )
 
 class Personel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,16 +75,20 @@ class Personel(db.Model):
 
 class Ariza(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    demirbas_id = db.Column(db.Integer)
-    baslik = db.Column(db.String(200))
-    aciklama = db.Column(db.Text)
-    bildiren = db.Column(db.String(100))
-    tarih = db.Column(db.String(20))
-    durum = db.Column(db.String(20)) # Bekliyor, İşlemde, Tamamlandı
-    konum = db.Column(db.String(100))
-    cozum = db.Column(db.Text)
-    islem_yapan = db.Column(db.String(100))
-    oncelik = db.Column(db.String(20))
+    baslik = db.Column(db.String(100), nullable=False)
+    aciklama = db.Column(db.Text, nullable=False)
+    durum = db.Column(db.String(20), default='Beklemede')
+    tarih = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişkiler
+    demirbas_id = db.Column(db.Integer, db.ForeignKey('demirbas.id'), nullable=False)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('kullanici.id'), nullable=False)
+    
+    # --- PERFORMANS GÜNCELLEMESİ (İndeksler) ---
+    __table_args__ = (
+        db.Index('idx_ariza_demirbas_id', 'demirbas_id'),
+        db.Index('idx_ariza_durum', 'durum'),
+    )
 
 class YuklemeGecmisi(db.Model):
     id = db.Column(db.Integer, primary_key=True)
