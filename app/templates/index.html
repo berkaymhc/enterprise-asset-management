@@ -66,11 +66,11 @@
                         <label for="searchInput" class="visually-hidden">Detaylı arama</label>
                         <input id="searchInput" class="form-control border-0 ps-3 shadow-none" type="search" name="q"
                             placeholder="Detaylı arama yap..." value="{{ arama_terimi if arama_terimi else '' }}" aria-label="Arama">
-                        <button class="btn btn-white border-start px-3 text-primary" type="submit" aria-label="Ara" title="Ara">
+                        <button class="btn btn-white border-start px-3 text-primary js-tooltip" type="submit" aria-label="Ara" title="Ara">
                             <i class="fas fa-search" aria-hidden="true"></i>
                         </button>
                         {% if arama_terimi %}
-                        <a href="/?tab={{ aktif_tab }}" class="btn btn-white border-start px-3 text-danger" aria-label="Aramayı temizle" title="Aramayı temizle">
+                        <a href="/?tab={{ aktif_tab }}" class="btn btn-white border-start px-3 text-danger js-tooltip" aria-label="Aramayı temizle" title="Aramayı temizle">
                             <i class="fas fa-times" aria-hidden="true"></i>
                         </a>
                         {% endif %}
@@ -325,19 +325,22 @@
                                             </td>
                                             <td>
                                                 {% if session.get('yetki_duzeyi', 0) >= 1 %}
-                                                <button type="button" class="btn btn-primary btn-sm py-0"
-                                                    data-bs-toggle="modal" data-bs-target="#editDemirbas{{ item.id }}">
+                                                <button type="button" class="btn btn-primary btn-sm py-0 js-tooltip"
+                                                    data-bs-toggle="modal" data-bs-target="#editDemirbas{{ item.id }}"
+                                                    title="Düzenle" aria-label="Düzenle">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 {% endif %}
                                                 {% if session.get('rol') == 'admin' %}
                                                 <button type="button" onclick="silOnay('{{ item.id }}', 'demirbas')"
-                                                    class="btn btn-outline-danger btn-sm py-0">
+                                                    class="btn btn-outline-danger btn-sm py-0 js-tooltip"
+                                                    title="Sil" aria-label="Sil">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                                 {% endif %}
                                                 <a href="/kapi-karti/{{ item.konum }}" target="_blank"
-                                                    class="btn btn-outline-dark btn-sm py-0"><i
+                                                    class="btn btn-outline-dark btn-sm py-0 js-tooltip"
+                                                    title="Kapı Kartı Yazdır" aria-label="Kapı Kartı Yazdır"><i
                                                         class="fas fa-print"></i></a>
                                             </td>
                                         </tr>
@@ -535,19 +538,22 @@
                                                     p.ofis }}</span></td>
 
                                             <td class="align-middle">
-                                                <button type="button" class="btn btn-sm btn-warning py-0"
-                                                    data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}">
+                                                <button type="button" class="btn btn-sm btn-warning py-0 js-tooltip"
+                                                    data-bs-toggle="modal" data-bs-target="#editPersonel{{ p.id }}"
+                                                    title="Düzenle" aria-label="Düzenle">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
 
-                                                <button type="button" class="btn btn-sm btn-primary py-0"
-                                                    data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}">
+                                                <button type="button" class="btn btn-sm btn-primary py-0 js-tooltip"
+                                                    data-bs-toggle="modal" data-bs-target="#tasiModal{{ p.id }}"
+                                                    title="Personeli Taşı" aria-label="Personeli Taşı">
                                                     <i class="fas fa-exchange-alt"></i>
                                                 </button>
 
                                                 {% if session.get('rol') == 'admin' %}
                                                 <button type="button" onclick="silOnay('{{ p.id }}', 'personel')"
-                                                    class="btn btn-sm btn-danger py-0">
+                                                    class="btn btn-sm btn-danger py-0 js-tooltip"
+                                                    title="Sil" aria-label="Sil">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                                 {% endif %}
@@ -755,8 +761,9 @@
                                                 {% endif %}
 
                                                 {% if session.get('rol') == 'admin' %}
-                                                <button class="btn btn-outline-danger btn-sm ms-1"
-                                                    onclick="tekilArizaSilModalAc('{{ ariza.id }}')">
+                                                <button class="btn btn-outline-danger btn-sm ms-1 js-tooltip"
+                                                    onclick="tekilArizaSilModalAc('{{ ariza.id }}')"
+                                                    title="Sil" aria-label="Sil">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                                 {% endif %}
@@ -809,8 +816,9 @@
                                             </td>
                                             <td class="text-end">
                                                 {% if session.get('rol') == 'admin' %}
-                                                <button class="btn btn-outline-danger btn-sm"
-                                                    onclick="tekilArizaSilModalAc('{{ ariza.id }}')">
+                                                <button class="btn btn-outline-danger btn-sm js-tooltip"
+                                                    onclick="tekilArizaSilModalAc('{{ ariza.id }}')"
+                                                    title="Sil" aria-label="Sil">
                                                     <i class="fas fa-trash"></i> Sil
                                                 </button>
                                                 {% else %}
@@ -1864,6 +1872,14 @@
 
         // Sayfa DOM'u hazır olduğunda dinleyicileri ekle
         document.addEventListener("DOMContentLoaded", function () {
+            // Tooltip Başlatma
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('.js-tooltip'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    trigger: 'hover'
+                });
+            });
+
             // Form gönderilirken barı başlat
             document.querySelectorAll('form').forEach(frm => {
                 frm.addEventListener('submit', function () {
