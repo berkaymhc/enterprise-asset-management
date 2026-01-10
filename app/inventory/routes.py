@@ -170,13 +170,15 @@ def toplu_tasi_demirbas():
     # SQLAlchemy ile toplu güncelleme
     query = Demirbas.query.filter(Demirbas.id.in_(secilen_ids))
     
+    update_values = {}
+    if yeni_kampus: update_values[Demirbas.kampus] = yeni_kampus
+    if yeni_konum: update_values[Demirbas.konum] = yeni_konum
+
     count = 0
-    for item in query.all():
-        if yeni_kampus: item.kampus = yeni_kampus
-        if yeni_konum: item.konum = yeni_konum
-        count += 1
-        
-    db.session.commit()
+    if update_values:
+        count = query.update(update_values, synchronize_session=False)
+        db.session.commit()
+
     flash(f"{count} adet demirbaş taşındı.", "success")
     return redirect(url_for('main.index', tab='demirbas'))
 
