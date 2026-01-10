@@ -124,7 +124,7 @@ def sil_demirbas(id):
         
     return redirect(url_for('main.index', tab='demirbas'))
 
-@bp.route('/sifirla-demirbas')
+@bp.route('/sifirla-demirbas', methods=['POST'])
 @login_required
 def sifirla_demirbas():
     # Sadece Admin
