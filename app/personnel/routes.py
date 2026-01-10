@@ -150,7 +150,7 @@ def sil_personel(id):
         
     return redirect(url_for('main.index', tab='personel'))
 
-@bp.route('/sifirla-personel')
+@bp.route('/sifirla-personel', methods=['POST'])
 @login_required
 def sifirla_personel():
     if int(session.get('yetki_duzeyi', 0)) < 3: return redirect(url_for('main.index'))

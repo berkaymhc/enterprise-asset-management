@@ -1850,7 +1850,19 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     localStorage.removeItem('envanter_sepeti');
-                    window.location.href = '/sifirla-' + tur;
+                    // CSRF Korumalı POST İsteği
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/sifirla-' + tur;
+
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrf_token';
+                    csrfInput.value = "{{ csrf_token() }}";
+                    form.appendChild(csrfInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
                 }
             });
         }
