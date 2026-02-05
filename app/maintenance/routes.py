@@ -1,27 +1,11 @@
-from flask import redirect, url_for, request, session, flash
+from flask import redirect, url_for, request, session, flash, jsonify
 from app.maintenance import bp
 from app import db
 from app.models import Ariza, Demirbas, YuklemeGecmisi
 from flask_login import login_required, current_user
-from app.utils import turkce_normalize
+from app.utils import turkce_normalize, log_kaydet
 from datetime import datetime
 
-# --- LOG FONKSİYONU ---
-def log_kaydet(baslik, detay, tur):
-    try:
-        log = YuklemeGecmisi(
-            dosya_adi=baslik, 
-            hedef_konum=detay, 
-            tur=tur, 
-            tarih=datetime.now().strftime("%d-%m-%Y %H:%M"),
-            # session yerine current_user kullanmak daha güvenlidir
-            islem_yapan=current_user.ad_soyad if current_user.is_authenticated else "Sistem"
-        )
-        db.session.add(log)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"LOG HATASI: {e}") #pass eğer uygulama bitmişse
 
 # --- ARIZA İŞLEMLERİ ---
 
@@ -80,32 +64,28 @@ def guncelle_ariza_durum():
         if ariza:
             eski_durum = ariza.durum
             if eski_durum == yeni_durum:
-                # JavaScript fetch kullandığı için JSON veya sade metin dönebiliriz
-                return "Değişiklik yok", 200
+                return jsonify({'status': 'success', 'msg': 'Değişiklik yok'}), 200
 
             ariza.durum = yeni_durum
-            ariza.islem_yapan = current_user.ad_soyad
             
             if aciklama_notu:
-                mevcut_aciklama = ariza.cozum if ariza.cozum else ""
                 zaman = datetime.now().strftime("%d-%m %H:%M")
-                ariza.cozum = f"{mevcut_aciklama} \n[{zaman}] {yeni_durum}: {aciklama_notu}"
+                yapan = current_user.ad_soyad if current_user.is_authenticated else "Sistem"
+                yeni_not = f"\n[{zaman} - {yapan} - {yeni_durum}]: {aciklama_notu}"
+                ariza.aciklama = (ariza.aciklama or "") + yeni_not
 
             db.session.commit()
             
             log_mesaji = f"Durum: {eski_durum} -> {yeni_durum}"
-            if aciklama_notu:
-                log_mesaji += f" (Not: {aciklama_notu})"
+            if aciklama_notu: log_mesaji += f" ({aciklama_notu})"
                 
             log_kaydet(log_mesaji, f"Arıza ID: {ariza_id}", "Arıza")
-
-            # FETCH İSTEĞİ OLDUĞU İÇİN BURADA REDIRECT DEĞİL, ONAY DÖNÜYORUZ
-            return "Başarılı", 200
+            return jsonify({'status': 'success'}), 200
         else:
-            return "Arıza bulunamadı", 404
+            return jsonify({'status': 'error', 'msg': 'Arıza bulunamadı'}), 404
     except Exception as e:
         db.session.rollback()
-        return str(e), 500
+        return jsonify({'status': 'error', 'msg': str(e)}), 500
 
 @bp.route('/sil-ariza/<int:id>')
 @login_required

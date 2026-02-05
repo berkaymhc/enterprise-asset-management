@@ -1,7 +1,8 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash
 from itsdangerous import URLSafeTimedSerializer
-from flask import current_app
+from flask import current_app, session
+from datetime import datetime
 
 def turkce_normalize(metin):
     if metin is None: return ""
@@ -57,3 +58,22 @@ def verify_reset_token(token):
 def save_picture(form_picture, folder='profile_pics'):
     """Resim yükleme fonksiyonu (Varsa kalsın)"""
     pass # Mevcut resim yükleme kodun varsa buraya ekleyebilirsin
+
+def log_kaydet(baslik, detay, tur):
+    """Sistem genelinde işlem geçmişini kaydeder"""
+    from app import db
+    from app.models import YuklemeGecmisi
+    try:
+        log = YuklemeGecmisi(
+            dosya_adi=baslik, 
+            hedef_konum=detay, 
+            tur=tur, 
+            tarih=datetime.now().strftime("%d-%m-%Y %H:%M"),
+            islem_yapan=session.get('ad_soyad', 'Sistem')
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        if current_app:
+            current_app.logger.error(f"Log Kaydetme Hatası: {e}")

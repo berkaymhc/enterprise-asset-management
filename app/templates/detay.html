@@ -98,8 +98,8 @@
                     <div class="card-footer bg-white p-3">
                         <div class="d-grid gap-2">
                             {% if not session.get('kullanici_adi') %}
-                            <a href="/login" class="btn btn-outline-primary">
-                                <i class="fas fa-sign-in-alt"></i> Yönetici Girişi Yap
+                            <a href="/" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Geri Dön
                             </a>
                             {% else %}
                             <a href="/?tab=demirbas&q={{ item.ad }}" class="btn btn-primary">

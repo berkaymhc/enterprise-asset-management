@@ -4,25 +4,12 @@ from app import db
 from app.models import Demirbas, YuklemeGecmisi, Ariza
 from datetime import datetime
 from flask_login import login_required, current_user
-from app.utils import turkce_normalize, tr_upper, tr_title
+from app.utils import turkce_normalize, tr_upper, tr_title, log_kaydet
 from sqlalchemy import text
 import openpyxl
 import os
+import uuid
 
-# --- YARDIMCI LOG FONKSİYONU ---
-def log_kaydet(dosya_adi, hedef_konum, tur):
-    try:
-        yeni_log = YuklemeGecmisi(
-            dosya_adi=dosya_adi,
-            hedef_konum=hedef_konum,
-            tur=tur,
-            tarih=datetime.now().strftime("%d-%m-%Y %H:%M"),
-            islem_yapan=session.get('ad_soyad', 'Sistem')
-        )
-        db.session.add(yeni_log)
-        db.session.commit()
-    except:
-        pass # Log hatası sistemi durdurmasın
 
 # --- CRUD İŞLEMLERİ ---
 
@@ -47,7 +34,8 @@ def ekle_demirbas():
         kampus=kampus,
         konum=konum,
         adet=adet,
-        alim_tarihi=datetime.now().strftime("%Y-%m-%d")
+        alim_tarihi=datetime.now().strftime("%Y-%m-%d"),
+        demirbas_no=str(uuid.uuid4())[:8].upper() # Otomatik numara
     )
     
     db.session.add(yeni_demirbas)
@@ -243,7 +231,8 @@ def yukle_demirbas():
                             kampus=hedef_kampus,
                             konum=tam_konum,
                             adet=adet,
-                            alim_tarihi=datetime.now().strftime("%Y-%m-%d")
+                            alim_tarihi=datetime.now().strftime("%Y-%m-%d"),
+                            demirbas_no=str(uuid.uuid4())[:8].upper()
                         )
                         db.session.add(yeni)
                         toplam_eklenen += 1
@@ -279,9 +268,9 @@ def yukle_klasor():
         "pelitli": "Pelitli Yerleşkesi",
         "çimenli": "Çimenli Yerleşkesi",
         "cimenli": "Çimenli Yerleşkesi",
-        "kaşüstü": "Kaşüstü (Yomra) Yerleşkesi",
-        "kasustu": "Kaşüstü (Yomra) Yerleşkesi",
-        "yomra": "Kaşüstü (Yomra) Yerleşkesi",
+        "kaşüstü": "Kaşüstü Yerleşkesi",
+        "kasustu": "Kaşüstü Yerleşkesi",
+        "yomra": "Yomra Yerleşkesi",
         "yalıncak": "Yalıncak Yerleşkesi",
         "yalincak": "Yalıncak Yerleşkesi",
         "ömer yıldız": "Yalıncak Yerleşkesi",
@@ -399,7 +388,8 @@ def yukle_klasor():
                             kampus=aktif_kampus, 
                             konum=tam_konum, 
                             adet=adet, 
-                            alim_tarihi=datetime.now().strftime("%Y-%m-%d")
+                            alim_tarihi=datetime.now().strftime("%Y-%m-%d"),
+                            demirbas_no=str(uuid.uuid4())[:8].upper()
                         )
                         db.session.add(yeni)
             

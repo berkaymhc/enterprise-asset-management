@@ -136,10 +136,12 @@
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
 
-                    <input type="password" name="sifre" id="passwordInput" class="form-control border-start-0 border-end-0" placeholder="********"
-                        required autocomplete="current-password">
+                    <input type="password" name="sifre" id="passwordInput"
+                        class="form-control border-start-0 border-end-0" placeholder="********" required
+                        autocomplete="current-password">
 
-                    <button class="btn btn-light border border-start-0" type="button" id="togglePassword" style="z-index: 5;" aria-label="Şifreyi Göster/Gizle">
+                    <button class="btn btn-light border border-start-0" type="button" id="togglePassword"
+                        style="z-index: 5;" aria-label="Şifreyi Göster/Gizle">
                         <i class="fas fa-eye text-muted"></i>
                     </button>
                 </div>
@@ -205,6 +207,34 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const kadiInput = document.querySelector('input[name="kullanici_adi"]');
+            const sifreInput = document.getElementById('passwordInput');
+            const rememberCheck = document.getElementById('rememberCheck');
+            const loginForm = document.querySelector('form');
+
+            // 1. Sayfa açıldığında kayıtlı verileri getir
+            const savedKadi = localStorage.getItem('rem_kadi');
+            const savedSifre = localStorage.getItem('rem_sifre');
+
+            if (savedKadi && savedSifre) {
+                kadiInput.value = savedKadi;
+                sifreInput.value = savedSifre;
+                rememberCheck.checked = true;
+            }
+
+            // 2. Form gönderilirken eğer "Beni Hatırla" seçiliyse kaydet, değilse sil
+            loginForm.addEventListener('submit', function () {
+                if (rememberCheck.checked) {
+                    localStorage.setItem('rem_kadi', kadiInput.value);
+                    localStorage.setItem('rem_sifre', sifreInput.value);
+                } else {
+                    localStorage.removeItem('rem_kadi');
+                    localStorage.removeItem('rem_sifre');
+                }
+            });
+        });
+
         document.getElementById('togglePassword').addEventListener('click', function (e) {
             const passwordInput = document.getElementById('passwordInput');
             const icon = this.querySelector('i');

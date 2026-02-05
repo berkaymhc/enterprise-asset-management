@@ -70,10 +70,10 @@ def rapor():
 
     # SAYFA 3: ARIZALAR
     ws3 = wb.create_sheet("Arıza Kayıtları")
-    ws3.append(['ID', 'Konum', 'Başlık', 'Durum', 'Bildiren', 'Tarih', 'İşlem Yapan'])
+    ws3.append(['ID', 'Konum', 'Başlık', 'Durum', 'Bildiren', 'Tarih'])
     
     for a in Ariza.query.all():
-        ws3.append([a.id, a.konum, a.baslik, a.durum, a.bildiren, a.tarih, a.islem_yapan])
+        ws3.append([a.id, a.konum, a.baslik, a.durum, a.bildiren, a.tarih])
 
     # Stil Ayarları
     bold = Font(bold=True)

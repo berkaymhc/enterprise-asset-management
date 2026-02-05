@@ -6,27 +6,10 @@ from app.personnel import bp
 from app import db
 from app.models import Personel, YuklemeGecmisi, Demirbas
 from flask_login import login_required
-from app.utils import format_telefon, turkce_normalize
+from app.utils import format_telefon, turkce_normalize, log_kaydet
 from datetime import datetime
 from sqlalchemy import func
 
-# --- LOG FONKSİYONU ---
-def log_kaydet(baslik, detay, tur):
-    try:
-        log = YuklemeGecmisi(
-            dosya_adi=baslik, 
-            hedef_konum=detay, 
-            tur=tur, 
-            tarih=datetime.now().strftime("%d-%m-%Y %H:%M"),
-            islem_yapan=session.get('ad_soyad', 'Sistem')
-        )
-        db.session.add(log)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        # Hata olsa bile sistemi durdurma ama logla (Development için)
-        if current_app:
-            current_app.logger.error(f"Log Error: {e}")
 
 # --- EXCEL YÜKLEME ---
 @bp.route('/yukle-personel', methods=['POST'])

@@ -12,7 +12,7 @@ from app.utils import turkce_normalize
 from app import db
 
 # Sabitler
-YERLESKELER = ["Yalıncak Yerleşkesi", "Pelitli Yerleşkesi", "Kaşüstü (Yomra) Yerleşkesi", "Çimenli Yerleşkesi"]
+YERLESKELER = ["Yalıncak Yerleşkesi", "Pelitli Yerleşkesi", "Kaşüstü Yerleşkesi", "Yomra Yerleşkesi", "Çimenli Yerleşkesi"]
 BIRIMLER = ["Bilgi İşlem Daire Başkanlığı", "İdari ve Mali İşler", "Personel Daire Başkanlığı", "Öğrenci İşleri", "Rektörlük", "Kütüphane", "SKS"]
 UNVANLAR = ["Daire Başkanı", "Şube Müdürü", "Memur", "Tekniker", "Mühendis", "Sürekli İşçi"]
 
@@ -78,7 +78,12 @@ def index():
             or_(
                 func.NORMALIZE(Demirbas.ad).like(t),
                 func.NORMALIZE(Demirbas.konum).like(t),
-                func.NORMALIZE(Demirbas.kampus).like(t)
+                func.NORMALIZE(Demirbas.kampus).like(t),
+                func.NORMALIZE(Demirbas.cinsi).like(t),
+                func.NORMALIZE(Demirbas.marka).like(t),
+                func.NORMALIZE(Demirbas.model).like(t),
+                func.NORMALIZE(Demirbas.seri_no).like(t),
+                func.NORMALIZE(Demirbas.demirbas_no).like(t)
             )
         )
     
@@ -100,7 +105,12 @@ def index():
         query_p = query_p.filter(
             or_(
                 func.NORMALIZE(Personel.ad_soyad).like(t),
-                func.NORMALIZE(Personel.ofis).like(t)
+                func.NORMALIZE(Personel.unvan).like(t),
+                func.NORMALIZE(Personel.birimi).like(t),
+                func.NORMALIZE(Personel.ofis).like(t),
+                func.NORMALIZE(Personel.kampus).like(t),
+                func.NORMALIZE(Personel.email).like(t),
+                func.NORMALIZE(Personel.telefon).like(t)
             )
         )
         
@@ -132,10 +142,11 @@ def index():
         q_aktif = q_aktif.filter(filtre)
         q_gecmis = q_gecmis.filter(filtre)
 
+    aktif_durumlar = ['Beklemede', 'İşlemde', 'Parça Bekleniyor']
     if kullanici_rol in ['admin', 'teknik']:
-        bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor').count()
+        bildirim_sayisi = Ariza.query.filter(Ariza.durum.in_(aktif_durumlar)).count()
     else:
-        bildirim_sayisi = Ariza.query.filter_by(durum='Bekliyor', kullanici_id=current_user.id).count()
+        bildirim_sayisi = Ariza.query.filter(Ariza.durum.in_(aktif_durumlar), Ariza.kullanici_id == current_user.id).count()
 
     arizalar_aktif = q_aktif.order_by(Ariza.tarih.desc()).all()
     arizalar_gecmis = q_gecmis.order_by(Ariza.tarih.desc()).all()
@@ -184,17 +195,24 @@ def index():
             if ist_p_ofis:
                 q = q.filter(func.NORMALIZE(Personel.ofis).like(f"%{turkce_normalize(ist_p_ofis)}%"))
                 
+            # Personel Analizi: Birim ve Ünvan Dağılımı
             analiz_sonuclari = q.order_by(Personel.birimi.asc(), Personel.ad_soyad.asc()).all()
             analiz_toplam = len(analiz_sonuclari)
             
             temp_birim = {}
+            temp_unvan = {}
             for p in analiz_sonuclari:
                 b = p.birimi if p.birimi else "Belirtilmedi"
+                u = p.unvan if p.unvan else "Belirtilmedi"
                 temp_birim[b] = temp_birim.get(b, 0) + 1
+                temp_unvan[u] = temp_unvan.get(u, 0) + 1
+                
             f_labels_1 = list(temp_birim.keys())
             f_values_1 = list(temp_birim.values())
+            f_labels_2 = list(temp_unvan.keys())
+            f_values_2 = list(temp_unvan.values())
 
-        else: # Demirbaş Analizi
+        else: # Demirbaş Analizi: Kampüs ve Konum Dağılımı
             q = db.session.query(
                 Demirbas.ad, 
                 Demirbas.kampus, 
@@ -388,47 +406,3 @@ def page_not_found(e):
 def internal_server_error(e):
     db.session.rollback()
     return render_template('500.html'), 500
-
-# --- BU KISMI app/main/routes.py DOSYASINA EKLE ---
-
-@bp.route('/guncelle-ariza-durum', methods=['POST'])
-@login_required
-def guncelle_ariza_durum():
-    # Garanti olması için importları burada yapıyoruz
-    from datetime import datetime
-    from flask import jsonify, request, session
-    from app import db
-    from app.models import Ariza
-
-    try:
-        # 1. Verileri Al
-        ariza_id = request.form.get('id')
-        yeni_durum = request.form.get('durum')
-        aciklama = request.form.get('aciklama')
-
-        # 2. Kaydı Bul
-        ariza = Ariza.query.get(ariza_id)
-        if not ariza:
-            return jsonify({'status': 'error', 'msg': 'Kayıt bulunamadı'}), 404
-
-        # 3. Durumu Güncelle
-        ariza.durum = yeni_durum
-
-        # 4. Açıklama Varsa Tarihçeye Ekle
-        if aciklama:
-            zaman = datetime.now().strftime("%d.%m %H:%M")
-            yapan = session.get('ad_soyad', 'Sistem')
-            # Mevcut açıklamaya (yoksa boşluğa) yenisini ekle
-            yeni_not = f"\n[{zaman} - {yapan} - {yeni_durum}]: {aciklama}"
-            ariza.aciklama = (ariza.aciklama or "") + yeni_not
-
-        # 5. Kaydet
-        db.session.commit()
-        return jsonify({'status': 'success'})
-
-    except Exception as e:
-        db.session.rollback()
-        # Hatayı konsola da yaz ki görelim
-        print(f"HATA DETAYI: {str(e)}")
-        # Hatayı frontend'e gönder
-        return jsonify({'status': 'error', 'msg': f"Sunucu Hatası: {str(e)}"}), 500
