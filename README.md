@@ -3,9 +3,12 @@
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.3-green.svg)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red.svg)
+[![Medium](https://img.shields.io/badge/Medium-Case%20Study-black?logo=medium)](https://medium.com/@berkaymhc/architecting-a-modular-enterprise-asset-management-system-with-flask-and-sqlalchemy-54b8485fcec1)
 ![License](https://img.shields.io/badge/License-MIT-purple.svg)
 
 An enterprise-grade, modular Web Application built with **Flask**, **SQLAlchemy ORM**, and **Alembic** for managing corporate assets, maintenance logs, and personnel assignments. Engineered with a scalable Blueprint architecture and robust Role-Based Access Control (RBAC).
+
+📖 **Read the full architectural case study on Medium:** [Architecting a Modular Enterprise Asset Management System with Flask and SQLAlchemy](https://medium.com/@berkaymhc/architecting-a-modular-enterprise-asset-management-system-with-flask-and-sqlalchemy-54b8485fcec1)
 
 ---
 
