@@ -59,3 +59,4 @@ Desktop.ini
 
 # Project specific ignores
 /app/static/uploads/
+/docs/
