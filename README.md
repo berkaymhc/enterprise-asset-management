@@ -54,8 +54,8 @@ The application implements a multi-tier authorization matrix enforced at the rou
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/berkaymhc/universite-demirbas.git
-cd universite-demirbas
+git clone https://github.com/berkaymhc/enterprise-asset-management.git
+cd enterprise-asset-management
 ```
 
 ### 2. Create and activate a Virtual Environment
