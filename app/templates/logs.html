@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İşlem Geçmişi - Üniversite Demirbaş</title>
+    <title>Activity Logs - Enterprise Asset</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -20,14 +20,14 @@
         
         <div class="mb-3">
             <a href="{{ url_for('main.index') }}" class="text-decoration-none text-secondary fw-bold">
-                <i class="fas fa-arrow-left"></i> Yönetim Paneline Dön
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" rolee="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -39,17 +39,17 @@
             
             <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-center">
                 <div class="mb-3 mb-md-0">
-                    <h4 class="fw-bold text-dark mb-0"><i class="fas fa-history text-primary"></i> Sistem İşlem Geçmişi</h4>
-                    <small class="text-muted">Sistemde kaydedilen son 500 işlem kaydı.</small>
+                    <h4 class="fw-bold text-dark mb-0"><i class="fas fa-history text-primary"></i> System Activity Logs</h4>
+                    <small class="text-muted">The last 500 operation records saved in the system.</small>
                 </div>
                 
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('main.yedek_al') }}" class="btn btn-success btn-sm shadow-sm fw-bold">
-                        <i class="fas fa-download"></i> Veritabanını Yedekle
+                    <a href="{{ url_for('main.backup_db') }}" class="btn btn-success btn-sm shadow-sm fw-bold">
+                        <i class="fas fa-download"></i> Backup Database
                     </a>
 
                     <button class="btn btn-danger btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#clearLogModal">
-                        <i class="fas fa-trash-alt"></i> Geçmişi Temizle
+                        <i class="fas fa-trash-alt"></i> Clear Logs
                     </button>
                 </div>
             </div>
@@ -60,57 +60,57 @@
                         <thead class="table-light text-uppercase small">
                             <tr>
                                 <th class="ps-3">ID</th>
-                                <th>İşlem / Dosya</th>
-                                <th>Detay / Konum</th>
-                                <th>İşlem Türü</th>
-                                <th>Tarih</th>
-                                <th>Yapan Kişi</th>
+                                <th>Operation / File</th>
+                                <th>Detail / Location</th>
+                                <th>Operation Type</th>
+                                <th>Date</th>
+                                <th>Performed By</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for log in logs %}
                             <tr>
                                 <td class="ps-3 fw-bold text-muted">#{{ log.id }}</td>
-                                <td class="fw-bold text-dark">{{ log.dosya_adi }}</td>
+                                <td class="fw-bold text-dark">{{ log.file_name }}</td>
                                 <td class="text-muted small">
-                                    {% if log.hedef_konum|length > 50 %}
-                                        {{ log.hedef_konum[:50] }}...
+                                    {% if log.target_location|length > 50 %}
+                                        {{ log.target_location[:50] }}...
                                     {% else %}
-                                        {{ log.hedef_konum }}
+                                        {{ log.target_location }}
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if 'Sil' in log.tur or 'İptal' in log.tur %}
+                                    {% if 'Delete' in log.type or 'Cancel' in log.type %}
                                         <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger">
-                                            <i class="fas fa-times-circle"></i> {{ log.tur }}
+                                            <i class="fas fa-times-circle"></i> {{ log.type }}
                                         </span>
-                                    {% elif 'Ekle' in log.tur or 'Yükle' in log.tur %}
+                                    {% elif 'Add' in log.type or 'Upload' in log.type %}
                                         <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success">
-                                            <i class="fas fa-check-circle"></i> {{ log.tur }}
+                                            <i class="fas fa-check-circle"></i> {{ log.type }}
                                         </span>
-                                    {% elif 'Düzen' in log.tur or 'Güncel' in log.tur %}
+                                    {% elif 'Edit' in log.type or 'Update' in log.type %}
                                         <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning border border-warning">
-                                            <i class="fas fa-edit"></i> {{ log.tur }}
+                                            <i class="fas fa-edit"></i> {{ log.type }}
                                         </span>
-                                    {% elif 'Taşı' in log.tur %}
+                                    {% elif 'Move' in log.type %}
                                         <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary">
-                                            <i class="fas fa-exchange-alt"></i> {{ log.tur }}
+                                            <i class="fas fa-exchange-alt"></i> {{ log.type }}
                                         </span>
                                     {% else %}
                                         <span class="badge rounded-pill bg-secondary bg-opacity-10 text-secondary border border-secondary">
-                                            {{ log.tur }}
+                                            {{ log.type }}
                                         </span>
                                     {% endif %}
                                 </td>
                                 <td class="text-nowrap text-muted small">
-                                    <i class="far fa-clock"></i> {{ log.tarih }}
+                                    <i class="far fa-clock"></i> {{ log.date }}
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="bg-secondary text-white rounded-circle d-flex justify-content-center align-items-center me-2" style="width: 25px; height: 25px; font-size: 10px;">
-                                            {{ log.islem_yapan[0] | upper }}
+                                            {{ log.performed_by[0] | upper }}
                                         </div>
-                                        <span class="fw-bold small">{{ log.islem_yapan }}</span>
+                                        <span class="fw-bold small">{{ log.performed_by }}</span>
                                     </div>
                                 </td>
                             </tr>
@@ -119,8 +119,8 @@
                                 <td colspan="6" class="text-center p-5 text-muted bg-light">
                                     <div class="py-4">
                                         <i class="fas fa-history fa-4x text-secondary mb-3 opacity-25"></i>
-                                        <h5>İşlem Geçmişi Boş</h5>
-                                        <p class="small mb-0">Henüz sisteme kayıtlı bir işlem bulunmuyor.</p>
+                                        <h5>Activity Logs are Empty</h5>
+                                        <p class="small mb-0">There are no records in the system yet.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -130,7 +130,7 @@
                 </div>
             </div>
             <div class="card-footer bg-light small text-muted text-end">
-                Toplam {{ logs|length }} kayıt gösteriliyor.
+                Total {{ logs|length }} records displayed.
             </div>
         </div>
     </div>
@@ -139,16 +139,16 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Dikkat!</h5>
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Warning!</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4 text-center">
-                    <p class="mb-0 fs-5">Tüm işlem geçmişi silinecek.</p>
-                    <p class="text-muted small mt-2">Bu işlem sadece log kayıtlarını siler, veritabanındaki eşyaları etkilemez. Yine de devam etmek istiyor musunuz?</p>
+                    <p class="mb-0 fs-5">All activity logs will be deleted.</p>
+                    <p class="text-muted small mt-2">This process only deletes the log records and does not affect the assets in the database. Do you still want to continue?</p>
                 </div>
                 <div class="modal-footer bg-light justify-content-center">
-                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Vazgeç</button>
-                    <a href="{{ url_for('main.loglari_temizle') }}" class="btn btn-danger px-4">Evet, Sil</a>
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <a href="{{ url_for('main.clear_logs') }}" class="btn btn-danger px-4">Yes, Delete</a>
                 </div>
             </div>
         </div>

@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personel Detayı - {{ kisi.ad_soyad }}</title>
+    <title>Personnel Detayı - {{ kisi.ad_soyad }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-light">
 
     <div class="container mt-5">
-        <a href="/?tab=personel" class="btn btn-outline-secondary btn-sm mb-3">
+        <a href="/?tab=personnel" class="btn btn-outline-secondary btn-sm mb-3">
             <i class="fas fa-arrow-left"></i> Listeye Dön
         </a>
 
@@ -30,16 +30,16 @@
                     
                     <ul class="list-group list-group-flush small">
                         <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
-                            <span class="text-muted"><i class="fas fa-map-marker-alt me-2"></i> Kampüs</span>
+                            <span class="text-muted"><i class="fas fa-map-marker-alt me-2"></i> Campus</span>
                             <span class="fw-bold">{{ kisi.kampus }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
-                            <span class="text-muted"><i class="fas fa-door-open me-2"></i> Ofis</span>
+                            <span class="text-muted"><i class="fas fa-door-open me-2"></i> Office</span>
                             <span class="fw-bold text-primary">{{ kisi.ofis }}</span>
                         </li>
                         
                         <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
-                            <span class="text-muted"><i class="fas fa-envelope me-2"></i> E-Posta</span>
+                            <span class="text-muted"><i class="fas fa-envelope me-2"></i> Email</span>
                             {% if kisi.email %}
                                 <a href="mailto:{{ kisi.email }}" class="text-decoration-none fw-bold">{{ kisi.email }}</a>
                             {% else %}
@@ -48,7 +48,7 @@
                         </li>
 
                         <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
-                            <span class="text-muted"><i class="fas fa-phone me-2"></i> Telefon</span>
+                            <span class="text-muted"><i class="fas fa-phone me-2"></i> Phone</span>
                             {% if kisi.telefon %}
                                 <a href="tel:{{ kisi.telefon }}" class="text-decoration-none fw-bold">{{ kisi.telefon }}</a>
                             {% else %}
@@ -59,7 +59,7 @@
                     
                     <div class="card-footer bg-white text-center py-3 border-0">
                         <a href="/kapi-karti/{{ kisi.ofis }}" target="_blank" class="btn btn-outline-dark btn-sm w-100">
-                            <i class="fas fa-qrcode"></i> Kapı Kartı Oluştur
+                            <i class="fas fa-qrcode"></i> Door Card Oluştur
                         </a>
                     </div>
                 </div>
@@ -67,13 +67,13 @@
                 {% if arkadaslar %}
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white fw-bold">
-                        <i class="fas fa-users text-secondary"></i> Oda Arkadaşları
+                        <i class="fas fa-users text-secondary"></i> Room Arkadaşları
                     </div>
                     <ul class="list-group list-group-flush">
                         {% for ark in arkadaslar %}
                         <li class="list-group-item d-flex align-items-center">
                             <i class="fas fa-user-circle text-muted me-2"></i>
-                            <a href="/personel-detay/{{ ark.id }}" class="text-decoration-none text-dark small fw-bold">
+                            <a href="/personnel-detay/{{ ark.id }}" class="text-decoration-none text-dark small fw-bold">
                                 {{ ark.ad_soyad }}
                             </a>
                         </li>
@@ -86,17 +86,17 @@
             <div class="col-md-8">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0 fw-bold text-primary"><i class="fas fa-boxes"></i> Zimmetli / Ofis Demirbaşları</h6>
+                        <h6 class="mb-0 fw-bold text-primary"><i class="fas fa-boxes"></i> Zimmetli / Office Assetsı</h6>
                         <span class="badge bg-light text-dark border">{{ esyalar|length }} Parça</span>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Malzeme Adı</th>
-                                    <th>Cinsi</th>
-                                    <th>Konum Detayı</th>
-                                    <th class="text-center">Adet</th>
+                                    <th>Asset Name</th>
+                                    <th>Type</th>
+                                    <th>Location Detayı</th>
+                                    <th class="text-center">Quantity</th>
                                 </tr>
                             </thead>
                             <tbody>

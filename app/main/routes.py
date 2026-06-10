@@ -1,296 +1,265 @@
-# app/main/routes.py - FINAL OPTIMIZE EDILMIS VERSİYON
-
 import os
-# import math <-- GEREK KALMADI!
 from datetime import datetime
 from flask import render_template, request, session, redirect, url_for, jsonify, send_from_directory, flash, send_file
 from sqlalchemy import func, or_
 from flask_login import login_required, current_user
 from app.main import bp
-from app.models import Demirbas, Personel, Ariza, YuklemeGecmisi, Kullanici
-from app.utils import turkce_normalize
+from app.models import Asset, Personnel, MaintenanceLog, UploadHistory, User
+from app.utils import normalize_text
 from app import db
 
-# Sabitler
-YERLESKELER = ["Yalıncak Yerleşkesi", "Pelitli Yerleşkesi", "Kaşüstü Yerleşkesi", "Yomra Yerleşkesi", "Çimenli Yerleşkesi"]
-BIRIMLER = ["Bilgi İşlem Daire Başkanlığı", "İdari ve Mali İşler", "Personel Daire Başkanlığı", "Öğrenci İşleri", "Rektörlük", "Kütüphane", "SKS"]
-UNVANLAR = ["Daire Başkanı", "Şube Müdürü", "Memur", "Tekniker", "Mühendis", "Sürekli İşçi"]
+# Constants
+CAMPUSES = ["Main Campus", "North Campus", "South Campus", "East Campus", "West Campus"]
+DEPARTMENTS = ["IT Department", "Administrative & Financial Affairs", "Human Resources", "Student Affairs", "Rectorate", "Library", "Health & Sports"]
+TITLES = ["Head of Department", "Branch Manager", "Officer", "Technician", "Engineer", "Worker"]
 
 @bp.route('/')
 @bp.route('/index')
 @login_required
 def index():
-    # 1. TEMEL DEĞİŞKENLER
-    aktif_tab = request.args.get('tab', 'demirbas')
-    arama_terimi = request.args.get('q', '').strip()
+    active_tab = request.args.get('tab', 'assets')
+    search_term = request.args.get('q', '').strip()
     
-    kullanici_yetki = int(session.get('yetki_duzeyi', 0))
-    kullanici_rol = session.get('rol')
+    auth_level = int(session.get('auth_level', 0))
+    user_role = session.get('role')
 
-    # Yetkiye göre varsayılan tab
     if not request.args.get('tab'):
-        if kullanici_yetki == 0 or kullanici_rol == 'teknik':
-            aktif_tab = 'ariza'
+        if auth_level == 0 or user_role == 'technician':
+            active_tab = 'maintenance'
     
-    # Sayfalama
     limit = 20
-    sayfa_d = request.args.get('sayfa_d', 1, type=int)
-    sayfa_p = request.args.get('sayfa_p', 1, type=int)
+    page_a = request.args.get('page_a', 1, type=int)
+    page_p = request.args.get('page_p', 1, type=int)
     
-    # ==========================================
-    # 2. İSTATİSTİK VE GRAFİK VERİLERİ (ORM)
-    # ==========================================
-    chart_kampus_labels, chart_kampus_values = [], []
-    chart_esya_labels, chart_esya_values = [], []
-    chart_personel_labels, chart_personel_values = [], []
-    chart_tur_labels, chart_tur_values = [], []
+    # 2. STATS AND CHART DATA (ORM)
+    chart_campus_labels, chart_campus_values = [], []
+    chart_asset_labels, chart_asset_values = [], []
+    chart_personnel_labels, chart_personnel_values = [], []
+    chart_type_labels, chart_type_values = [], []
     
-    if kullanici_yetki >= 1:
-        # Kampüs Dağılımı
-        res_kampus = db.session.query(Demirbas.kampus, func.sum(Demirbas.adet)).group_by(Demirbas.kampus).all()
-        chart_kampus_labels = [r[0] for r in res_kampus if r[0]]
-        chart_kampus_values = [r[1] for r in res_kampus if r[0]]
+    if auth_level >= 1:
+        res_campus = db.session.query(Asset.campus, func.sum(Asset.quantity)).group_by(Asset.campus).all()
+        chart_campus_labels = [r[0] for r in res_campus if r[0]]
+        chart_campus_values = [r[1] for r in res_campus if r[0]]
         
-        # En Çok Olan 5 Eşya
-        res_esya = db.session.query(Demirbas.ad, func.sum(Demirbas.adet)).group_by(Demirbas.ad).order_by(func.sum(Demirbas.adet).desc()).limit(5).all()
-        chart_esya_labels = [r[0] for r in res_esya]
-        chart_esya_values = [r[1] for r in res_esya]
+        res_asset = db.session.query(Asset.name, func.sum(Asset.quantity)).group_by(Asset.name).order_by(func.sum(Asset.quantity).desc()).limit(5).all()
+        chart_asset_labels = [r[0] for r in res_asset]
+        chart_asset_values = [r[1] for r in res_asset]
 
-        # Personel Dağılımı
-        res_per = db.session.query(Personel.birimi, func.count(Personel.id)).group_by(Personel.birimi).limit(8).all()
-        chart_personel_labels = [r[0] for r in res_per if r[0]]
-        chart_personel_values = [r[1] for r in res_per if r[0]]
+        res_per = db.session.query(Personnel.department, func.count(Personnel.id)).group_by(Personnel.department).limit(8).all()
+        chart_personnel_labels = [r[0] for r in res_per if r[0]]
+        chart_personnel_values = [r[1] for r in res_per if r[0]]
         
-        # Tür Dağılımı
-        res_tur = db.session.query(Demirbas.cinsi, func.sum(Demirbas.adet)).filter(Demirbas.cinsi != "").group_by(Demirbas.cinsi).all()
-        chart_tur_labels = [r[0] for r in res_tur]
-        chart_tur_values = [r[1] for r in res_tur]
+        res_type = db.session.query(Asset.type, func.sum(Asset.quantity)).filter(Asset.type != "").group_by(Asset.type).all()
+        chart_type_labels = [r[0] for r in res_type]
+        chart_type_values = [r[1] for r in res_type]
 
-    # ==========================================
-    # 3. DEMİRBAŞ SORGUSU (OPTIMIZE EDİLDİ ⚡)
-    # ==========================================
-    query_d = Demirbas.query
+    # 3. ASSET QUERY
+    query_a = Asset.query
     
-    # Arama Filtresi
-    if arama_terimi and aktif_tab == 'demirbas':
-        t = f"%{turkce_normalize(arama_terimi)}%"
-        query_d = query_d.filter(
+    if search_term and active_tab == 'assets':
+        t = f"%{normalize_text(search_term)}%"
+        query_a = query_a.filter(
             or_(
-                func.NORMALIZE(Demirbas.ad).like(t),
-                func.NORMALIZE(Demirbas.konum).like(t),
-                func.NORMALIZE(Demirbas.kampus).like(t),
-                func.NORMALIZE(Demirbas.cinsi).like(t),
-                func.NORMALIZE(Demirbas.marka).like(t),
-                func.NORMALIZE(Demirbas.model).like(t),
-                func.NORMALIZE(Demirbas.seri_no).like(t),
-                func.NORMALIZE(Demirbas.demirbas_no).like(t)
+                func.NORMALIZE(Asset.name).like(t),
+                func.NORMALIZE(Asset.location).like(t),
+                func.NORMALIZE(Asset.campus).like(t),
+                func.NORMALIZE(Asset.type).like(t),
+                func.NORMALIZE(Asset.brand).like(t),
+                func.NORMALIZE(Asset.model).like(t),
+                func.NORMALIZE(Asset.serial_number).like(t),
+                func.NORMALIZE(Asset.asset_tag).like(t)
             )
         )
     
-    # Eskiden burada .count() ve math.ceil() vardı. 
-    # Şimdi direkt pagination objesini kullanıyoruz.
-    pagination_d = query_d.order_by(Demirbas.id.desc()).paginate(page=sayfa_d, per_page=limit, error_out=False)
+    pagination_a = query_a.order_by(Asset.id.desc()).paginate(page=page_a, per_page=limit, error_out=False)
     
-    demirbaslar = pagination_d.items
-    total_d = pagination_d.total       # Toplam kayıt sayısı (Otomatik gelir)
-    toplam_sayfa_demirbas = pagination_d.pages # Toplam sayfa sayısı (Otomatik gelir)
+    assets = pagination_a.items
+    total_a = pagination_a.total
+    total_pages_asset = pagination_a.pages
 
-    # ==========================================
-    # 4. PERSONEL SORGUSU (OPTIMIZE EDİLDİ ⚡)
-    # ==========================================
-    query_p = Personel.query
+    # 4. PERSONNEL QUERY
+    query_p = Personnel.query
     
-    if arama_terimi and aktif_tab == 'personel':
-        t = f"%{turkce_normalize(arama_terimi)}%"
+    if search_term and active_tab == 'personnel':
+        t = f"%{normalize_text(search_term)}%"
         query_p = query_p.filter(
             or_(
-                func.NORMALIZE(Personel.ad_soyad).like(t),
-                func.NORMALIZE(Personel.unvan).like(t),
-                func.NORMALIZE(Personel.birimi).like(t),
-                func.NORMALIZE(Personel.ofis).like(t),
-                func.NORMALIZE(Personel.kampus).like(t),
-                func.NORMALIZE(Personel.email).like(t),
-                func.NORMALIZE(Personel.telefon).like(t)
+                func.NORMALIZE(Personnel.full_name).like(t),
+                func.NORMALIZE(Personnel.title).like(t),
+                func.NORMALIZE(Personnel.department).like(t),
+                func.NORMALIZE(Personnel.office).like(t),
+                func.NORMALIZE(Personnel.campus).like(t),
+                func.NORMALIZE(Personnel.email).like(t),
+                func.NORMALIZE(Personnel.phone).like(t)
             )
         )
         
-    pagination_p = query_p.order_by(Personel.ofis.asc()).paginate(page=sayfa_p, per_page=limit, error_out=False)
+    pagination_p = query_p.order_by(Personnel.office.asc()).paginate(page=page_p, per_page=limit, error_out=False)
     
-    personeller = pagination_p.items
+    personnel = pagination_p.items
     total_p = pagination_p.total
-    toplam_sayfa_personel = pagination_p.pages
+    total_pages_personnel = pagination_p.pages
 
-    # ==========================================
-    # 5. ARIZA SORGUSU
-    # ==========================================
-    aktif_durumlar = ['Beklemede', 'İşlemde', 'Parça Bekleniyor']
-    gecmis_durumlar = ['Tamamlandı', 'İptal Edildi']
+    # 5. MAINTENANCE QUERY
+    active_statuses = ['Pending', 'In Progress', 'Waiting for Parts']
+    past_statuses = ['Completed', 'Cancelled']
 
-    q_aktif = Ariza.query.filter(Ariza.durum.in_(aktif_durumlar))
-    q_gecmis = Ariza.query.filter(Ariza.durum.in_(gecmis_durumlar))
+    q_active = MaintenanceLog.query.filter(MaintenanceLog.status.in_(active_statuses))
+    q_past = MaintenanceLog.query.filter(MaintenanceLog.status.in_(past_statuses))
     
-    if kullanici_rol not in ['admin', 'teknik'] and kullanici_yetki < 3:
-        q_aktif = q_aktif.filter(Ariza.kullanici_id == current_user.id)
-        q_gecmis = q_gecmis.filter(Ariza.kullanici_id == current_user.id)
+    if user_role not in ['admin', 'technician'] and auth_level < 3:
+        q_active = q_active.filter(MaintenanceLog.user_id == current_user.id)
+        q_past = q_past.filter(MaintenanceLog.user_id == current_user.id)
         
-    if arama_terimi and aktif_tab == 'ariza':
-        t = f"%{turkce_normalize(arama_terimi)}%"
-        filtre = or_(
-            func.NORMALIZE(Ariza.baslik).like(t),
-            func.NORMALIZE(Ariza.konum).like(t)
+    if search_term and active_tab == 'maintenance':
+        t = f"%{normalize_text(search_term)}%"
+        f_filter = or_(
+            func.NORMALIZE(MaintenanceLog.title).like(t),
+            func.NORMALIZE(MaintenanceLog.location).like(t)
         )
-        q_aktif = q_aktif.filter(filtre)
-        q_gecmis = q_gecmis.filter(filtre)
+        q_active = q_active.filter(f_filter)
+        q_past = q_past.filter(f_filter)
 
-    aktif_durumlar = ['Beklemede', 'İşlemde', 'Parça Bekleniyor']
-    if kullanici_rol in ['admin', 'teknik']:
-        bildirim_sayisi = Ariza.query.filter(Ariza.durum.in_(aktif_durumlar)).count()
+    if user_role in ['admin', 'technician']:
+        notification_count = MaintenanceLog.query.filter(MaintenanceLog.status.in_(active_statuses)).count()
     else:
-        bildirim_sayisi = Ariza.query.filter(Ariza.durum.in_(aktif_durumlar), Ariza.kullanici_id == current_user.id).count()
+        notification_count = MaintenanceLog.query.filter(MaintenanceLog.status.in_(active_statuses), MaintenanceLog.user_id == current_user.id).count()
 
-    arizalar_aktif = q_aktif.order_by(Ariza.tarih.desc()).all()
-    arizalar_gecmis = q_gecmis.order_by(Ariza.tarih.desc()).all()
+    active_maintenance = q_active.order_by(MaintenanceLog.date_reported.desc()).all()
+    past_maintenance = q_past.order_by(MaintenanceLog.date_reported.desc()).all()
 
-    # ==========================================
-    # 6. DİĞER VERİLER
-    # ==========================================
-    son_yukleme = YuklemeGecmisi.query.filter_by(tur='Yükleme').order_by(YuklemeGecmisi.id.desc()).first()
-    tum_gecmis = YuklemeGecmisi.query.order_by(YuklemeGecmisi.id.desc()).limit(100).all()
+    # 6. OTHER DATA
+    last_upload = UploadHistory.query.filter_by(type='Upload').order_by(UploadHistory.id.desc()).first()
+    all_history = UploadHistory.query.order_by(UploadHistory.id.desc()).limit(100).all()
     
-    kullanicilar_listesi = []
-    if session.get('rol') == 'admin':
-        kullanicilar_listesi = Kullanici.query.order_by(Kullanici.id.asc()).all()
+    users_list = []
+    if session.get('role') == 'admin':
+        users_list = User.query.order_by(User.id.asc()).all()
 
-    aktif_kullanici_ofis = ""
+    active_user_office = ""
     
-    # ==========================================
-    # 7. İSTATİSTİK ANALİZ MANTIĞI
-    # ==========================================
-    analiz_sonuclari = []
-    analiz_toplam = 0
-    analiz_turu = request.args.get('analiz_turu', 'demirbas')
-    islem_turu = request.args.get('islem') 
+    # 7. STATISTICS ANALYSIS
+    analysis_results = []
+    analysis_total = 0
+    analysis_type = request.args.get('analysis_type', 'assets')
+    operation_type = request.args.get('operation') 
 
-    ist_malzeme = request.args.get('ist_malzeme', '').strip()
-    ist_kampus = request.args.get('ist_kampus', '')
-    ist_konum = request.args.get('ist_konum', '').strip()
-    ist_p_ad = request.args.get('ist_p_ad', '').strip()
-    ist_p_birim = request.args.get('ist_p_birim', '').strip()
-    ist_p_kampus = request.args.get('ist_p_kampus', '')
-    ist_p_ofis = request.args.get('ist_p_ofis', '').strip()
+    stat_material = request.args.get('stat_material', '').strip()
+    stat_campus = request.args.get('stat_campus', '')
+    stat_location = request.args.get('stat_location', '').strip()
+    stat_p_name = request.args.get('stat_p_name', '').strip()
+    stat_p_dept = request.args.get('stat_p_dept', '').strip()
+    stat_p_campus = request.args.get('stat_p_campus', '')
+    stat_p_office = request.args.get('stat_p_office', '').strip()
 
     f_labels_1, f_values_1 = [], []
     f_labels_2, f_values_2 = [], []
 
-    if aktif_tab == 'istatistik' and islem_turu == 'analiz':
-        if analiz_turu == 'personel':
-            q = Personel.query
-            if ist_p_ad:
-                t = f"%{turkce_normalize(ist_p_ad)}%"
-                q = q.filter(or_(func.NORMALIZE(Personel.ad_soyad).like(t), func.NORMALIZE(Personel.unvan).like(t)))
-            if ist_p_birim:
-                q = q.filter(func.NORMALIZE(Personel.birimi).like(f"%{turkce_normalize(ist_p_birim)}%"))
-            if ist_p_kampus and ist_p_kampus != "Tümü":
-                q = q.filter(Personel.kampus == ist_p_kampus)
-            if ist_p_ofis:
-                q = q.filter(func.NORMALIZE(Personel.ofis).like(f"%{turkce_normalize(ist_p_ofis)}%"))
+    if active_tab == 'statistics' and operation_type == 'analyze':
+        if analysis_type == 'personnel':
+            q = Personnel.query
+            if stat_p_name:
+                t = f"%{normalize_text(stat_p_name)}%"
+                q = q.filter(or_(func.NORMALIZE(Personnel.full_name).like(t), func.NORMALIZE(Personnel.title).like(t)))
+            if stat_p_dept:
+                q = q.filter(func.NORMALIZE(Personnel.department).like(f"%{normalize_text(stat_p_dept)}%"))
+            if stat_p_campus and stat_p_campus != "All":
+                q = q.filter(Personnel.campus == stat_p_campus)
+            if stat_p_office:
+                q = q.filter(func.NORMALIZE(Personnel.office).like(f"%{normalize_text(stat_p_office)}%"))
                 
-            # Personel Analizi: Birim ve Ünvan Dağılımı
-            analiz_sonuclari = q.order_by(Personel.birimi.asc(), Personel.ad_soyad.asc()).all()
-            analiz_toplam = len(analiz_sonuclari)
+            analysis_results = q.order_by(Personnel.department.asc(), Personnel.full_name.asc()).all()
+            analysis_total = len(analysis_results)
             
-            temp_birim = {}
-            temp_unvan = {}
-            for p in analiz_sonuclari:
-                b = p.birimi if p.birimi else "Belirtilmedi"
-                u = p.unvan if p.unvan else "Belirtilmedi"
-                temp_birim[b] = temp_birim.get(b, 0) + 1
-                temp_unvan[u] = temp_unvan.get(u, 0) + 1
+            temp_dept = {}
+            temp_title = {}
+            for p in analysis_results:
+                b = p.department if p.department else "Not Specified"
+                u = p.title if p.title else "Not Specified"
+                temp_dept[b] = temp_dept.get(b, 0) + 1
+                temp_title[u] = temp_title.get(u, 0) + 1
                 
-            f_labels_1 = list(temp_birim.keys())
-            f_values_1 = list(temp_birim.values())
-            f_labels_2 = list(temp_unvan.keys())
-            f_values_2 = list(temp_unvan.values())
+            f_labels_1 = list(temp_dept.keys())
+            f_values_1 = list(temp_dept.values())
+            f_labels_2 = list(temp_title.keys())
+            f_values_2 = list(temp_title.values())
 
-        else: # Demirbaş Analizi: Kampüs ve Konum Dağılımı
+        else: # Asset Analysis
             q = db.session.query(
-                Demirbas.ad, 
-                Demirbas.kampus, 
-                Demirbas.konum, 
-                func.sum(Demirbas.adet).label('toplam_adet')
+                Asset.name, 
+                Asset.campus, 
+                Asset.location, 
+                func.sum(Asset.quantity).label('total_quantity')
             )
             
-            if ist_malzeme:
-                q = q.filter(func.NORMALIZE(Demirbas.ad).like(f"%{turkce_normalize(ist_malzeme)}%"))
-            if ist_kampus and ist_kampus != "Tümü":
-                q = q.filter(Demirbas.kampus == ist_kampus)
-            if ist_konum:
-                q = q.filter(func.NORMALIZE(Demirbas.konum).like(f"%{turkce_normalize(ist_konum)}%"))
+            if stat_material:
+                q = q.filter(func.NORMALIZE(Asset.name).like(f"%{normalize_text(stat_material)}%"))
+            if stat_campus and stat_campus != "All":
+                q = q.filter(Asset.campus == stat_campus)
+            if stat_location:
+                q = q.filter(func.NORMALIZE(Asset.location).like(f"%{normalize_text(stat_location)}%"))
                 
-            analiz_sonuclari = q.group_by(Demirbas.ad, Demirbas.kampus, Demirbas.konum)\
-                                .order_by(Demirbas.kampus.asc(), Demirbas.konum.asc()).all()
+            analysis_results = q.group_by(Asset.name, Asset.campus, Asset.location)\
+                                .order_by(Asset.campus.asc(), Asset.location.asc()).all()
             
-            analiz_toplam = sum(item.toplam_adet for item in analiz_sonuclari)
+            analysis_total = sum(item.total_quantity for item in analysis_results)
             
-            temp_kampus = {}
-            temp_konum = {}
-            for item in analiz_sonuclari:
-                k = item.kampus
-                adet = item.toplam_adet
-                temp_kampus[k] = temp_kampus.get(k, 0) + adet
+            temp_campus = {}
+            temp_location = {}
+            for item in analysis_results:
+                k = item.campus
+                qty = item.total_quantity
+                temp_campus[k] = temp_campus.get(k, 0) + qty
                 
-                k_ozet = item.konum.split('/')[0].strip()
-                temp_konum[k_ozet] = temp_konum.get(k_ozet, 0) + adet
+                l_summary = item.location.split('/')[0].strip()
+                temp_location[l_summary] = temp_location.get(l_summary, 0) + qty
                 
-            f_labels_1 = list(temp_kampus.keys())
-            f_values_1 = list(temp_kampus.values())
-            f_labels_2 = list(temp_konum.keys())
-            f_values_2 = list(temp_konum.values())
+            f_labels_1 = list(temp_campus.keys())
+            f_values_1 = list(temp_campus.values())
+            f_labels_2 = list(temp_location.keys())
+            f_values_2 = list(temp_location.values())
 
-    # ==========================================
-    # 7.5 ZİMMETLİ EŞYA LİSTESİ
-    # ==========================================
-    zimmetli_esya_listesi = []
+    # 7.5 ASSIGNED ASSETS
+    assigned_assets = []
     
-    if current_user.is_authenticated and session.get('rol') != 'admin':
-        mevcut_personel = Personel.query.filter_by(email=current_user.email).first()
-        if mevcut_personel and mevcut_personel.ofis:
-            zimmetli_esya_listesi = Demirbas.query.filter(
-                func.NORMALIZE(Demirbas.konum).like(f"%{turkce_normalize(mevcut_personel.ofis)}%")
+    if current_user.is_authenticated and session.get('role') != 'admin':
+        current_staff = Personnel.query.filter_by(email=current_user.email).first()
+        if current_staff and current_staff.office:
+            assigned_assets = Asset.query.filter(
+                func.NORMALIZE(Asset.location).like(f"%{normalize_text(current_staff.office)}%")
             ).all()
-            session['personel_ofis'] = mevcut_personel.ofis
+            session['personnel_office'] = current_staff.office
     
-    # ==========================================
     # 8. RENDER TEMPLATE
-    # ==========================================
     return render_template('index.html',
-                           aktif_tab=aktif_tab,
-                           arama_terimi=arama_terimi,
-                           demirbaslar=demirbaslar,
-                           personeller=personeller,
+                           active_tab=active_tab,
+                           search_term=search_term,
+                           assets=assets,
+                           personnel=personnel,
                            
-                           arizalar_aktif=arizalar_aktif,
-                           arizalar_gecmis=arizalar_gecmis,
-                           zimmetli_esya_listesi=zimmetli_esya_listesi,
-                           bildirim_sayisi=bildirim_sayisi,
+                           active_maintenance=active_maintenance,
+                           past_maintenance=past_maintenance,
+                           assigned_assets=assigned_assets,
+                           notification_count=notification_count,
                            
-                           sayfa_d=sayfa_d, toplam_sayfa_demirbas=toplam_sayfa_demirbas,
-                           sayfa_p=sayfa_p, toplam_sayfa_personel=toplam_sayfa_personel,
+                           page_a=page_a, total_pages_asset=total_pages_asset,
+                           page_p=page_p, total_pages_personnel=total_pages_personnel,
                            
-                           chart_kampus_labels=chart_kampus_labels, chart_kampus_values=chart_kampus_values,
-                           chart_esya_labels=chart_esya_labels, chart_esya_values=chart_esya_values,
-                           chart_personel_labels=chart_personel_labels, chart_personel_values=chart_personel_values,
-                           chart_tur_labels=chart_tur_labels, chart_tur_values=chart_tur_values,
+                           chart_campus_labels=chart_campus_labels, chart_campus_values=chart_campus_values,
+                           chart_asset_labels=chart_asset_labels, chart_asset_values=chart_asset_values,
+                           chart_personnel_labels=chart_personnel_labels, chart_personnel_values=chart_personnel_values,
+                           chart_type_labels=chart_type_labels, chart_type_values=chart_type_values,
                            
-                           yerleskeler=YERLESKELER, birimler=BIRIMLER, unvanlar=UNVANLAR,
-                           son_yukleme=son_yukleme, tum_gecmis=tum_gecmis,
-                           kullanicilar_listesi=kullanicilar_listesi, aktif_kullanici_ofis=aktif_kullanici_ofis,
+                           campuses=CAMPUSES, departments=DEPARTMENTS, titles=TITLES,
+                           last_upload=last_upload, all_history=all_history,
+                           users_list=users_list, active_user_office=active_user_office,
 
-                           analiz_sonuclari=analiz_sonuclari,
-                           analiz_turu=analiz_turu,
-                           analiz_toplam=analiz_toplam,
-                           ist_malzeme=ist_malzeme, ist_kampus=ist_kampus, ist_konum=ist_konum,
-                           ist_p_ad=ist_p_ad, ist_p_birim=ist_p_birim, ist_p_kampus=ist_p_kampus, ist_p_ofis=ist_p_ofis,
+                           analysis_results=analysis_results,
+                           analysis_type=analysis_type,
+                           analysis_total=analysis_total,
+                           stat_material=stat_material, stat_campus=stat_campus, stat_location=stat_location,
+                           stat_p_name=stat_p_name, stat_p_dept=stat_p_dept, stat_p_campus=stat_p_campus, stat_p_office=stat_p_office,
                            f_labels_1=f_labels_1, f_values_1=f_values_1,
                            f_labels_2=f_labels_2, f_values_2=f_values_2,
                            open_modal=request.args.get('open_modal', None)
@@ -304,99 +273,99 @@ def favicon():
 @bp.route('/get-all-ids')
 @login_required
 def get_all_ids():
-    tab = request.args.get('tab', 'demirbas')
+    tab = request.args.get('tab', 'assets')
     q = request.args.get('q', '').strip()
     
-    yetki = int(session.get('yetki_duzeyi', 0))
-    rol = session.get('rol')
+    auth_level = int(session.get('auth_level', 0))
+    role = session.get('role')
 
     ids = []
 
-    if tab == 'demirbas':
-        query = Demirbas.query
-        if yetki == 0 and rol != 'teknik':
+    if tab == 'assets':
+        query = Asset.query
+        if auth_level == 0 and role != 'technician':
             return jsonify([])
             
         if q:
-            t = f"%{turkce_normalize(q)}%"
+            t = f"%{normalize_text(q)}%"
             query = query.filter(
                 or_(
-                    func.NORMALIZE(Demirbas.ad).like(t),
-                    func.NORMALIZE(Demirbas.konum).like(t)
+                    func.NORMALIZE(Asset.name).like(t),
+                    func.NORMALIZE(Asset.location).like(t)
                 )
             )
         ids = [str(item.id) for item in query.all()]
 
-    elif tab == 'personel':
-        query = Personel.query
-        if yetki == 0 and rol != 'teknik':
+    elif tab == 'personnel':
+        query = Personnel.query
+        if auth_level == 0 and role != 'technician':
             return jsonify([])
 
         if q:
-            t = f"%{turkce_normalize(q)}%"
+            t = f"%{normalize_text(q)}%"
             query = query.filter(
                 or_(
-                    func.NORMALIZE(Personel.ad_soyad).like(t),
-                    func.NORMALIZE(Personel.ofis).like(t)
+                    func.NORMALIZE(Personnel.full_name).like(t),
+                    func.NORMALIZE(Personnel.office).like(t)
                 )
             )
         ids = [str(item.id) for item in query.all()]
 
-    elif tab == 'ariza':
-        query = Ariza.query
-        if rol not in ['admin', 'teknik'] and yetki < 3:
-            query = query.filter(Ariza.kullanici_id == current_user.id)
+    elif tab == 'maintenance':
+        query = MaintenanceLog.query
+        if role not in ['admin', 'technician'] and auth_level < 3:
+            query = query.filter(MaintenanceLog.user_id == current_user.id)
         
         if q:
-            t = f"%{turkce_normalize(q)}%"
+            t = f"%{normalize_text(q)}%"
             query = query.filter(
                 or_(
-                    func.NORMALIZE(Ariza.baslik).like(t),
-                    func.NORMALIZE(Ariza.konum).like(t)
+                    func.NORMALIZE(MaintenanceLog.title).like(t),
+                    func.NORMALIZE(MaintenanceLog.location).like(t)
                 )
             )
         ids = [str(item.id) for item in query.all()]
 
     return jsonify(ids)
 
-@bp.route('/islem-gecmisi')
+@bp.route('/activity-logs')
 @login_required
-def islem_gecmisi():
-    if session.get('rol') != 'admin':
-        flash("Bu sayfayı görüntüleme yetkiniz yok.", "danger")
+def activity_logs():
+    if session.get('role') != 'admin':
+        flash("You do not have permission to view this page.", "danger")
         return redirect(url_for('main.index'))
     
-    logs = YuklemeGecmisi.query.order_by(YuklemeGecmisi.id.desc()).limit(500).all()
+    logs = UploadHistory.query.order_by(UploadHistory.id.desc()).limit(500).all()
     return render_template('logs.html', logs=logs)
 
-@bp.route('/loglari-temizle')
+@bp.route('/clear-logs')
 @login_required
-def loglari_temizle():
-    if session.get('rol') != 'admin': return redirect(url_for('main.index'))
+def clear_logs():
+    if session.get('role') != 'admin': return redirect(url_for('main.index'))
     
     try:
-        db.session.query(YuklemeGecmisi).delete()
+        db.session.query(UploadHistory).delete()
         db.session.commit()
-        flash("Tüm işlem geçmişi temizlendi.", "success")
+        flash("All activity logs cleared.", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Hata: {str(e)}", "danger")
+        flash(f"Error: {str(e)}", "danger")
         
-    return redirect(url_for('main.islem_gecmisi'))
+    return redirect(url_for('main.activity_logs'))
 
-@bp.route('/yedek-al')
+@bp.route('/backup-db')
 @login_required
-def yedek_al():
-    if session.get('rol') != 'admin':
+def backup_db():
+    if session.get('role') != 'admin':
         return redirect(url_for('main.index'))
     
-    db_file = os.path.join(os.getcwd(), 'demirbas.db')
+    db_file = os.path.join(os.getcwd(), 'asset_management.db')
     
     try:
-        return send_file(db_file, as_attachment=True, download_name=f"Yedek_Demirbas_{datetime.now().strftime('%Y-%m-%d_%H%M')}.db")
+        return send_file(db_file, as_attachment=True, download_name=f"Backup_DB_{datetime.now().strftime('%Y-%m-%d_%H%M')}.db")
     except Exception as e:
-        flash(f"Yedek alma hatası: {str(e)}", "danger")
-        return redirect(url_for('main.islem_gecmisi'))
+        flash(f"Backup Error: {str(e)}", "danger")
+        return redirect(url_for('main.activity_logs'))
 
 @bp.app_errorhandler(404)
 def page_not_found(e):

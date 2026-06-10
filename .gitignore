@@ -1,24 +1,61 @@
-# Python cache dosyaları
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Sanal Ortam (Çok Önemli - Bunu sakın yükleme)
+# Virtual Environment
 venv/
 env/
-.env
+ENV/
+env.bak/
+venv.bak/
 
-# Veritabanı (İçinde gerçek veriler var, yükleme)
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# SQLite Database (Do not upload production data)
 *.db
 *.sqlite3
 instance/
 
-# IDE Ayarları (VS Code vb.)
+# Flask
+flask_session/
+
+# IDE and Editor Settings
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# Log dosyaları
+# Logs
 *.log
 
-# Windows thumbnail dosyaları
+# Windows specific
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Project specific ignores
+/app/static/uploads/

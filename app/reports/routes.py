@@ -1,12 +1,11 @@
-# app/reports/routes.py - DÜZELTİLMİŞ VERSİYON
+# app/reports/routes.py
 
 from flask import render_template, request, session, redirect, url_for, send_file, flash
-from flask_login import login_required, current_user # <--- 1. DÜZELTME: Flask-Login eklendi
+from flask_login import login_required, current_user
 from app.reports import bp
 from app import db
-from app.models import Demirbas, Personel, Ariza, YuklemeGecmisi
-# login_required BURADAN SİLİNDİ 👇
-from app.utils import tr_upper, format_telefon, turkce_normalize 
+from app.models import Asset, Personnel, MaintenanceLog, UploadHistory
+from app.utils import to_upper, format_phone, normalize_text 
 from datetime import datetime
 import io
 import qrcode
@@ -15,23 +14,23 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from sqlalchemy import func, or_
 
-# --- 1. EXCEL ŞABLON İNDİRME ---
-@bp.route('/indir-sablon/<tur>')
+# --- 1. DOWNLOAD EXCEL TEMPLATE ---
+@bp.route('/download-template/<type>')
 @login_required
-def indir_sablon(tur):
+def download_template(type):
     wb = Workbook()
     ws = wb.active
-    ws.title = "Örnek Şablon"
+    ws.title = "Sample Template"
     bold_font = Font(bold=True)
     
-    if tur == 'personel':
-        ws.append(['Ad Soyad', 'Ünvan', 'Birim', 'Kampüs', 'Ofis', 'Telefon', 'E-Posta'])
-        ws.append(['Ali Yılmaz', 'Memur', 'Bilgi İşlem', 'Yalıncak Yerleşkesi', 'Z-23', '5551234567', 'ali@ornek.com'])
+    if type == 'personnel':
+        ws.append(['Full Name', 'Title', 'Department', 'Campus', 'Office', 'Phone', 'Email'])
+        ws.append(['John Doe', 'Clerk', 'IT', 'Main Campus', 'Z-23', '5551234567', 'john@example.com'])
         ws.column_dimensions['A'].width = 25
     else:
-        # Demirbaş Şablonu
-        ws.append(['Malzeme Adı', 'Cinsi', 'Marka', 'Model', 'Seri No', 'Kampüs', 'Konum', 'Adet', 'Zimmetli Kişi', 'Açıklama'])
-        ws.append(['Çalışma Masası', 'Mobilya', '', '', '', 'Yalıncak Yerleşkesi', 'B-Blok 105', 1, '', ''])
+        # Asset Template
+        ws.append(['Asset Name', 'Type', 'Brand', 'Model', 'Serial No', 'Campus', 'Location', 'Quantity', 'Assigned To', 'Description'])
+        ws.append(['Work Desk', 'Furniture', '', '', '', 'Main Campus', 'B-Block 105', 1, '', ''])
         ws.column_dimensions['A'].width = 25
 
     for cell in ws[1]: cell.font = bold_font
@@ -39,43 +38,44 @@ def indir_sablon(tur):
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-    return send_file(output, as_attachment=True, download_name=f"Ornek_{tur.capitalize()}_Sablonu.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    return send_file(output, as_attachment=True, download_name=f"Sample_{type.capitalize()}_Template.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-# --- 2. GENEL RAPOR (Tüm Veritabanını İndir) ---
-@bp.route('/rapor')
+# --- 2. GENERAL REPORT (Download Entire DB) ---
+@bp.route('/report')
 @login_required
-def rapor():
-    if int(session.get('yetki_duzeyi', 0)) < 1:
+def report():
+    if int(session.get('auth_level', 0)) < 1:
         return redirect(url_for('main.index'))
 
     wb = Workbook()
     
-    # SAYFA 1: DEMİRBAŞLAR
+    # SHEET 1: ASSETS
     ws1 = wb.active
-    ws1.title = "Demirbaş Listesi"
-    ws1.append(['ID', 'Malzeme Adı', 'Cinsi', 'Kampüs', 'Konum', 'Adet', 'Alım Tarihi'])
+    ws1.title = "Asset List"
+    ws1.append(['ID', 'Asset Name', 'Type', 'Campus', 'Location', 'Quantity', 'Purchase Date'])
     
-    query_d = Demirbas.query.all()
+    query_d = Asset.query.all()
     
     for d in query_d:
-        # 2. DÜZELTME: d.tarih -> d.alim_tarihi yapıldı
-        ws1.append([d.id, d.ad, d.cinsi, d.kampus, d.konum, d.adet, d.alim_tarihi])
+        ws1.append([d.id, d.name, d.type, d.campus, d.location, d.quantity, d.date_added])
 
-    # SAYFA 2: PERSONELLER
-    ws2 = wb.create_sheet("Personel Listesi")
-    ws2.append(['ID', 'Ad Soyad', 'Ünvan', 'Birim', 'Kampüs', 'Ofis', 'Telefon', 'E-Posta'])
+    # SHEET 2: PERSONNEL
+    ws2 = wb.create_sheet("Personnel List")
+    ws2.append(['ID', 'Full Name', 'Title', 'Department', 'Campus', 'Office', 'Phone', 'Email'])
     
-    for p in Personel.query.all():
-        ws2.append([p.id, p.ad_soyad, p.unvan, p.birimi, p.kampus, p.ofis, p.telefon, p.email])
+    for p in Personnel.query.all():
+        ws2.append([p.id, p.full_name, p.title, p.department, p.campus, p.office, p.phone, p.email])
 
-    # SAYFA 3: ARIZALAR
-    ws3 = wb.create_sheet("Arıza Kayıtları")
-    ws3.append(['ID', 'Konum', 'Başlık', 'Durum', 'Bildiren', 'Tarih'])
+    # SHEET 3: MAINTENANCE
+    ws3 = wb.create_sheet("Maintenance Logs")
+    ws3.append(['ID', 'Location', 'Title', 'Status', 'Reported By', 'Date'])
     
-    for a in Ariza.query.all():
-        ws3.append([a.id, a.konum, a.baslik, a.durum, a.bildiren, a.tarih])
+    for a in MaintenanceLog.query.all():
+        # User query to find reporter is not directly mapped as user relation might be null
+        reporter = str(a.user_id)
+        ws3.append([a.id, a.location, a.title, a.status, reporter, a.date_reported])
 
-    # Stil Ayarları
+    # Style Settings
     bold = Font(bold=True)
     for sheet in wb.worksheets:
         for cell in sheet[1]: cell.font = bold
@@ -85,32 +85,29 @@ def rapor():
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-    return send_file(output, as_attachment=True, download_name=f"Genel_Rapor_{datetime.now().strftime('%Y-%m-%d')}.xlsx")
+    return send_file(output, as_attachment=True, download_name=f"General_Report_{datetime.now().strftime('%Y-%m-%d')}.xlsx")
 
-# --- 3. TOPLU QR KOD YAZDIRMA ---
-@bp.route('/toplu-yazdir-demirbas', methods=['GET', 'POST'])
+# --- 3. BULK PRINT QR CODES ---
+@bp.route('/bulk-print-assets', methods=['GET', 'POST'])
 @login_required
-def toplu_yazdir_demirbas():
+def bulk_print_assets():
     if request.method == 'POST': 
-        secilenler = request.form.getlist('secilen_ids')
+        selected_ids = request.form.getlist('selected_ids')
     else: 
-        secilenler = request.args.get('ids', '').split(',')
+        selected_ids = request.args.get('ids', '').split(',')
     
-    if not secilenler or secilenler == ['']: 
-        return redirect(url_for('main.index', tab='demirbas'))
+    if not selected_ids or selected_ids == ['']: 
+        return redirect(url_for('main.index', tab='assets'))
     
-    # ORM ile seçilenleri çek
-    demirbaslar = Demirbas.query.filter(Demirbas.id.in_(secilenler)).all()
-    qr_listesi = []
+    assets = Asset.query.filter(Asset.id.in_(selected_ids)).all()
+    qr_list = []
     
-    for item in demirbaslar:
-        # 3. DÜZELTME: item.tarih -> item.alim_tarihi
-        tarih_bilgisi = item.alim_tarihi if item.alim_tarihi else "Belirtilmedi"
-        qr_icerik = f"DEMİRBAŞ BİLGİSİ\nID: {item.id}\nÜrün: {item.ad}\nKonum: {item.konum}\nCinsi: {item.cinsi}\nKayıt: {tarih_bilgisi}"
+    for item in assets:
+        date_info = item.date_added if item.date_added else "Not Specified"
+        qr_content = f"ASSET INFO\nID: {item.id}\nItem: {item.name}\nLocation: {item.location}\nType: {item.type}\nDate: {date_info}"
         
-        # QR Oluştur
         qr = qrcode.QRCode(box_size=10, border=2)
-        qr.add_data(qr_icerik)
+        qr.add_data(qr_content)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
         
@@ -118,21 +115,20 @@ def toplu_yazdir_demirbas():
         img.save(buffered, format="PNG")
         qr_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
         
-        qr_listesi.append({
-            'ad': item.ad, 'id': item.id, 'konum': item.konum,
-            'cinsi': item.cinsi, 'qr': qr_base64
+        qr_list.append({
+            'name': item.name, 'id': item.id, 'location': item.location,
+            'type': item.type, 'qr': qr_base64
         })
 
-    return render_template('toplu_yazdir.html', qr_listesi=qr_listesi)
+    return render_template('toplu_yazdir.html', qr_list=qr_list)
 
-# --- 4. KAPI KARTI VE TEKLİ QR ---
-@bp.route('/kapi-karti/<path:konum_adi>')
-def kapi_karti(konum_adi):
-    # Kapı kartı için QR (Odanın linkini içerir)
-    hedef_url = url_for('reports.ofis_detay', konum_adi=konum_adi, _external=True)
+# --- 4. DOOR CARD & SINGLE QR ---
+@bp.route('/door-card/<path:location_name>')
+def door_card(location_name):
+    target_url = url_for('reports.office_details', location_name=location_name, _external=True)
     
     qr = qrcode.QRCode(box_size=10, border=2)
-    qr.add_data(hedef_url)
+    qr.add_data(target_url)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
     
@@ -140,90 +136,88 @@ def kapi_karti(konum_adi):
     img.save(buffered, format="PNG")
     qr_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
     
-    return render_template('kapi_karti.html', konum=konum_adi, qr_code=qr_base64)
+    return render_template('kapi_karti.html', location=location_name, qr_code=qr_base64)
 
-@bp.route('/ofis/<path:konum_adi>')
-def ofis_detay(konum_adi):
-    # Ofis detay sayfası (Kapı kartındaki QR okutulunca açılır)
-    t = f"%{turkce_normalize(konum_adi)}%"
+@bp.route('/office/<path:location_name>')
+def office_details(location_name):
+    t = f"%{normalize_text(location_name)}%"
     
-    esyalar = Demirbas.query.filter(func.NORMALIZE(Demirbas.konum).like(t)).all()
-    personeller = Personel.query.filter(func.NORMALIZE(Personel.ofis).like(t)).all()
+    assets = Asset.query.filter(func.NORMALIZE(Asset.location).like(t)).all()
+    personnel = Personnel.query.filter(func.NORMALIZE(Personnel.office).like(t)).all()
     
-    return render_template('oda_detay.html', konum=konum_adi, esyalar=esyalar, personeller=personeller)
+    return render_template('oda_detay.html', location=location_name, assets=assets, personnel=personnel)
 
-@bp.route('/rapor-analiz')
+@bp.route('/report-analysis')
 @login_required
-def rapor_analiz():
-    if int(session.get('yetki_duzeyi', 0)) < 1:
+def report_analysis():
+    if int(session.get('auth_level', 0)) < 1:
         return redirect(url_for('main.index'))
 
-    # Parametreleri al
-    analiz_turu = request.args.get('analiz_turu', 'demirbas')
+    analysis_type = request.args.get('analysis_type', 'assets')
     
-    ist_malzeme = request.args.get('ist_malzeme', '').strip()
-    ist_kampus = request.args.get('ist_kampus', '')
-    ist_konum = request.args.get('ist_konum', '').strip()
+    req_item = request.args.get('req_item', '').strip()
+    req_campus = request.args.get('req_campus', '')
+    req_location = request.args.get('req_location', '').strip()
     
-    ist_p_ad = request.args.get('ist_p_ad', '').strip()
-    ist_p_birim = request.args.get('ist_p_birim', '').strip()
-    ist_p_kampus = request.args.get('ist_p_kampus', '')
-    ist_p_ofis = request.args.get('ist_p_ofis', '').strip()
+    req_p_name = request.args.get('req_p_name', '').strip()
+    req_p_dept = request.args.get('req_p_dept', '').strip()
+    req_p_campus = request.args.get('req_p_campus', '')
+    req_p_office = request.args.get('req_p_office', '').strip()
 
     wb = Workbook()
     ws = wb.active
     
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="198754", fill_type="solid")
-    genel_toplam = 0
+    grand_total = 0
 
-    if analiz_turu == 'personel':
-        ws.title = "Personel Analiz"
-        ws.append(['Sıra No', 'Ad Soyad', 'Ünvan', 'Birim', 'Kampüs', 'Ofis', 'Telefon', 'E-Posta'])
+    if analysis_type == 'personnel':
+        ws.title = "Personnel Analysis"
+        ws.append(['No', 'Full Name', 'Title', 'Department', 'Campus', 'Office', 'Phone', 'Email'])
         
-        q = Personel.query
-        if ist_p_ad:
-            t = f"%{turkce_normalize(ist_p_ad)}%"
-            q = q.filter(or_(func.NORMALIZE(Personel.ad_soyad).like(t), func.NORMALIZE(Personel.unvan).like(t)))
-        if ist_p_birim:
-            q = q.filter(func.NORMALIZE(Personel.birimi).like(f"%{turkce_normalize(ist_p_birim)}%"))
-        if ist_p_kampus and ist_p_kampus != "Tümü":
-            q = q.filter(Personel.kampus == ist_p_kampus)
-        if ist_p_ofis:
-            q = q.filter(func.NORMALIZE(Personel.ofis).like(f"%{turkce_normalize(ist_p_ofis)}%"))
+        q = Personnel.query
+        if req_p_name:
+            t = f"%{normalize_text(req_p_name)}%"
+            q = q.filter(or_(func.NORMALIZE(Personnel.full_name).like(t), func.NORMALIZE(Personnel.title).like(t)))
+        if req_p_dept:
+            q = q.filter(func.NORMALIZE(Personnel.department).like(f"%{normalize_text(req_p_dept)}%"))
+        if req_p_campus and req_p_campus != "All":
+            q = q.filter(Personnel.campus == req_p_campus)
+        if req_p_office:
+            q = q.filter(func.NORMALIZE(Personnel.office).like(f"%{normalize_text(req_p_office)}%"))
             
-        sonuclar = q.order_by(Personel.birimi.asc(), Personel.ad_soyad.asc()).all()
+        results = q.order_by(Personnel.department.asc(), Personnel.full_name.asc()).all()
         
-        for i, p in enumerate(sonuclar, 1):
-            tel_formati = format_telefon(p.telefon)
-            ws.append([i, p.ad_soyad, p.unvan, p.birimi, p.kampus, p.ofis, tel_formati, p.email])
-            genel_toplam += 1
+        for i, p in enumerate(results, 1):
+            phone_fmt = format_phone(p.phone)
+            ws.append([i, p.full_name, p.title, p.department, p.campus, p.office, phone_fmt, p.email])
+            grand_total += 1
             
-        ws.append(['', '', '', '', '', '', 'GENEL TOPLAM:', genel_toplam])
+        ws.append(['', '', '', '', '', '', 'GRAND TOTAL:', grand_total])
 
     else:
-        ws.title = "Demirbaş Analiz"
-        ws.append(['Sıra No', 'Malzeme Adı', 'Kampüs', 'Konum / Ofis', 'Adet'])
+        ws.title = "Asset Analysis"
+        ws.append(['No', 'Asset Name', 'Campus', 'Location / Office', 'Quantity'])
         
-        q = db.session.query(Demirbas.ad, Demirbas.kampus, Demirbas.konum, func.sum(Demirbas.adet).label('toplam_adet'))
+        q = db.session.query(Asset.name, Asset.campus, Asset.location, func.sum(Asset.quantity).label('total_qty'))
         
-        if ist_malzeme:
-            q = q.filter(func.NORMALIZE(Demirbas.ad).like(f"%{turkce_normalize(ist_malzeme)}%"))
-        if ist_kampus and ist_kampus != "Tümü":
-            q = q.filter(Demirbas.kampus == ist_kampus)
-        if ist_konum:
-            q = q.filter(func.NORMALIZE(Demirbas.konum).like(f"%{turkce_normalize(ist_konum)}%"))
+        if req_item:
+            q = q.filter(func.NORMALIZE(Asset.name).like(f"%{normalize_text(req_item)}%"))
+        if req_campus and req_campus != "All":
+            q = q.filter(Asset.campus == req_campus)
+        if req_location:
+            q = q.filter(func.NORMALIZE(Asset.location).like(f"%{normalize_text(req_location)}%"))
             
-        sonuclar = q.group_by(Demirbas.ad, Demirbas.kampus, Demirbas.konum)\
-                    .order_by(Demirbas.kampus.asc(), Demirbas.konum.asc()).all()
+        results = q.group_by(Asset.name, Asset.campus, Asset.location)\
+                    .order_by(Asset.campus.asc(), Asset.location.asc()).all()
                     
-        for i, item in enumerate(sonuclar, 1):
-            ws.append([i, item.ad, item.kampus, item.konum, item.toplam_adet])
-            genel_toplam += item.toplam_adet
+        for i, item in enumerate(results, 1):
+            ws.append([i, item.name, item.campus, item.location, item.total_qty])
+            grand_total += item.total_qty
             
-        ws.append(['', '', '', 'GENEL TOPLAM:', genel_toplam])
+        ws.append(['', '', '', 'GRAND TOTAL:', grand_total])
 
-    # Stil Ayarları
+    # Style Settings
     for cell in ws[1]: 
         cell.font = header_font
         cell.fill = header_fill
@@ -237,50 +231,49 @@ def rapor_analiz():
     wb.save(output)
     output.seek(0)
     
-    dosya_adi = f"Analiz_Raporu_{analiz_turu}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-    return send_file(output, download_name=dosya_adi, as_attachment=True)
+    file_name = f"Analysis_Report_{analysis_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    return send_file(output, download_name=file_name, as_attachment=True)
 
-@bp.route('/rapor-grafik-ozet')
+@bp.route('/report-chart-summary')
 @login_required
-def rapor_grafik_ozet():
-    # Parametreleri al
-    analiz_turu = request.args.get('analiz_turu', 'demirbas')
+def report_chart_summary():
+    analysis_type = request.args.get('analysis_type', 'assets')
     
-    ist_malzeme = request.args.get('ist_malzeme', '').strip()
-    ist_kampus = request.args.get('ist_kampus', '')
-    ist_p_birim = request.args.get('ist_p_birim', '').strip()
+    req_item = request.args.get('req_item', '').strip()
+    req_campus = request.args.get('req_campus', '')
+    req_p_dept = request.args.get('req_p_dept', '').strip()
 
     wb = Workbook()
     ws1 = wb.active
-    ws1.title = "Kampüs Dağılımı"
+    ws1.title = "Campus Distribution"
     
-    ws1.append(['Kampüs Adı', 'Sayı'])
+    ws1.append(['Campus Name', 'Count'])
     
-    temp_kampus = {}
+    temp_campus = {}
     
-    if analiz_turu == 'personel':
-        q = Personel.query
-        if ist_p_birim:
-            q = q.filter(func.NORMALIZE(Personel.birimi).like(f"%{turkce_normalize(ist_p_birim)}%"))
+    if analysis_type == 'personnel':
+        q = Personnel.query
+        if req_p_dept:
+            q = q.filter(func.NORMALIZE(Personnel.department).like(f"%{normalize_text(req_p_dept)}%"))
         
         for p in q.all():
-            k = p.kampus if p.kampus else "Belirtilmedi"
-            temp_kampus[k] = temp_kampus.get(k, 0) + 1
+            k = p.campus if p.campus else "Not Specified"
+            temp_campus[k] = temp_campus.get(k, 0) + 1
     else:
-        q = Demirbas.query
-        if ist_malzeme:
-            q = q.filter(func.NORMALIZE(Demirbas.ad).like(f"%{turkce_normalize(ist_malzeme)}%"))
-        if ist_kampus and ist_kampus != "Tümü":
-            q = q.filter(Demirbas.kampus == ist_kampus)
+        q = Asset.query
+        if req_item:
+            q = q.filter(func.NORMALIZE(Asset.name).like(f"%{normalize_text(req_item)}%"))
+        if req_campus and req_campus != "All":
+            q = q.filter(Asset.campus == req_campus)
             
         for d in q.all():
-            temp_kampus[d.kampus] = temp_kampus.get(d.kampus, 0) + d.adet
+            temp_campus[d.campus] = temp_campus.get(d.campus, 0) + d.quantity
 
-    for k, v in temp_kampus.items():
+    for k, v in temp_campus.items():
         ws1.append([k, v])
         
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
     
-    return send_file(output, download_name="Grafik_Ozet_Verisi.xlsx", as_attachment=True)
+    return send_file(output, download_name="Chart_Summary_Data.xlsx", as_attachment=True)

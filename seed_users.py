@@ -1,76 +1,74 @@
 from app import create_app, db
-from app.models import Kullanici
+from app.models import User
 from werkzeug.security import generate_password_hash
 
 app = create_app()
 
-def kullanicilari_olustur():
+def create_users():
     with app.app_context():
-        print("👥 KULLANICI SENARYOLARI OLUŞTURULUYOR...")
+        print("👥 CREATING USER SCENARIOS...")
         print("-------------------------------------------------")
 
-        # Test Kullanıcıları Listesi
-        kullanicilar = [
+        # Test Users List
+        users = [
             {
-                'kadi': 'teknik',
-                'sifre': '12345',
-                'ad': 'Ali Tekniker',
-                'rol': 'teknik',        # Teknik Servis Modu
-                'yetki': 1,             # Düşük/Orta Yetki
-                'birim': 'Bilgi İşlem',
-                'desc': '🔧 TEKNİK SERVİS: Sadece Arıza tablosuna yönlendirilir. Demirbaş ekleyemez.'
+                'username': 'tech',
+                'password': 'password123',
+                'full_name': 'Ali Tech',
+                'role': 'technician',
+                'auth_level': 1,
+                'department': 'IT',
+                'desc': '🔧 TECHNICIAN: Directed only to Maintenance. Cannot add assets.'
             },
             {
-                'kadi': 'sorumlu',
-                'sifre': '12345',
-                'ad': 'Ayşe Müdür',
-                'rol': 'admin',         # Admin yetkileri var ama kısıtlı olabilir
-                'yetki': 2,             # Seviye 2 (Birim Sorumlusu - Silme yapamaz)
-                'birim': 'İdari İşler',
-                'desc': '👔 BİRİM SORUMLUSU: Demirbaş günceller, taşır ama SİLEMEZ (Yetki < 3).'
+                'username': 'manager',
+                'password': 'password123',
+                'full_name': 'Ayse Manager',
+                'role': 'admin',
+                'auth_level': 2,
+                'department': 'Administrative',
+                'desc': '👔 DEPARTMENT MANAGER: Can update and move assets but CANNOT DELETE (Auth < 3).'
             },
             {
-                'kadi': 'personel',
-                'sifre': '12345',
-                'ad': 'Mehmet Memur',
-                'rol': 'personel',      # Standart Kullanıcı
-                'yetki': 0,             # İzleyici (Sadece Okuma)
-                'birim': 'Öğrenci İşleri',
-                'desc': '👀 STANDART PERSONEL: Sadece listeyi görür. Hiçbir buton aktif değildir.'
+                'username': 'staff',
+                'password': 'password123',
+                'full_name': 'Mehmet Staff',
+                'role': 'personnel',
+                'auth_level': 0,
+                'department': 'Student Affairs',
+                'desc': '👀 STANDARD STAFF: View-only. No buttons are active.'
             }
         ]
 
-        # Admin Kontrolü (Zaten varsa dokunma)
-        admin = Kullanici.query.filter_by(kullanici_adi='admin').first()
+        # Admin Check
+        admin = User.query.filter_by(username='admin').first()
         if not admin:
-            print("❌ Önce 'reset_db.py' ile Admin oluşturmalısın.")
+            print("❌ You must first create an Admin using 'reset_db.py'.")
         else:
-            print(f"👑 ADMIN (Mevcut): Tam Yetki (Seviye 3)")
+            print(f"👑 ADMIN (Exists): Full Permissions (Level 3)")
 
-        # Diğerlerini Ekle
-        for k in kullanicilar:
-            mevcut = Kullanici.query.filter_by(kullanici_adi=k['kadi']).first()
-            if not mevcut:
-                yeni = Kullanici(
-                    kullanici_adi=k['kadi'],
-                    email=f"{k['kadi']}@avrasya.edu.tr",
-                    sifre=generate_password_hash(k['sifre']),
-                    ad_soyad=k['ad'],
-                    rol=k['rol'],
-                    yetki_duzeyi=k['yetki'],
-                    birim=k['birim']
+        for k in users:
+            existing = User.query.filter_by(username=k['username']).first()
+            if not existing:
+                new_user = User(
+                    username=k['username'],
+                    email=f"{k['username']}@avrasya.edu.tr",
+                    password=generate_password_hash(k['password']),
+                    full_name=k['full_name'],
+                    role=k['role'],
+                    auth_level=k['auth_level'],
+                    department=k['department']
                 )
-                db.session.add(yeni)
-                print(f"✅ Eklendi: {k['kadi']} ({k['desc']})")
+                db.session.add(new_user)
+                print(f"✅ Added: {k['username']} ({k['desc']})")
             else:
-                # Mevcutsa özelliklerini güncelle (Test için emin olalım)
-                mevcut.rol = k['rol']
-                mevcut.yetki_duzeyi = k['yetki']
-                mevcut.sifre = generate_password_hash(k['sifre'])
-                print(f"🔄 Güncellendi: {k['kadi']}")
+                existing.role = k['role']
+                existing.auth_level = k['auth_level']
+                existing.password = generate_password_hash(k['password'])
+                print(f"🔄 Updated: {k['username']}")
 
         db.session.commit()
-        print("\n🚀 TÜM KULLANICILAR HAZIR! Şifrelerin hepsi: 12345")
+        print("\n🚀 ALL USERS READY! Passwords are: password123")
 
 if __name__ == "__main__":
-    kullanicilari_olustur()
+    create_users()

@@ -1,124 +1,121 @@
 from flask import redirect, url_for, request, session, flash, jsonify
 from app.maintenance import bp
 from app import db
-from app.models import Ariza, Demirbas, YuklemeGecmisi
+from app.models import MaintenanceLog, Asset, UploadHistory
 from flask_login import login_required, current_user
-from app.utils import turkce_normalize, log_kaydet
+from app.utils import normalize_text, save_log
 from datetime import datetime
 
 
-# --- ARIZA İŞLEMLERİ ---
+# --- MAINTENANCE OPERATIONS ---
 
-@bp.route('/ekle-ariza', methods=['POST'])
+@bp.route('/add-maintenance', methods=['POST'])
 @login_required
-def ekle_ariza():
+def add_maintenance():
     try:
-        # Formdan gelen veriler
-        konum = request.form.get('konum')
-        baslik = request.form.get('baslik')
-        aciklama = request.form.get('aciklama')
-        oncelik = request.form.get('oncelik')
-        d_id = request.form.get('demirbas_id') 
+        location = request.form.get('location')
+        title = request.form.get('title')
+        description = request.form.get('description')
+        priority = request.form.get('priority')
+        d_id = request.form.get('asset_id') 
         
-        # Demirbaş ID kontrolü (Boş gelirse hata vermesin)
         if not d_id or not d_id.isdigit():
-            flash("Geçersiz Demirbaş ID! Lütfen listeden seçin veya doğru ID girin.", "danger")
-            return redirect(url_for('main.index', tab='ariza'))
+            flash("Invalid Asset ID! Please select from the list or enter a correct ID.", "danger")
+            return redirect(url_for('main.index', tab='maintenance'))
 
-        yeni_ariza = Ariza(
-            konum=konum,
-            baslik=baslik,
-            aciklama=aciklama,
-            durum="Beklemede",
-            oncelik=oncelik,
-            demirbas_id=int(d_id),
-            kullanici_id=current_user.id, # <-- Giriş yapan kullanıcıyı bağlıyoruz
-            tarih=datetime.now()          # <-- DateTime nesnesi olarak kaydediyoruz
+        new_maintenance = MaintenanceLog(
+            location=location,
+            title=title,
+            description=description,
+            status="Pending",
+            priority=priority,
+            asset_id=int(d_id),
+            user_id=current_user.id,
+            date_reported=datetime.now()
         )
 
-        db.session.add(yeni_ariza)
+        db.session.add(new_maintenance)
         db.session.commit()
         
-        log_kaydet(f"Yeni Arıza: {baslik}", f"Konum: {konum}", "Arıza")
-        flash("Arıza kaydı başarıyla oluşturuldu.", "success")
+        save_log(f"New Maintenance: {title}", f"Location: {location}", "Maintenance")
+        flash("Maintenance request successfully created.", "success")
         
     except Exception as e:
         db.session.rollback()
-        print(f"HATA: {e}")
-        flash(f"Kayıt sırasında hata oluştu: {str(e)}", "danger")
+        print(f"ERROR: {e}")
+        flash(f"Error occurred during registration: {str(e)}", "danger")
 
-    return redirect(url_for('main.index', tab='ariza'))
+    return redirect(url_for('main.index', tab='maintenance'))
 
-@bp.route('/guncelle-ariza-durum', methods=['POST'])
+@bp.route('/update-maintenance-status', methods=['POST'])
 @login_required
-def guncelle_ariza_durum():
-    if not current_user.rol in ['teknik', 'admin']:
-        return "Yetkisiz işlem", 403
+def update_maintenance_status():
+    if not current_user.role in ['technician', 'admin']:
+        return "Unauthorized action", 403
 
     try:
-        ariza_id = request.form.get('id')
-        yeni_durum = request.form.get('durum')
-        aciklama_notu = request.form.get('aciklama')
+        maintenance_id = request.form.get('id')
+        new_status = request.form.get('status')
+        description_note = request.form.get('description')
         
-        ariza = Ariza.query.get(ariza_id)
-        if ariza:
-            eski_durum = ariza.durum
-            if eski_durum == yeni_durum:
-                return jsonify({'status': 'success', 'msg': 'Değişiklik yok'}), 200
+        maintenance = MaintenanceLog.query.get(maintenance_id)
+        if maintenance:
+            old_status = maintenance.status
+            if old_status == new_status:
+                return jsonify({'status': 'success', 'msg': 'No changes'}), 200
 
-            ariza.durum = yeni_durum
+            maintenance.status = new_status
             
-            if aciklama_notu:
-                zaman = datetime.now().strftime("%d-%m %H:%M")
-                yapan = current_user.ad_soyad if current_user.is_authenticated else "Sistem"
-                yeni_not = f"\n[{zaman} - {yapan} - {yeni_durum}]: {aciklama_notu}"
-                ariza.aciklama = (ariza.aciklama or "") + yeni_not
+            if description_note:
+                time_str = datetime.now().strftime("%d-%m %H:%M")
+                user_name = current_user.full_name if current_user.is_authenticated else "System"
+                new_note = f"\n[{time_str} - {user_name} - {new_status}]: {description_note}"
+                maintenance.description = (maintenance.description or "") + new_note
 
             db.session.commit()
             
-            log_mesaji = f"Durum: {eski_durum} -> {yeni_durum}"
-            if aciklama_notu: log_mesaji += f" ({aciklama_notu})"
+            log_msg = f"Status: {old_status} -> {new_status}"
+            if description_note: log_msg += f" ({description_note})"
                 
-            log_kaydet(log_mesaji, f"Arıza ID: {ariza_id}", "Arıza")
+            save_log(log_msg, f"Maintenance ID: {maintenance_id}", "Maintenance")
             return jsonify({'status': 'success'}), 200
         else:
-            return jsonify({'status': 'error', 'msg': 'Arıza bulunamadı'}), 404
+            return jsonify({'status': 'error', 'msg': 'Maintenance not found'}), 404
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
-@bp.route('/sil-ariza/<int:id>')
+@bp.route('/delete-maintenance/<int:id>')
 @login_required
-def sil_ariza(id):
-    # DÜZELTME: 'teknik' rolünü buradan kaldırdık. Sadece 'admin' silebilir.
-    if current_user.rol != 'admin':
-        flash("Bu işlem için yetkiniz yok. Sadece yönetici silebilir.", "danger")
-        return redirect(url_for('main.index', tab='ariza'))
+def delete_maintenance(id):
+    if current_user.role != 'admin':
+        flash("You do not have permission for this action. Only an admin can delete.", "danger")
+        return redirect(url_for('main.index', tab='maintenance'))
         
-    ariza = Ariza.query.get(id)
-    if ariza:
-        baslik_yedek = ariza.baslik
-        db.session.delete(ariza)
+    maintenance = MaintenanceLog.query.get(id)
+    if maintenance:
+        title_backup = maintenance.title
+        db.session.delete(maintenance)
         db.session.commit()
-        log_kaydet(f"Arıza Silindi: {baslik_yedek}", f"ID: {id}", "Arıza")
-        flash("Arıza silindi.", "warning")
+        save_log(f"Maintenance Deleted: {title_backup}", f"ID: {id}", "Maintenance")
+        flash("Maintenance deleted.", "warning")
         
-    return redirect(url_for('main.index', tab='ariza'))
+    return redirect(url_for('main.index', tab='maintenance'))
 
-@bp.route('/toplu-sil-ariza', methods=['POST'])
+@bp.route('/bulk-delete-maintenance', methods=['POST'])
 @login_required
-def toplu_sil_ariza():
-    if current_user.rol != 'teknik' and current_user.rol != 'admin':
-        return redirect(url_for('main.index', tab='ariza'))
+def bulk_delete_maintenance():
+    if current_user.role != 'technician' and current_user.role != 'admin':
+        return redirect(url_for('main.index', tab='maintenance'))
         
-    ids = request.form.getlist('secilen_ids')
+    ids = request.form.getlist('selected_ids')
     if ids:
         count = len(ids)
-        Ariza.query.filter(Ariza.id.in_(ids)).delete(synchronize_session=False)
+        MaintenanceLog.query.filter(MaintenanceLog.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()
         
-        log_kaydet(f"Toplu Arıza Silme ({count} Kayıt)", f"Silinen ID'ler: {', '.join(ids)}", "Arıza")
+        save_log(f"Bulk Maintenance Deletion ({count} Records)", f"Deleted IDs: {', '.join(ids)}", "Maintenance")
         
-        flash(f"{count} arıza başarıyla silindi.", "success")
+        flash(f"{count} maintenance records successfully deleted.", "success")
         
-    return redirect(url_for('main.index', tab='ariza'))
+    return redirect(url_for('main.index', tab='maintenance'))

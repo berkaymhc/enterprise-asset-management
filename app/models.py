@@ -3,120 +3,117 @@ from flask_login import UserMixin
 from datetime import datetime
 
 # ----------------------------------------------------
-# 1. KULLANICI MODELİ
+# 1. USER MODEL
 # ----------------------------------------------------
-class Kullanici(UserMixin, db.Model):
-    __tablename__ = 'kullanici'
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    kullanici_adi = db.Column(db.String(50), unique=True, nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=True)
-    sifre = db.Column(db.String(200), nullable=False)
-    ad_soyad = db.Column(db.String(100))
-    birim = db.Column(db.String(100))
+    password = db.Column(db.String(200), nullable=False)
+    full_name = db.Column(db.String(100))
+    department = db.Column(db.String(100))
     
-    # Rol: 'admin', 'personel', 'teknik'
-    rol = db.Column(db.String(20), default='personel') 
-    # Yetki Düzeyi: 0 (İzleyici), 1 (Sorumlu), 2 (Denetçi), 3 (Tam Yetki)
-    yetki_duzeyi = db.Column(db.Integer, default=0) 
+    # Role: 'admin', 'personnel', 'technician'
+    role = db.Column(db.String(20), default='personnel') 
+    # Auth Level: 0 (Read-only), 1 (Responsible), 2 (Auditor), 3 (Full Admin)
+    auth_level = db.Column(db.Integer, default=0) 
     
-    tarih = db.Column(db.String(20))
+    created_date = db.Column(db.String(20))
 
     def get_id(self):
         return str(self.id)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return Kullanici.query.get(int(user_id))
+    return User.query.get(int(user_id))
 
 # ----------------------------------------------------
-# 2. DEMİRBAŞ MODELİ
+# 2. ASSET MODEL
 # ----------------------------------------------------
-class Demirbas(db.Model):
-    __tablename__ = 'demirbas'
+class Asset(db.Model):
+    __tablename__ = 'assets'
     __table_args__ = (
-        db.Index('idx_demirbas_kampus', 'kampus'),
-        db.Index('idx_demirbas_konum', 'konum'),
-        db.Index('idx_demirbas_ad', 'ad'),
+        db.Index('idx_asset_campus', 'campus'),
+        db.Index('idx_asset_location', 'location'),
+        db.Index('idx_asset_name', 'name'),
         {'extend_existing': True}
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    ad = db.Column(db.String(100), nullable=False)
-    marka = db.Column(db.String(50))
+    name = db.Column(db.String(100), nullable=False)
+    brand = db.Column(db.String(50))
     model = db.Column(db.String(50))
-    seri_no = db.Column(db.String(50), unique=True)
-    demirbas_no = db.Column(db.String(50), unique=True, nullable=False)
+    serial_number = db.Column(db.String(50), unique=True)
+    asset_tag = db.Column(db.String(50), unique=True, nullable=False)
     
-    # EKSİK OLAN SÜTUNLAR EKLENDİ
-    cinsi = db.Column(db.String(50)) 
-    alim_tarihi = db.Column(db.String(20)) # 'YYYY-MM-DD' formatında tutuyoruz
+    type = db.Column(db.String(50)) 
+    purchase_date = db.Column(db.String(20)) # 'YYYY-MM-DD'
     
-    kategori = db.Column(db.String(50))
-    konum = db.Column(db.String(100))
-    kampus = db.Column(db.String(100))
-    birim = db.Column(db.String(100))
-    adet = db.Column(db.Integer, default=1)
-    durum = db.Column(db.String(20), default='Aktif')
-    kayit_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    qr_kod = db.Column(db.String(200))
-    fotograf = db.Column(db.String(100))
+    category = db.Column(db.String(50))
+    location = db.Column(db.String(100))
+    campus = db.Column(db.String(100))
+    department = db.Column(db.String(100))
+    quantity = db.Column(db.Integer, default=1)
+    status = db.Column(db.String(20), default='Active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    qr_code = db.Column(db.String(200))
+    photo = db.Column(db.String(100))
     
-    arizalar = db.relationship('Ariza', backref='demirbas', lazy=True)
+    maintenance_logs = db.relationship('MaintenanceLog', backref='asset', lazy=True)
 
 # ----------------------------------------------------
-# 3. PERSONEL MODELİ
+# 3. PERSONNEL MODEL
 # ----------------------------------------------------
-class Personel(db.Model):
-    __tablename__ = 'personel'
+class Personnel(db.Model):
+    __tablename__ = 'personnel'
     id = db.Column(db.Integer, primary_key=True)
-    ad_soyad = db.Column(db.String(100))
-    unvan = db.Column(db.String(100))
-    birimi = db.Column(db.String(100))
-    sicil_no = db.Column(db.String(50))
-    ofis = db.Column(db.String(50))
+    full_name = db.Column(db.String(100))
+    title = db.Column(db.String(100))
+    department = db.Column(db.String(100))
+    registration_no = db.Column(db.String(50))
+    office = db.Column(db.String(50))
     email = db.Column(db.String(100))
-    telefon = db.Column(db.String(20))
-    baslama_tarihi = db.Column(db.String(20))
-    kampus = db.Column(db.String(100))
+    phone = db.Column(db.String(20))
+    start_date = db.Column(db.String(20))
+    campus = db.Column(db.String(100))
 
 # ----------------------------------------------------
-# 4. ARIZA MODELİ
+# 4. MAINTENANCE LOG MODEL
 # ----------------------------------------------------
-class Ariza(db.Model):
-    __tablename__ = 'ariza'
+class MaintenanceLog(db.Model):
+    __tablename__ = 'maintenance_logs'
     __table_args__ = (
-        db.Index('idx_ariza_demirbas_id', 'demirbas_id'),
-        db.Index('idx_ariza_durum', 'durum'),
+        db.Index('idx_maintenance_asset_id', 'asset_id'),
+        db.Index('idx_maintenance_status', 'status'),
         {'extend_existing': True}
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    baslik = db.Column(db.String(100), nullable=False)
-    aciklama = db.Column(db.Text, nullable=False)
-    durum = db.Column(db.String(20), default='Beklemede')
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='Pending')
     
-    # EKSİK OLAN SÜTUNLAR EKLENDİ
-    oncelik = db.Column(db.String(20), default='Normal') 
-    konum = db.Column(db.String(100)) 
+    priority = db.Column(db.String(20), default='Normal') 
+    location = db.Column(db.String(100)) 
     
-    tarih = db.Column(db.DateTime, default=datetime.utcnow)
+    date_reported = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Kullanıcı değil string olarak bildiren kişi (Opsiyonel, kullanici_id var zaten)
-    bildiren = db.Column(db.String(100)) 
+    reported_by = db.Column(db.String(100)) 
 
-    demirbas_id = db.Column(db.Integer, db.ForeignKey('demirbas.id'), nullable=False)
-    kullanici_id = db.Column(db.Integer, db.ForeignKey('kullanici.id'), nullable=False)
+    asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 # ----------------------------------------------------
-# 5. YÜKLEME GEÇMİŞİ
+# 5. UPLOAD HISTORY MODEL
 # ----------------------------------------------------
-class YuklemeGecmisi(db.Model):
-    __tablename__ = 'yukleme_gecmisi'
+class UploadHistory(db.Model):
+    __tablename__ = 'upload_history'
     id = db.Column(db.Integer, primary_key=True)
-    dosya_adi = db.Column(db.String(255))
-    tarih = db.Column(db.String(30))
-    islem_yapan = db.Column(db.String(100))
-    tur = db.Column(db.String(50)) 
-    hedef_konum = db.Column(db.String(255))
+    file_name = db.Column(db.String(255))
+    upload_date = db.Column(db.String(30))
+    uploaded_by = db.Column(db.String(100))
+    type = db.Column(db.String(50)) 
+    target_location = db.Column(db.String(255))

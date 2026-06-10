@@ -1,66 +1,66 @@
 import random
 from app import create_app, db
-from app.models import Demirbas
+from app.models import Asset
 from datetime import datetime
 
 app = create_app()
 
-def veri_yukle():
+def load_data():
     with app.app_context():
-        print("🌱 Örnek veriler hazırlanıyor...")
+        print("🌱 Preparing sample data...")
 
-        # Örnek Veri Listesi
-        kampusler = ['Mühendislik Fakültesi', 'Hukuk Fakültesi', 'Rektörlük', 'Yabancı Diller']
-        konumlar = ['Z-10 Lab', '101 Nolu Sınıf', 'Toplantı Odası A', 'Bilgi İşlem Ofisi', 'Kütüphane']
-        markalar = ['Dell', 'HP', 'Lenovo', 'Canon', 'Epson', 'Samsung', 'Ikea', 'Bürotime']
+        # Sample Data Lists
+        campuses = ['Engineering Faculty', 'Law Faculty', 'Rectorate', 'Foreign Languages']
+        locations = ['Z-10 Lab', 'Room 101', 'Meeting Room A', 'IT Office', 'Library']
+        brands = ['Dell', 'HP', 'Lenovo', 'Canon', 'Epson', 'Samsung', 'Ikea', 'Bürotime']
         
-        # Demirbaş Tipleri
-        tipler = [
-            {'ad': 'Laptop Bilgisayar', 'cinsi': 'Elektronik', 'kategori': 'Bilgisayar'},
-            {'ad': 'Lazer Yazıcı', 'cinsi': 'Elektronik', 'kategori': 'Yazıcı'},
-            {'ad': 'Projeksiyon Cihazı', 'cinsi': 'Elektronik', 'kategori': 'Görüntüleme'},
-            {'ad': 'Ofis Sandalyesi', 'cinsi': 'Mobilya', 'kategori': 'Ofis Mobilyası'},
-            {'ad': 'Çalışma Masası', 'cinsi': 'Mobilya', 'kategori': 'Ofis Mobilyası'},
-            {'ad': 'Klima Ünitesi', 'cinsi': 'Demirbaş', 'kategori': 'İklimlendirme'}
+        # Asset Types
+        types = [
+            {'name': 'Laptop Computer', 'type': 'Electronic', 'category': 'Computer'},
+            {'name': 'Laser Printer', 'type': 'Electronic', 'category': 'Printer'},
+            {'name': 'Projector', 'type': 'Electronic', 'category': 'Display'},
+            {'name': 'Office Chair', 'type': 'Furniture', 'category': 'Office Furniture'},
+            {'name': 'Work Desk', 'type': 'Furniture', 'category': 'Office Furniture'},
+            {'name': 'Air Conditioner', 'type': 'Asset', 'category': 'HVAC'}
         ]
 
-        eklenen_sayisi = 0
+        added_count = 0
         
-        # 50 Adet Rastgele Demirbaş Üret
+        # Generate 50 Random Assets
         for i in range(1, 51):
-            secilen_tip = random.choice(tipler)
-            secilen_kampus = random.choice(kampusler)
+            selected_type = random.choice(types)
+            selected_campus = random.choice(campuses)
             
-            # Benzersiz Demirbaş No Üret (D-2024-001 gibi)
-            d_no = f"D-2026-{1000 + i}"
+            # Generate Unique Asset No (e.g. D-2024-001)
+            d_no = f"A-2026-{1000 + i}"
             s_no = f"SN-{random.randint(10000, 99999)}"
             
-            # Veritabanında var mı kontrol et (Hata almamak için)
-            if Demirbas.query.filter_by(demirbas_no=d_no).first():
+            # Check if exists in DB to prevent errors
+            if Asset.query.filter_by(asset_tag=d_no).first():
                 continue
 
-            yeni_urun = Demirbas(
-                ad=f"{secilen_tip['ad']} - {i}",
-                marka=random.choice(markalar),
+            new_item = Asset(
+                name=f"{selected_type['name']} - {i}",
+                brand=random.choice(brands),
                 model=f"Model-{random.randint(10, 99)}X",
-                seri_no=s_no,
-                demirbas_no=d_no,
-                cinsi=secilen_tip['cinsi'],
-                kategori=secilen_tip['kategori'],
-                konum=random.choice(konumlar),
-                kampus=secilen_kampus,
-                birim='İdari İşler',
-                adet=1,
-                durum='Aktif',
-                kayit_tarihi=datetime.now()
+                serial_number=s_no,
+                asset_tag=d_no,
+                type=selected_type['type'],
+                category=selected_type['category'],
+                location=random.choice(locations),
+                campus=selected_campus,
+                department='Administrative',
+                quantity=1,
+                status='Active',
+                purchase_date=datetime.now().strftime("%Y-%m-%d")
             )
             
-            db.session.add(yeni_urun)
-            eklenen_sayisi += 1
+            db.session.add(new_item)
+            added_count += 1
 
         db.session.commit()
-        print(f"✅ BAŞARILI: Toplam {eklenen_sayisi} adet örnek demirbaş veritabanına eklendi.")
-        print("📊 Şimdi Dashboard'u kontrol edebilirsin!")
+        print(f"✅ SUCCESS: A total of {added_count} sample assets were added to the database.")
+        print("📊 Now you can check the Dashboard!")
 
 if __name__ == "__main__":
-    veri_yukle()
+    load_data()

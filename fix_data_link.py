@@ -1,51 +1,49 @@
 from app import create_app, db
-from app.models import Personel, Demirbas
+from app.models import Personnel, Asset
 
 app = create_app()
 
-def baglantiyi_kur():
+def establish_connection():
     with app.app_context():
-        print("🔗 Veri bağlantıları kuruluyor...")
+        print("🔗 Establishing data connections...")
 
-        # 1. İçinde eşya olan bir ofis bulalım (Garanti olsun)
-        ornek_demirbas = Demirbas.query.first()
-        if not ornek_demirbas:
-            print("❌ HATA: Sistemde hiç demirbaş yok! Önce seed_full.py çalıştır.")
+        # 1. Find an office with an asset in it
+        sample_asset = Asset.query.first()
+        if not sample_asset:
+            print("❌ ERROR: No assets in the system! Run seed_full.py first.")
             return
             
-        hedef_ofis = ornek_demirbas.konum # Örn: 'Z-10 Lab'
-        print(f"📍 Hedef Ofis: {hedef_ofis} (Bu ofiste eşya var)")
+        target_office = sample_asset.location # e.g. 'Z-10 Lab'
+        print(f"📍 Target Office: {target_office} (Contains assets)")
         
-        # 2. Test Kullanıcılarımızın E-postaları
-        test_kullanicilari = [
-            {'email': 'personel@avrasya.edu.tr', 'ad': 'Mehmet Memur'},
-            {'email': 'teknik@avrasya.edu.tr', 'ad': 'Ali Tekniker'},
-            {'email': 'sorumlu@avrasya.edu.tr', 'ad': 'Ayşe Müdür'}
+        # 2. Test Users' Emails
+        test_users = [
+            {'email': 'staff@avrasya.edu.tr', 'name': 'Mehmet Staff'},
+            {'email': 'tech@avrasya.edu.tr', 'name': 'Ali Tech'},
+            {'email': 'manager@avrasya.edu.tr', 'name': 'Ayse Manager'}
         ]
 
-        for k in test_kullanicilari:
-            # Bu e-postaya sahip bir Personel var mı?
-            p = Personel.query.filter_by(email=k['email']).first()
+        for k in test_users:
+            p = Personnel.query.filter_by(email=k['email']).first()
             
             if not p:
-                # Yoksa oluşturalım
-                p = Personel(
-                    ad_soyad=k['ad'],
+                p = Personnel(
+                    full_name=k['name'],
                     email=k['email'],
-                    unvan='Personel',
-                    birimi='Bilgi İşlem',
-                    kampus='Merkez',
-                    telefon='0500 123 45 67'
+                    title='Personnel',
+                    department='IT',
+                    campus='Main Campus',
+                    phone='0500 123 45 67'
                 )
                 db.session.add(p)
-                print(f"➕ {k['ad']} personel listesine eklendi.")
+                print(f"➕ Added {k['name']} to personnel list.")
             
-            # 3. Ofisini, içinde eşya olan ofis yapalım
-            p.ofis = hedef_ofis
-            print(f"✅ {k['ad']} -> {hedef_ofis} ofisine atandı.")
+            # 3. Assign them to the target office
+            p.office = target_office
+            print(f"✅ {k['name']} -> assigned to office {target_office}.")
 
         db.session.commit()
-        print("\n🚀 İŞLEM TAMAM! Şimdi 'personel' kullanıcısı ile giriş yapıp deneyebilirsin.")
+        print("\n🚀 DONE! Now you can login with the 'staff' user and try it.")
 
 if __name__ == '__main__':
-    baglantiyi_kur()
+    establish_connection()

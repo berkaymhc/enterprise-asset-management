@@ -1,284 +1,266 @@
 from flask import redirect, url_for, request, session, flash, jsonify, render_template
 from app.inventory import bp
 from app import db
-from app.models import Demirbas, YuklemeGecmisi, Ariza
+from app.models import Asset, UploadHistory, MaintenanceLog
 from datetime import datetime
 from flask_login import login_required, current_user
-from app.utils import turkce_normalize, tr_upper, tr_title, log_kaydet
+from app.utils import normalize_text, to_upper, to_title, save_log
 from sqlalchemy import text
 import openpyxl
 import os
 import uuid
 
 
-# --- CRUD İŞLEMLERİ ---
+# --- CRUD OPERATIONS ---
 
-@bp.route('/ekle-demirbas', methods=['POST'])
+@bp.route('/add-asset', methods=['POST'])
 @login_required
-def ekle_demirbas():
-    # Yetki Kontrolü: Teknik servis ekleme yapamaz
-    if session.get('rol') == 'teknik':
-        return redirect(url_for('main.index', tab='ariza'))
+def add_asset():
+    if session.get('role') == 'technician':
+        return redirect(url_for('main.index', tab='maintenance'))
     
-    # Form verilerini al
-    ad = request.form.get('ad')
-    cinsi = request.form.get('cinsi')
-    kampus = request.form.get('kampus')
-    konum = request.form.get('konum')
-    adet = request.form.get('adet')
+    name = request.form.get('name')
+    type_ = request.form.get('type')
+    campus = request.form.get('campus')
+    location = request.form.get('location')
+    quantity = request.form.get('quantity')
     
-    # Yeni Kayıt (ORM)
-    yeni_demirbas = Demirbas(
-        ad=ad,
-        cinsi=cinsi,
-        kampus=kampus,
-        konum=konum,
-        adet=adet,
-        alim_tarihi=datetime.now().strftime("%Y-%m-%d"),
-        demirbas_no=str(uuid.uuid4())[:8].upper() # Otomatik numara
+    new_asset = Asset(
+        name=name,
+        type=type_,
+        campus=campus,
+        location=location,
+        quantity=quantity,
+        date_added=datetime.now().strftime("%Y-%m-%d"),
+        asset_tag=str(uuid.uuid4())[:8].upper()
     )
     
-    db.session.add(yeni_demirbas)
+    db.session.add(new_asset)
     db.session.commit()
     
-    log_kaydet(f"{ad} Eklendi", f"Konum: {konum}", "Ekleme")
-    flash(f"{ad} başarıyla eklendi.", "success")
-    return redirect(url_for('main.index', tab='demirbas'))
+    save_log(f"{name} Added", f"Location: {location}", "Add")
+    flash(f"{name} added successfully.", "success")
+    return redirect(url_for('main.index', tab='assets'))
 
-@bp.route('/guncelle-demirbas', methods=['POST'])
+@bp.route('/update-asset', methods=['POST'])
 @login_required
-def guncelle_demirbas():
-    # Yetki: Seviye 0 güncelleme yapamaz
-    if int(session.get('yetki_duzeyi', 0)) < 1:
-        flash("Yetkisiz işlem.", "danger")
-        return redirect(url_for('main.index', tab='demirbas'))
+def update_asset():
+    if int(session.get('auth_level', 0)) < 1:
+        flash("Unauthorized action.", "danger")
+        return redirect(url_for('main.index', tab='assets'))
     d_id = request.form.get('id')
     
-    # Güncellenecek kaydı bul
-    demirbas = Demirbas.query.get(d_id)
+    asset = Asset.query.get(d_id)
     
-    if demirbas:
-        demirbas.ad = request.form.get('ad')
-        demirbas.cinsi = request.form.get('cinsi')
-        demirbas.kampus = request.form.get('kampus')
-        demirbas.konum = request.form.get('konum')
-        demirbas.adet = request.form.get('adet')
+    if asset:
+        asset.name = request.form.get('name')
+        asset.type = request.form.get('type')
+        asset.campus = request.form.get('campus')
+        asset.location = request.form.get('location')
+        asset.quantity = request.form.get('quantity')
         
         db.session.commit()
-        log_kaydet(f"{demirbas.ad} Güncellendi", f"Yeni Konum: {demirbas.konum}", "Düzenleme")
-        flash("Kayıt güncellendi.", "success")
+        save_log(f"{asset.name} Updated", f"New Location: {asset.location}", "Edit")
+        flash("Record updated.", "success")
         
-    return redirect(url_for('main.index', tab='demirbas'))
+    return redirect(url_for('main.index', tab='assets'))
 
-@bp.route('/tasi-demirbas', methods=['POST'])
+@bp.route('/move-asset', methods=['POST'])
 @login_required
-def tasi_demirbas():
-    # Yetki: Seviye 0 taşıma yapamaz
-    if int(session.get('yetki_duzeyi', 0)) < 1:
-        flash("Yetkisiz işlem.", "danger")
-        return redirect(url_for('main.index', tab='demirbas'))
+def move_asset():
+    if int(session.get('auth_level', 0)) < 1:
+        flash("Unauthorized action.", "danger")
+        return redirect(url_for('main.index', tab='assets'))
 
     d_id = request.form.get('id')
-    yeni_kampus = request.form.get('kampus')
-    yeni_konum = request.form.get('konum')
+    new_campus = request.form.get('campus')
+    new_location = request.form.get('location')
     
-    demirbas = Demirbas.query.get(d_id)
+    asset = Asset.query.get(d_id)
     
-    if demirbas:
-        eski_konum = f"{demirbas.kampus}/{demirbas.konum}"
-        demirbas.kampus = yeni_kampus
-        demirbas.konum = yeni_konum
+    if asset:
+        old_location = f"{asset.campus}/{asset.location}"
+        asset.campus = new_campus
+        asset.location = new_location
         
         db.session.commit()
-        log_kaydet(f"{demirbas.ad} Taşındı", f"{eski_konum} -> {yeni_kampus}/{yeni_konum}", "Taşıma")
-        flash("Demirbaş başarıyla taşındı.", "success")
+        save_log(f"{asset.name} Moved", f"{old_location} -> {new_campus}/{new_location}", "Move")
+        flash("Asset moved successfully.", "success")
         
-    return redirect(url_for('main.index', tab='demirbas'))
+    return redirect(url_for('main.index', tab='assets'))
 
-@bp.route('/sil-demirbas/<int:id>')
+@bp.route('/delete-asset/<int:id>')
 @login_required
-def sil_demirbas(id):
-    # Yetki: Sadece Admin (Seviye 3)
-    if int(session.get('yetki_duzeyi', 0)) < 3:
-        flash("Silme yetkiniz yok.", "danger")
-        return redirect(url_for('main.index', tab='demirbas'))
+def delete_asset(id):
+    if int(session.get('auth_level', 0)) < 3:
+        flash("No permission to delete.", "danger")
+        return redirect(url_for('main.index', tab='assets'))
         
-    demirbas = Demirbas.query.get(id)
-    if demirbas:
-        log_kaydet(f"{demirbas.ad} Silindi", f"Eski Konum: {demirbas.konum}", "Silme")
-        db.session.delete(demirbas)
+    asset = Asset.query.get(id)
+    if asset:
+        save_log(f"{asset.name} Deleted", f"Old Location: {asset.location}", "Delete")
+        db.session.delete(asset)
         db.session.commit()
-        flash("Demirbaş silindi.", "warning")
+        flash("Asset deleted.", "warning")
         
-    return redirect(url_for('main.index', tab='demirbas'))
+    return redirect(url_for('main.index', tab='assets'))
 
-@bp.route('/sifirla-demirbas')
+@bp.route('/reset-assets')
 @login_required
-def sifirla_demirbas():
-    # Sadece Admin
-    if int(session.get('yetki_duzeyi', 0)) < 3:
+def reset_assets():
+    if int(session.get('auth_level', 0)) < 3:
         return redirect(url_for('main.index'))
         
     try:
-        # Tüm tabloyu sil (ORM Yöntemi)
-        db.session.query(Demirbas).delete()
-        # SQLite Sequence sıfırlama (ID'yi 1'e çekmek için)
+        db.session.query(Asset).delete()
         if db.engine.name == 'sqlite':
             try:
-                db.session.execute(text("DELETE FROM sqlite_sequence WHERE name='demirbas'"))
+                db.session.execute(text("DELETE FROM sqlite_sequence WHERE name='asset'"))
             except Exception:
-                # sqlite_sequence tablosu olmayabilir, görmezden gel
                 pass
         db.session.commit()
         
-        log_kaydet("Tüm Liste Silindi", "Veritabanı Sıfırlama", "Sıfırlama")
-        flash("Tüm demirbaş listesi temizlendi.", "danger")
+        save_log("All List Deleted", "Database Reset", "Reset")
+        flash("All asset list cleared.", "danger")
     except Exception as e:
         db.session.rollback()
-        flash(f"Hata: {str(e)}", "danger")
+        flash(f"Error: {str(e)}", "danger")
         
-    return redirect(url_for('main.index', tab='demirbas'))
+    return redirect(url_for('main.index', tab='assets'))
 
-# --- TOPLU İŞLEMLER ---
+# --- BULK OPERATIONS ---
 
-@bp.route('/toplu-tasi-demirbas', methods=['POST'])
+@bp.route('/bulk-move-assets', methods=['POST'])
 @login_required
-def toplu_tasi_demirbas():
-    if session.get('yetki_duzeyi', 0) < 1 and session.get('rol') != 'teknik':
-        return jsonify({'status': 'error', 'msg': 'Yetkisiz işlem!'})
+def bulk_move_assets():
+    if session.get('auth_level', 0) < 1 and session.get('role') != 'technician':
+        return jsonify({'status': 'error', 'msg': 'Unauthorized action!'})
 
-    secilen_ids = request.form.getlist('secilen_ids')
-    yeni_kampus = request.form.get('yeni_kampus')
-    yeni_konum = request.form.get('yeni_konum')
+    selected_ids = request.form.getlist('selected_ids')
+    new_campus = request.form.get('new_campus')
+    new_location = request.form.get('new_location')
 
-    if not secilen_ids:
-        flash("Seçim yapılmadı.", "warning")
-        return redirect(url_for('main.index', tab='demirbas'))
+    if not selected_ids:
+        flash("No selection made.", "warning")
+        return redirect(url_for('main.index', tab='assets'))
 
-    # SQLAlchemy ile toplu güncelleme
-    query = Demirbas.query.filter(Demirbas.id.in_(secilen_ids))
+    query = Asset.query.filter(Asset.id.in_(selected_ids))
     
     count = 0
     for item in query.all():
-        if yeni_kampus: item.kampus = yeni_kampus
-        if yeni_konum: item.konum = yeni_konum
+        if new_campus: item.campus = new_campus
+        if new_location: item.location = new_location
         count += 1
         
     db.session.commit()
-    flash(f"{count} adet demirbaş taşındı.", "success")
-    return redirect(url_for('main.index', tab='demirbas'))
+    flash(f"{count} assets moved.", "success")
+    return redirect(url_for('main.index', tab='assets'))
 
-@bp.route('/toplu-sil-demirbas', methods=['POST'])
+@bp.route('/bulk-delete-assets', methods=['POST'])
 @login_required
-def toplu_sil_demirbas():
-    if int(session.get('yetki_duzeyi', 0)) < 3:
-        return redirect(url_for('main.index', tab='demirbas'))
+def bulk_delete_assets():
+    if int(session.get('auth_level', 0)) < 3:
+        return redirect(url_for('main.index', tab='assets'))
 
-    secilen_ids = request.form.getlist('secilen_ids')
-    if not secilen_ids: return redirect(url_for('main.index', tab='demirbas'))
+    selected_ids = request.form.getlist('selected_ids')
+    if not selected_ids: return redirect(url_for('main.index', tab='assets'))
     
-    # Toplu Silme (ORM)
-    silinen_sayisi = Demirbas.query.filter(Demirbas.id.in_(secilen_ids)).delete(synchronize_session=False)
+    deleted_count = Asset.query.filter(Asset.id.in_(selected_ids)).delete(synchronize_session=False)
     db.session.commit()
     
-    log_kaydet(f"{silinen_sayisi} Kayıt Silindi", "Toplu İşlem", "Silme")
-    flash(f"{silinen_sayisi} kayıt silindi.", "success")
+    save_log(f"{deleted_count} Records Deleted", "Bulk Action", "Delete")
+    flash(f"{deleted_count} records deleted.", "success")
     
-    return redirect(url_for('main.index', tab='demirbas'))
+    return redirect(url_for('main.index', tab='assets'))
 
-@bp.route('/yukle-demirbas', methods=['POST'])
+@bp.route('/upload-assets', methods=['POST'])
 @login_required
-def yukle_demirbas():
-    if 'dosya' not in request.files: 
+def upload_assets():
+    if 'file' not in request.files: 
         return redirect(url_for('main.index'))
         
-    dosyalar = request.files.getlist('dosya')
-    hedef_kampus = request.form.get('hedef_kampus', 'Merkez')
-    bina_kat = request.form.get('bina_kat', '')
+    files = request.files.getlist('file')
+    target_campus = request.form.get('target_campus', 'Main Campus')
+    building_floor = request.form.get('building_floor', '')
     
-    toplam_eklenen = 0
-    islem_yapildi = False
+    total_added = 0
+    processed = False
 
-    for dosya in dosyalar:
-        if dosya.filename == '': continue
+    for file in files:
+        if file.filename == '': continue
         try:
-            # Dosya adından konum türetme (Örn: Zemin_Kat.xlsx -> Zemin Kat)
-            dosya_adi_temiz = dosya.filename.rsplit('.', 1)[0].replace('_', ' ').title()
+            file_name_clean = file.filename.rsplit('.', 1)[0].replace('_', ' ').title()
             
-            wb = openpyxl.load_workbook(dosya)
+            wb = openpyxl.load_workbook(file)
             for ws in wb.worksheets:
-                # Konum birleştirme: Bina/Kat + Dosya Adı + Sayfa Adı
-                tam_konum = " / ".join([p for p in [bina_kat, dosya_adi_temiz, ws.title] if p])
+                full_location = " / ".join([p for p in [building_floor, file_name_clean, ws.title] if p])
                 
                 for row in ws.iter_rows(min_row=2, values_only=True):
                     if not row or row[0] is None: continue
                     
-                    ad = row[0]
-                    cinsi = row[1] if len(row) > 1 else ""
+                    name = row[0]
+                    type_ = row[1] if len(row) > 1 else ""
                     
                     try: 
-                        adet = int(row[2]) if len(row) > 2 and row[2] else 1
+                        quantity = int(row[2]) if len(row) > 2 and row[2] else 1
                     except: 
-                        adet = 1
+                        quantity = 1
                     
-                    # Mükerrer Kontrol (ORM)
-                    mevcut = Demirbas.query.filter_by(ad=ad, konum=tam_konum).first()
+                    existing = Asset.query.filter_by(name=name, location=full_location).first()
                     
-                    if not mevcut:
-                        yeni = Demirbas(
-                            ad=ad,
-                            cinsi=cinsi,
-                            kampus=hedef_kampus,
-                            konum=tam_konum,
-                            adet=adet,
-                            alim_tarihi=datetime.now().strftime("%Y-%m-%d"),
-                            demirbas_no=str(uuid.uuid4())[:8].upper()
+                    if not existing:
+                        new_item = Asset(
+                            name=name,
+                            type=type_,
+                            campus=target_campus,
+                            location=full_location,
+                            quantity=quantity,
+                            date_added=datetime.now().strftime("%Y-%m-%d"),
+                            asset_tag=str(uuid.uuid4())[:8].upper()
                         )
-                        db.session.add(yeni)
-                        toplam_eklenen += 1
-                        islem_yapildi = True
+                        db.session.add(new_item)
+                        total_added += 1
+                        processed = True
 
         except Exception as e:
-            flash(f"Hata ({dosya.filename}): {str(e)}", "danger")
+            flash(f"Error ({file.filename}): {str(e)}", "danger")
             continue
 
-    if islem_yapildi:
+    if processed:
         db.session.commit()
-        log_kaydet(f"{len(dosyalar)} Dosya Yüklendi", f"{bina_kat} - {toplam_eklenen} Eşya", "Yükleme")
-        flash(f"{toplam_eklenen} adet demirbaş sisteme eklendi.", "success")
+        save_log(f"{len(files)} Files Uploaded", f"{building_floor} - {total_added} Assets", "Upload")
+        flash(f"{total_added} assets added to the system.", "success")
     else:
-        flash("Yeni demirbaş eklenmedi veya hepsi zaten kayıtlı.", "warning")
+        flash("No new assets added or all already registered.", "warning")
 
-    return redirect(url_for('main.index', tab='demirbas'))
+    return redirect(url_for('main.index', tab='assets'))
 
 
-@bp.route('/yukle-klasor', methods=['POST'])
+@bp.route('/upload-folder', methods=['POST'])
 @login_required
-def yukle_klasor():
-    if 'dosya' not in request.files: return redirect(url_for('main.index'))
-    dosyalar = request.files.getlist('dosya')
+def upload_folder():
+    if 'file' not in request.files: return redirect(url_for('main.index'))
+    files = request.files.getlist('file')
     
-    varsayilan_kampus = request.form.get('hedef_kampus', 'Merkez (Kanuni) Kampüsü')
+    default_campus = request.form.get('target_campus', 'Main Campus')
     
-    islem_sayisi = 0
-    kaydedilen_yerler = set()
+    process_count = 0
+    saved_locations = set()
 
-    # --- 1. KAMPÜS TESPİT SÖZLÜĞÜ ---
-    KAMPUS_MAP = {
-        "pelitli": "Pelitli Yerleşkesi",
-        "çimenli": "Çimenli Yerleşkesi",
-        "cimenli": "Çimenli Yerleşkesi",
-        "kaşüstü": "Kaşüstü Yerleşkesi",
-        "kasustu": "Kaşüstü Yerleşkesi",
-        "yomra": "Yomra Yerleşkesi",
-        "yalıncak": "Yalıncak Yerleşkesi",
-        "yalincak": "Yalıncak Yerleşkesi",
-        "ömer yıldız": "Yalıncak Yerleşkesi",
-        "omer yildiz": "Yalıncak Yerleşkesi"
+    CAMPUS_MAP = {
+        "pelitli": "North Campus",
+        "çimenli": "South Campus",
+        "cimenli": "South Campus",
+        "kaşüstü": "East Campus",
+        "kasustu": "East Campus",
+        "yomra": "West Campus",
+        "yalıncak": "Main Campus",
+        "yalincak": "Main Campus",
+        "ömer yıldız": "Main Campus",
+        "omer yildiz": "Main Campus"
     }
 
-    # --- 2. KONUMDAN SİLİNECEK KELİMELER ---
-    SILINECEK_KELIMELER = [
+    WORDS_TO_REMOVE = [
         "LİSTESİ", "LISTESI", "LİSTE", "LISTE", "DEMİRBAŞLARI", "DEMİRBAŞ", "DEMIRBAS", 
         "ENVANTER", "SAYIM", "SİSTEMİ", "SISTEMI", "YAPILDI", "YAPILAN", "YENİ", "ESKİ", 
         "COPY", "KOPYA", "YEDEK", "REVİZE", "REVIZE", "DÜZENLEME", "DÜZENLENEN", 
@@ -289,7 +271,7 @@ def yukle_klasor():
         "ÖMER YILDIZ", "OMER YILDIZ", "ÖMER", "YILDIZ"
     ]
 
-    ONEMLI_KELIMELER = [
+    IMPORTANT_WORDS = [
         "BLOK", "KAT", "ODA", "BİNA", "BINA", "YURT", "OFİS", "OFFICE", 
         "HALL", "SALON", "LAB", "DEPO", "ZEMİN", "GİRİŞ", "SİSTEM", "KAZAN",
         "RESTORAN", "YEMEKHANE", "KANTİN", "LOBİ", "MESCİT", "GUVENLIK", "GÜVENLİK",
@@ -297,129 +279,118 @@ def yukle_klasor():
         "PATOLOJİ", "KLİNİK", "POLİKLİNİK", "SERVİS", "BÖLÜM", "BOLUM", "BİRİM", "LABORATUVAR"
     ]
 
-    for dosya in dosyalar:
-        if not (dosya.filename.endswith('.xlsx') or dosya.filename.endswith('.xls')):
+    for file in files:
+        if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
             continue
-        if '~$' in dosya.filename: continue
+        if '~$' in file.filename: continue
             
         try:
-            full_path = dosya.filename.replace('\\', '/')
+            full_path = file.filename.replace('\\', '/')
             path_lower = full_path.lower()
             
-            # A) Kampüsü Tespit Et
-            aktif_kampus = varsayilan_kampus
-            for anahtar, gercek_ad in KAMPUS_MAP.items():
-                if anahtar in path_lower:
-                    aktif_kampus = gercek_ad
+            active_campus = default_campus
+            for key, real_name in CAMPUS_MAP.items():
+                if key in path_lower:
+                    active_campus = real_name
                     break 
             
-            # B) Konum İsmini Temizle (Dosya yolundan)
             path_parts = full_path.split('/')
-            dosya_adi_ham = path_parts[-1].rsplit('.', 1)[0]
-            tum_parcalar = path_parts[:-1] + [dosya_adi_ham]
+            file_name_raw = path_parts[-1].rsplit('.', 1)[0]
+            all_parts = path_parts[:-1] + [file_name_raw]
             
-            anlamli_yol_parcalari = []
+            meaningful_path_parts = []
 
-            for parca in tum_parcalar:
-                temiz_parca = tr_upper(parca) # utils'den gelen fonksiyon
+            for part in all_parts:
+                clean_part = tr_upper(part)
                 
-                # SİLME İŞLEMİ
-                for yasakli in SILINECEK_KELIMELER:
-                    if yasakli in temiz_parca:
-                        temiz_parca = temiz_parca.replace(yasakli, "")
+                for banned in WORDS_TO_REMOVE:
+                    if banned in clean_part:
+                        clean_part = clean_part.replace(banned, "")
                 
-                temiz_parca = temiz_parca.replace("_", " ").replace("-", " ").strip()
+                clean_part = clean_part.replace("_", " ").replace("-", " ").strip()
                 
-                if len(temiz_parca) < 2 and not any(c.isdigit() for c in temiz_parca):
+                if len(clean_part) < 2 and not any(c.isdigit() for c in clean_part):
                     continue
 
-                is_onemli = any(k in temiz_parca for k in ONEMLI_KELIMELER)
-                is_blok_kodu = (len(temiz_parca) > 0 and len(temiz_parca) < 6 and any(c.isdigit() for c in temiz_parca))
+                is_important = any(k in clean_part for k in IMPORTANT_WORDS)
+                is_block_code = (len(clean_part) > 0 and len(clean_part) < 6 and any(c.isdigit() for c in clean_part))
                 
-                if (is_onemli or is_blok_kodu or len(temiz_parca) > 2):
-                    temiz_parca_title = tr_title(temiz_parca) # utils'den gelen fonksiyon
-                    # Mükerrer klasör ismi önleme
-                    if anlamli_yol_parcalari:
-                        son_eklenen = anlamli_yol_parcalari[-1]
-                        if temiz_parca_title in son_eklenen or son_eklenen in temiz_parca_title:
-                            if len(temiz_parca_title) > len(son_eklenen):
-                                anlamli_yol_parcalari[-1] = temiz_parca_title
+                if (is_important or is_block_code or len(clean_part) > 2):
+                    clean_part_title = tr_title(clean_part)
+                    if meaningful_path_parts:
+                        last_added = meaningful_path_parts[-1]
+                        if clean_part_title in last_added or last_added in clean_part_title:
+                            if len(clean_part_title) > len(last_added):
+                                meaningful_path_parts[-1] = clean_part_title
                             continue 
                     
-                    anlamli_yol_parcalari.append(temiz_parca_title)
+                    meaningful_path_parts.append(clean_part_title)
 
-            temiz_yol_str = " / ".join(anlamli_yol_parcalari)
+            clean_path_str = " / ".join(meaningful_path_parts)
 
-            # C) Excel İçini Oku ve Kaydet
-            wb = openpyxl.load_workbook(dosya)
+            wb = openpyxl.load_workbook(file)
             
             for ws in wb.worksheets:
-                sheet_adi = ws.title.strip()
+                sheet_name = ws.title.strip()
                 
-                # Konum Belirleme Mantığı
-                if "Sheet" in sheet_adi or "Sayfa" in sheet_adi:
-                    tam_konum = temiz_yol_str if temiz_yol_str else "Genel Depo"
+                if "Sheet" in sheet_name or "Sayfa" in sheet_name:
+                    full_location = clean_path_str if clean_path_str else "General Storage"
                 else:
-                    if temiz_yol_str:
-                        if sheet_adi in temiz_yol_str:
-                            tam_konum = temiz_yol_str
+                    if clean_path_str:
+                        if sheet_name in clean_path_str:
+                            full_location = clean_path_str
                         else:
-                            tam_konum = f"{temiz_yol_str} / {sheet_adi}"
+                            full_location = f"{clean_path_str} / {sheet_name}"
                     else:
-                        tam_konum = sheet_adi 
+                        full_location = sheet_name 
 
-                if len(tam_konum) > 150: tam_konum = tam_konum[:147] + "..."
-                kaydedilen_yerler.add(tam_konum)
+                if len(full_location) > 150: full_location = full_location[:147] + "..."
+                saved_locations.add(full_location)
 
                 for row in ws.iter_rows(min_row=2, values_only=True):
                     if not row or row[0] is None: continue
-                    ad = row[0]
-                    cinsi = row[1] if len(row)>1 else ""
-                    try: adet = int(row[2]) if len(row)>2 else 1
-                    except: adet = 1
+                    name = row[0]
+                    type_ = row[1] if len(row)>1 else ""
+                    try: quantity = int(row[2]) if len(row)>2 else 1
+                    except: quantity = 1
                     
-                    # Mükerrer Kontrol (ORM)
-                    mevcut = Demirbas.query.filter_by(ad=ad, konum=tam_konum).first()
+                    existing = Asset.query.filter_by(name=name, location=full_location).first()
                     
-                    if not mevcut:
-                        yeni = Demirbas(
-                            ad=ad, 
-                            cinsi=cinsi, 
-                            kampus=aktif_kampus, 
-                            konum=tam_konum, 
-                            adet=adet, 
-                            alim_tarihi=datetime.now().strftime("%Y-%m-%d"),
-                            demirbas_no=str(uuid.uuid4())[:8].upper()
+                    if not existing:
+                        new_item = Asset(
+                            name=name, 
+                            type=type_, 
+                            campus=active_campus, 
+                            location=full_location, 
+                            quantity=quantity, 
+                            date_added=datetime.now().strftime("%Y-%m-%d"),
+                            asset_tag=str(uuid.uuid4())[:8].upper()
                         )
-                        db.session.add(yeni)
+                        db.session.add(new_item)
             
-            islem_sayisi += 1
+            process_count += 1
 
         except Exception as e:
-            print(f"Hata ({dosya.filename}): {e}")
+            print(f"Error ({file.filename}): {e}")
 
-    # Döngü bitince toplu kaydet
     db.session.commit() 
     
-    if islem_sayisi > 0:
-        ornek_konum = list(kaydedilen_yerler)[0] if len(kaydedilen_yerler) > 0 else ""
-        log_kaydet(f"Akıllı Yükleme ({islem_sayisi} dosya)", f"Örn: {ornek_konum}", "Yükleme")
-        flash(f"{islem_sayisi} adet dosya başarıyla işlendi.", "success")
+    if process_count > 0:
+        sample_location = list(saved_locations)[0] if len(saved_locations) > 0 else ""
+        save_log(f"Smart Upload ({process_count} files)", f"Ex: {sample_location}", "Upload")
+        flash(f"{process_count} files processed successfully.", "success")
     else:
-        flash("İşlenecek dosya bulunamadı.", "warning")
+        flash("No files found to process.", "warning")
 
-    return redirect(url_for('main.index', tab='demirbas'))
+    return redirect(url_for('main.index', tab='assets'))
 
-@bp.route('/demirbas-detay/<int:id>')
-def demirbas_detay(id):
-    # 1. Demirbaşı Bul
-    demirbas = Demirbas.query.get_or_404(id)
+@bp.route('/asset-details/<int:id>')
+def asset_details(id):
+    asset = Asset.query.get_or_404(id)
     
-    # 2. Aktif Arıza Var mı? (SQLAlchemy Sorgusu)
-    # Durumu 'Tamamlandı' veya 'İptal Edildi' OLMAYAN bir kayıt arıyoruz
-    aktif_ariza = Ariza.query.filter(
-        Ariza.demirbas_id == id,
-        ~Ariza.durum.in_(['Tamamlandı', 'İptal Edildi']) # ~ işareti 'NOT IN' demektir
-    ).order_by(Ariza.id.desc()).first()
+    active_maintenance = MaintenanceLog.query.filter(
+        MaintenanceLog.asset_id == id,
+        ~MaintenanceLog.status.in_(['Completed', 'Cancelled'])
+    ).order_by(MaintenanceLog.id.desc()).first()
     
-    return render_template('detay.html', item=demirbas, ariza=aktif_ariza)
+    return render_template('detay.html', item=asset, ariza=active_maintenance)

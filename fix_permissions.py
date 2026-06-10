@@ -1,46 +1,44 @@
 from app import create_app, db
-from app.models import Kullanici
+from app.models import User
 
 app = create_app()
 
-def yetkileri_duzelt():
+def fix_permissions():
     with app.app_context():
-        print("🔧 YETKİLER DÜZENLENİYOR...\n")
+        print("🔧 FIXING PERMISSIONS...\n")
 
-        # 1. SORUMLU KULLANICIYI DÜZELT
-        # Sorun: Rolü 'admin' olduğu için her yeri görüyor.
-        # Çözüm: Rolünü 'personel' yapalım ama Yetki Düzeyi 2 (Yüksek) kalsın.
-        sorumlu = Kullanici.query.filter_by(kullanici_adi='sorumlu').first()
-        if sorumlu:
-            sorumlu.rol = 'personel'  # Admin değil, personel sınıfında
-            sorumlu.yetki_duzeyi = 2  # Ama yetkili bir personel (Birim Sorumlusu)
-            print(f"✅ DÜZELTİLDİ: {sorumlu.ad_soyad} -> Rol: Personel, Yetki: 2 (Birim Sorumlusu)")
+        # 1. FIX MANAGER USER
+        manager = User.query.filter_by(username='manager').first()
+        if manager:
+            manager.role = 'personnel'
+            manager.auth_level = 2
+            print(f"✅ FIXED: {manager.full_name} -> Role: Personnel, Auth: 2 (Department Manager)")
         else:
-            print("⚠️ 'sorumlu' kullanıcısı bulunamadı.")
+            print("⚠️ 'manager' user not found.")
 
-        # 2. TEKNİK SERVİSİ KONTROL ET
-        teknik = Kullanici.query.filter_by(kullanici_adi='teknik').first()
-        if teknik:
-            teknik.rol = 'teknik'
-            teknik.yetki_duzeyi = 1
-            print(f"✅ KONTROL EDİLDİ: {teknik.ad_soyad} -> Rol: Teknik, Yetki: 1")
+        # 2. CHECK TECHNICIAN
+        tech = User.query.filter_by(username='tech').first()
+        if tech:
+            tech.role = 'technician'
+            tech.auth_level = 1
+            print(f"✅ CHECKED: {tech.full_name} -> Role: Technician, Auth: 1")
 
-        # 3. STANDART PERSONELİ KONTROL ET
-        personel = Kullanici.query.filter_by(kullanici_adi='personel').first()
-        if personel:
-            personel.rol = 'personel'
-            personel.yetki_duzeyi = 0
-            print(f"✅ KONTROL EDİLDİ: {personel.ad_soyad} -> Rol: Personel, Yetki: 0 (İzleyici)")
+        # 3. CHECK STANDARD STAFF
+        staff = User.query.filter_by(username='staff').first()
+        if staff:
+            staff.role = 'personnel'
+            staff.auth_level = 0
+            print(f"✅ CHECKED: {staff.full_name} -> Role: Personnel, Auth: 0 (View Only)")
 
-        # 4. ADMIN (PATRON) KONTROLÜ
-        admin = Kullanici.query.filter_by(kullanici_adi='admin').first()
+        # 4. CHECK ADMIN
+        admin = User.query.filter_by(username='admin').first()
         if admin:
-            admin.rol = 'admin'
-            admin.yetki_duzeyi = 3
-            print(f"✅ KONTROL EDİLDİ: {admin.ad_soyad} -> Rol: Admin, Yetki: 3 (Tam Yetki)")
+            admin.role = 'admin'
+            admin.auth_level = 3
+            print(f"✅ CHECKED: {admin.full_name} -> Role: Admin, Auth: 3 (Full Access)")
 
         db.session.commit()
-        print("\n🚀 İŞLEM TAMAM! Şimdi çıkış yapıp 'sorumlu' ile tekrar dene.")
+        print("\n🚀 DONE! Now logout and login with 'manager' to test.")
 
 if __name__ == "__main__":
-    yetkileri_duzelt()
+    fix_permissions()

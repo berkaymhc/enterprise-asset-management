@@ -4,76 +4,70 @@ from itsdangerous import URLSafeTimedSerializer
 from flask import current_app, session
 from datetime import datetime
 
-def turkce_normalize(metin):
-    if metin is None: return ""
-    degisim = {
+def normalize_text(text):
+    if text is None: return ""
+    replacements = {
         'İ': 'i', 'I': 'i', 'ı': 'i', 'Ş': 's', 'ş': 's',
         'Ç': 'c', 'ç': 'c', 'Ö': 'o', 'ö': 'o',
         'Ü': 'u', 'ü': 'u', 'Ğ': 'g', 'ğ': 'g'
     }
-    yeni_metin = ""
-    for harf in metin:
-        yeni_metin += degisim.get(harf, harf)
-    return yeni_metin.lower()
+    new_text = ""
+    for char in text:
+        new_text += replacements.get(char, char)
+    return new_text.lower()
 
-def format_telefon(tel):
-    if not tel: return ""
-    temiz = ''.join(filter(str.isdigit, str(tel)))
-    if len(temiz) >= 10:
-        temiz = temiz[-10:]
-        return f"+90 {temiz[:3]} {temiz[3:6]} {temiz[6:8]} {temiz[8:]}"
-    return tel
-def tr_upper(text):
-    """Türkçe karakterlere uygun büyük harfe çevirme"""
+def format_phone(phone):
+    if not phone: return ""
+    clean = ''.join(filter(str.isdigit, str(phone)))
+    if len(clean) >= 10:
+        clean = clean[-10:]
+        return f"+90 {clean[:3]} {clean[3:6]} {clean[6:8]} {clean[8:]}"
+    return phone
+
+def to_upper(text):
     if not text: return ""
     return text.replace('i', 'İ').replace('ı', 'I').upper()
 
-def tr_title(text):
-    """Türkçe karakterlere uygun Başlık Formatı"""
+def to_title(text):
     if not text: return ""
-    kelimeler = text.split()
-    yeni_kelimeler = []
-    for kelime in kelimeler:
-        if not kelime: continue
-        ilk = kelime[0]
-        # Geri kalanını küçültürken I -> ı, İ -> i dönüşümü yap
-        kalan = kelime[1:].replace('I', 'ı').replace('İ', 'i').lower()
-        yeni_kelimeler.append(ilk + kalan)
-    return " ".join(yeni_kelimeler)
+    words = text.split()
+    new_words = []
+    for word in words:
+        if not word: continue
+        first = word[0]
+        rest = word[1:].replace('I', 'ı').replace('İ', 'i').lower()
+        new_words.append(first + rest)
+    return " ".join(new_words)
 
 def get_reset_token(user_id, expires_sec=1800):
-    """Şifre sıfırlama için güvenli token oluşturur (30 dk geçerli)"""
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    return s.dumps(user_id, salt='sifre-sifirlama-tuzu')
+    return s.dumps(user_id, salt='password-reset-salt')
 
 def verify_reset_token(token):
-    """Gelen tokenı doğrular ve user_id döndürür"""
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
-        user_id = s.loads(token, salt='sifre-sifirlama-tuzu', max_age=1800)
+        user_id = s.loads(token, salt='password-reset-salt', max_age=1800)
     except:
         return None
     return user_id
 
 def save_picture(form_picture, folder='profile_pics'):
-    """Resim yükleme fonksiyonu (Varsa kalsın)"""
-    pass # Mevcut resim yükleme kodun varsa buraya ekleyebilirsin
+    pass 
 
-def log_kaydet(baslik, detay, tur):
-    """Sistem genelinde işlem geçmişini kaydeder"""
+def save_log(title, detail, log_type):
     from app import db
-    from app.models import YuklemeGecmisi
+    from app.models import UploadHistory
     try:
-        log = YuklemeGecmisi(
-            dosya_adi=baslik, 
-            hedef_konum=detay, 
-            tur=tur, 
-            tarih=datetime.now().strftime("%d-%m-%Y %H:%M"),
-            islem_yapan=session.get('ad_soyad', 'Sistem')
+        log = UploadHistory(
+            file_name=title, 
+            target_location=detail, 
+            type=log_type, 
+            upload_date=datetime.now().strftime("%d-%m-%Y %H:%M"),
+            uploaded_by=session.get('full_name', 'System')
         )
         db.session.add(log)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         if current_app:
-            current_app.logger.error(f"Log Kaydetme Hatası: {e}")
+            current_app.logger.error(f"Save Log Error: {e}")

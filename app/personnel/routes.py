@@ -4,227 +4,223 @@ import openpyxl
 from flask import redirect, url_for, request, session, flash, render_template, current_app
 from app.personnel import bp
 from app import db
-from app.models import Personel, YuklemeGecmisi, Demirbas
+from app.models import Personnel, UploadHistory, Asset
 from flask_login import login_required
-from app.utils import format_telefon, turkce_normalize, log_kaydet
+from app.utils import format_phone, normalize_text, save_log
 from datetime import datetime
 from sqlalchemy import func
 
 
-# --- EXCEL YÜKLEME ---
-@bp.route('/yukle-personel', methods=['POST'])
+# --- EXCEL UPLOAD ---
+@bp.route('/upload-personnel', methods=['POST'])
 @login_required
-def yukle_personel():
-    if 'dosya' not in request.files: return redirect(url_for('main.index'))
-    dosya = request.files['dosya']
+def upload_personnel():
+    if 'file' not in request.files: return redirect(url_for('main.index'))
+    file = request.files['file']
     
-    if dosya and dosya.filename != '':
+    if file and file.filename != '':
         try:
-            wb = openpyxl.load_workbook(dosya)
+            wb = openpyxl.load_workbook(file)
             ws = wb.active
-            eklenen_sayisi = 0
+            added_count = 0
             
             for row in ws.iter_rows(min_row=2, values_only=True):
                 if not row or row[0] is None: continue
                 
-                # Excel Sütunları: 0:Ad, 1:Ünvan, 2:Birim, 3:Kampüs, 4:Ofis, 5:Telefon, 6:Email
-                ad_soyad = row[0]
-                unvan = row[1] if len(row) > 1 else ""
-                birim = row[2] if len(row) > 2 else ""
-                kampus = row[3] if len(row) > 3 and row[3] else "Merkez"
-                ofis = row[4] if len(row) > 4 else ""
+                # Excel Columns: 0:Name, 1:Title, 2:Department, 3:Campus, 4:Office, 5:Phone, 6:Email
+                full_name = row[0]
+                title = row[1] if len(row) > 1 else ""
+                department = row[2] if len(row) > 2 else ""
+                campus = row[3] if len(row) > 3 and row[3] else "Main Campus"
+                office = row[4] if len(row) > 4 else ""
                 
-                # Telefon ve Email (Hata düzeltmeleriyle)
-                raw_tel = str(row[5]) if len(row) > 5 and row[5] else ""
-                telefon = format_telefon(raw_tel)
+                # Phone and Email
+                raw_phone = str(row[5]) if len(row) > 5 and row[5] else ""
+                phone = format_phone(raw_phone)
                 
                 email = row[6] if len(row) > 6 and row[6] else ""
                 
-                # Mükerrer Kontrol (ORM)
-                mevcut = Personel.query.filter_by(ad_soyad=ad_soyad, ofis=ofis).first()
+                # Duplicate Check
+                existing = Personnel.query.filter_by(full_name=full_name, office=office).first()
                 
-                if not mevcut:
-                    yeni_p = Personel(
-                        ad_soyad=ad_soyad, unvan=unvan, birimi=birim,
-                        kampus=kampus, ofis=ofis, telefon=telefon, email=email
+                if not existing:
+                    new_p = Personnel(
+                        full_name=full_name, title=title, department=department,
+                        campus=campus, office=office, phone=phone, email=email
                     )
-                    db.session.add(yeni_p)
-                    eklenen_sayisi += 1
+                    db.session.add(new_p)
+                    added_count += 1
             
-            if eklenen_sayisi > 0:
+            if added_count > 0:
                 db.session.commit()
-                log_kaydet("Personel Listesi Yüklendi", f"{eklenen_sayisi} Kişi Eklendi", "Yükleme")
-                flash(f"{eklenen_sayisi} personel başarıyla yüklendi.", "success")
+                save_log("Personnel List Uploaded", f"{added_count} People Added", "Upload")
+                flash(f"{added_count} personnel successfully uploaded.", "success")
             else:
-                flash("Yeni personel bulunamadı.", "warning")
+                flash("No new personnel found.", "warning")
                 
         except Exception as e:
-            flash(f"Hata: {str(e)}", "danger")
+            flash(f"Error: {str(e)}", "danger")
             
-    return redirect(url_for('main.index', tab='personel'))
+    return redirect(url_for('main.index', tab='personnel'))
 
-# --- CRUD İŞLEMLERİ ---
+# --- CRUD OPERATIONS ---
 
-@bp.route('/ekle-personel', methods=['POST'])
+@bp.route('/add-personnel', methods=['POST'])
 @login_required
-def ekle_personel():
-    ad_soyad = request.form.get('ad_soyad')
-    unvan = request.form.get('unvan')
-    birimi = request.form.get('birimi')
-    kampus = request.form.get('kampus')
-    ofis = request.form.get('ofis')
-    telefon = request.form.get('telefon')
+def add_personnel():
+    full_name = request.form.get('full_name')
+    title = request.form.get('title')
+    department = request.form.get('department')
+    campus = request.form.get('campus')
+    office = request.form.get('office')
+    phone = request.form.get('phone')
     
-    # Email oluşturma (Ayarlanabilir Domain)
+    # Email generation
     email_prefix = request.form.get('email_prefix')
-    # Domain ayarını Config'den al, yoksa varsayılanı kullan
     domain = current_app.config.get('MAIL_DOMAIN', 'avrasya.edu.tr')
     email = f"{email_prefix}@{domain}" if email_prefix else ""
 
-    # Veritabanı Nesnesi
-    yeni_p = Personel(
-        ad_soyad=ad_soyad,
-        unvan=unvan,
-        birimi=birimi,
-        kampus=kampus,
-        ofis=ofis,
+    new_p = Personnel(
+        full_name=full_name,
+        title=title,
+        department=department,
+        campus=campus,
+        office=office,
         email=email,
-        telefon=telefon
+        phone=phone
     )
     
-    db.session.add(yeni_p)
+    db.session.add(new_p)
     db.session.commit()
     
-    flash("Personel eklendi.", "success")
-    return redirect(url_for('main.index', tab='personel'))
+    flash("Personnel added.", "success")
+    return redirect(url_for('main.index', tab='personnel'))
 
-@bp.route('/guncelle-personel', methods=['POST'])
+@bp.route('/update-personnel', methods=['POST'])
 @login_required
-def guncelle_personel():
+def update_personnel():
     p_id = request.form.get('id')
-    personel = Personel.query.get(p_id)
+    personnel = Personnel.query.get(p_id)
     
-    if personel:
-        personel.ad_soyad = request.form.get('ad_soyad')
-        personel.unvan = request.form.get('unvan')
-        personel.birimi = request.form.get('birimi')
-        personel.kampus = request.form.get('kampus')
-        personel.ofis = request.form.get('ofis')
-        personel.email = request.form.get('email')
-        personel.telefon = format_telefon(request.form.get('telefon'))
+    if personnel:
+        personnel.full_name = request.form.get('full_name')
+        personnel.title = request.form.get('title')
+        personnel.department = request.form.get('department')
+        personnel.campus = request.form.get('campus')
+        personnel.office = request.form.get('office')
+        personnel.email = request.form.get('email')
+        personnel.phone = format_phone(request.form.get('phone'))
         
         db.session.commit()
-        log_kaydet(f"{personel.ad_soyad} Güncellendi", f"Ofis: {personel.ofis}", "Düzenleme")
-        flash("Personel güncellendi.", "success")
+        save_log(f"{personnel.full_name} Updated", f"Office: {personnel.office}", "Edit")
+        flash("Personnel updated.", "success")
         
-    return redirect(url_for('main.index', tab='personel'))
+    return redirect(url_for('main.index', tab='personnel'))
 
-@bp.route('/sil-personel/<int:id>')
+@bp.route('/delete-personnel/<int:id>')
 @login_required
-def sil_personel(id):
-    if int(session.get('yetki_duzeyi', 0)) < 3: return redirect(url_for('main.index', tab='personel'))
+def delete_personnel(id):
+    if int(session.get('auth_level', 0)) < 3: return redirect(url_for('main.index', tab='personnel'))
     
-    personel = Personel.query.get(id)
-    if personel:
-        log_kaydet(f"{personel.ad_soyad} Silindi", f"Ofis: {personel.ofis}", "Silme")
-        db.session.delete(personel)
+    personnel = Personnel.query.get(id)
+    if personnel:
+        save_log(f"{personnel.full_name} Deleted", f"Office: {personnel.office}", "Delete")
+        db.session.delete(personnel)
         db.session.commit()
-        flash("Personel silindi.", "warning")
+        flash("Personnel deleted.", "warning")
         
-    return redirect(url_for('main.index', tab='personel'))
+    return redirect(url_for('main.index', tab='personnel'))
 
-@bp.route('/sifirla-personel')
+@bp.route('/reset-personnel')
 @login_required
-def sifirla_personel():
-    if int(session.get('yetki_duzeyi', 0)) < 3: return redirect(url_for('main.index'))
+def reset_personnel():
+    if int(session.get('auth_level', 0)) < 3: return redirect(url_for('main.index'))
     
     try:
-        db.session.query(Personel).delete()
+        db.session.query(Personnel).delete()
         db.session.commit()
-        log_kaydet("Tüm Personel Listesi Silindi", "Veritabanı Sıfırlama", "Sıfırlama")
-        flash("Personel listesi sıfırlandı.", "danger")
+        save_log("All Personnel List Deleted", "Database Reset", "Reset")
+        flash("Personnel list reset.", "danger")
     except:
         db.session.rollback()
         
-    return redirect(url_for('main.index', tab='personel'))
+    return redirect(url_for('main.index', tab='personnel'))
 
-# --- TOPLU İŞLEMLER ---
+# --- BULK OPERATIONS ---
 
-@bp.route('/toplu-sil-personel', methods=['POST'])
+@bp.route('/bulk-delete-personnel', methods=['POST'])
 @login_required
-def toplu_sil_personel():
-    if session.get('rol') != 'admin': return redirect(url_for('main.index', tab='personel'))
+def bulk_delete_personnel():
+    if session.get('role') != 'admin': return redirect(url_for('main.index', tab='personnel'))
     
-    ids = request.form.getlist('secilen_ids')
+    ids = request.form.getlist('selected_ids')
     if ids:
-        Personel.query.filter(Personel.id.in_(ids)).delete(synchronize_session=False)
+        Personnel.query.filter(Personnel.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()
-        flash(f"{len(ids)} personel silindi.", "success")
+        flash(f"{len(ids)} personnel deleted.", "success")
         
-    return redirect(url_for('main.index', tab='personel'))
+    return redirect(url_for('main.index', tab='personnel'))
 
-@bp.route('/toplu-tasi-personel', methods=['POST'])
+@bp.route('/bulk-move-personnel', methods=['POST'])
 @login_required
-def toplu_tasi_personel():
-    if int(session.get('yetki_duzeyi', 0)) < 1: return redirect(url_for('main.index', tab='personel'))
+def bulk_move_personnel():
+    if int(session.get('auth_level', 0)) < 1: return redirect(url_for('main.index', tab='personnel'))
     
-    ids = request.form.getlist('secilen_ids')
-    yeni_birim = request.form.get('yeni_birim')
-    yeni_kampus = request.form.get('yeni_kampus')
-    yeni_ofis = request.form.get('yeni_ofis')
+    ids = request.form.getlist('selected_ids')
+    new_department = request.form.get('new_department')
+    new_campus = request.form.get('new_campus')
+    new_office = request.form.get('new_office')
     
     if ids:
-        query = Personel.query.filter(Personel.id.in_(ids))
+        query = Personnel.query.filter(Personnel.id.in_(ids))
         for p in query.all():
-            p.ofis = yeni_ofis
-            if yeni_birim: p.birimi = yeni_birim
-            if yeni_kampus: p.kampus = yeni_kampus
+            p.office = new_office
+            if new_department: p.department = new_department
+            if new_campus: p.campus = new_campus
             
         db.session.commit()
-        flash(f"{len(ids)} personel taşındı.", "success")
+        flash(f"{len(ids)} personnel moved.", "success")
         
-    return redirect(url_for('main.index', tab='personel'))
+    return redirect(url_for('main.index', tab='personnel'))
 
-# --- PERSONEL DETAY VE ZİMMET GÖRÜNTÜLEME ---
-@bp.route('/personel-detay/<int:id>')
+# --- PERSONNEL DETAILS AND ASSIGNMENTS ---
+@bp.route('/personnel-details/<int:id>')
 @login_required
-def personel_detay(id):
-    kisi = Personel.query.get_or_404(id)
+def personnel_details(id):
+    person = Personnel.query.get_or_404(id)
     
-    # Aynı ofisteki arkadaşları
-    arkadaslar = Personel.query.filter(Personel.ofis == kisi.ofis, Personel.id != id).all()
+    # Friends in the same office
+    friends = Personnel.query.filter(Personnel.office == person.office, Personnel.id != id).all()
     
-    # Zimmet Mantığı (Jules Fix: Sağlam Karakter Normalizasyonu)
-    esyalar = []
-    if kisi.ofis:
-        # Hem arananı hem de veritabanındaki veriyi normalize et
-        aranan_ofis = turkce_normalize(kisi.ofis)
+    # Assigned Assets
+    assets = []
+    if person.office:
+        searched_office = normalize_text(person.office)
         
-        # Veritabanında arama yaparken de normalize fonksiyonunu kullan
-        esyalar = Demirbas.query.filter(
-            func.NORMALIZE(Demirbas.konum).like(f"%{aranan_ofis}%")
+        assets = Asset.query.filter(
+            func.NORMALIZE(Asset.location).like(f"%{searched_office}%")
         ).all()
     
-    return render_template('personel_detay.html', kisi=kisi, arkadaslar=arkadaslar, esyalar=esyalar)
+    return render_template('personnel_det.html', person=person, friends=friends, assets=assets)
 
-@bp.route('/tasi-personel', methods=['POST'])
+@bp.route('/move-personnel', methods=['POST'])
 @login_required
-def tasi_personel():
-    p_id = request.form.get('personel_id')
-    yeni_kampus = request.form.get('yeni_kampus')
-    yeni_ofis = request.form.get('yeni_ofis')
+def move_personnel():
+    p_id = request.form.get('personnel_id')
+    new_campus = request.form.get('new_campus')
+    new_office = request.form.get('new_office')
     
-    personel = Personel.query.get(p_id)
+    personnel = Personnel.query.get(p_id)
     
-    if personel:
-        eski_yer = f"{personel.kampus}/{personel.ofis}"
+    if personnel:
+        old_location = f"{personnel.campus}/{personnel.office}"
         
-        personel.kampus = yeni_kampus
-        personel.ofis = yeni_ofis
+        personnel.campus = new_campus
+        personnel.office = new_office
         
         db.session.commit()
         
-        log_kaydet(f"{personel.ad_soyad} Taşındı", f"{eski_yer} -> {yeni_kampus}/{yeni_ofis}", "Taşıma")
-        flash("Personel başarıyla taşındı.", "success")
+        save_log(f"{personnel.full_name} Moved", f"{old_location} -> {new_campus}/{new_office}", "Move")
+        flash("Personnel successfully moved.", "success")
         
-    return redirect(url_for('main.index', tab='personel'))
+    return redirect(url_for('main.index', tab='personnel'))

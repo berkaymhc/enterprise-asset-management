@@ -1,90 +1,60 @@
-# app/auth/routes.py - FİNAL DÜZELTİLMİŞ SÜRÜM
-
 from flask import render_template, redirect, url_for, flash, request, session, make_response
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from app.auth import bp
-from flask_mail import Message # <-- EKLE
-from app import mail # <-- EKLE
-from app.utils import get_reset_token, verify_reset_token # <-- EKLE
-from app.models import Kullanici, YuklemeGecmisi
+from flask_mail import Message
+from app import mail
+from app.utils import get_reset_token, verify_reset_token, save_log
+from app.models import User, UploadHistory
 from app import db
 from datetime import datetime
 
-# --- LOG YARDIMCI FONKSİYONU ---
-def log_kaydet(baslik, detay, tur):
-    try:
-        log = YuklemeGecmisi(
-            dosya_adi=baslik, 
-            hedef_konum=detay, 
-            tur=tur, 
-            tarih=datetime.now().strftime("%d-%m-%Y %H:%M"),
-            islem_yapan=session.get('ad_soyad', 'Sistem')
-        )
-        db.session.add(log)
-        db.session.commit()
-    except Exception as e:
-        print(f"Log hatası: {e}")
-
 # ----------------------------------------------------
-# GİRİŞ / ÇIKIŞ İŞLEMLERİ
+# LOGIN / LOGOUT OPERATIONS
 # ----------------------------------------------------
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
-    # Eğer zaten giriş yapmışsa ana sayfaya yönlendir
     if current_user.is_authenticated:
-        if session.get('rol') == 'teknik':
-            return redirect(url_for('main.index', tab='ariza'))
+        if session.get('role') == 'technician':
+            return redirect(url_for('main.index', tab='maintenance'))
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
-        kadi = request.form.get('kullanici_adi')
-        sifre = request.form.get('sifre')
+        username = request.form.get('username')
+        password = request.form.get('password')
         
-        # HTML'den gelen checkbox değeri
-        beni_hatirla = True if request.form.get('beni_hatirla') else False
+        remember_me = True if request.form.get('remember_me') else False
         
-        user = Kullanici.query.filter_by(kullanici_adi=kadi).first()
+        user = User.query.filter_by(username=username).first()
         
-        if user and check_password_hash(user.sifre, sifre):
-            # 1. FLASK-LOGIN İLE OTURUM AÇ
-            login_user(user, remember=beni_hatirla)
+        if user and check_password_hash(user.password, password):
+            login_user(user, remember=remember_me)
             
-            # 2. SESSION DEĞİŞKENLERİNİ AYARLA
-            session['rol'] = user.rol
-            session['ad_soyad'] = user.ad_soyad
-            session['birim'] = user.birim
-            session['yetki_duzeyi'] = user.yetki_duzeyi if user.yetki_duzeyi is not None else 0
+            session['role'] = user.role
+            session['full_name'] = user.full_name
+            session['department'] = user.department
+            session['auth_level'] = user.auth_level if user.auth_level is not None else 0
             
-            # Yönlendirme Hedefi Belirle
             next_page = request.args.get('next')
             if not next_page:
-                if user.rol == 'teknik':
-                    next_page = url_for('main.index', tab='ariza')
+                if user.role == 'technician':
+                    next_page = url_for('main.index', tab='maintenance')
                 else:
                     next_page = url_for('main.index')
             
-            # --- DÜZELTİLEN KISIM BAŞLANGIÇ ---
-            
-            # Önce response nesnesini oluşturuyoruz (Eksik olan satır buydu!)
             response = make_response(redirect(next_page))
             
-            # Sonra içine çerez (cookie) ekleyip çıkarıyoruz
-            if beni_hatirla:
-                response.set_cookie('last_username', kadi, max_age=30*24*60*60)
+            if remember_me:
+                response.set_cookie('last_username', username, max_age=30*24*60*60)
             else:
                 response.delete_cookie('last_username')
             
-            # En son oluşturduğumuz bu response'u döndürüyoruz
             return response
             
-            # --- DÜZELTİLEN KISIM BİTİŞ ---
-            
         else:
-            flash('Hatalı kullanıcı adı veya şifre!', 'danger')
+            flash('Invalid username or password!', 'danger')
             
-    # GET İsteği (Sayfa Yüklenirken)
     last_username = request.cookies.get('last_username', '')
     
     return render_template('auth/login.html', last_username=last_username)
@@ -92,70 +62,53 @@ def login():
 @bp.route('/logout')
 @login_required
 def logout():
-    # 1. Flask-Login Çıkışı (Cookie'yi sil emri verir)
     logout_user()
     
-    # 2. Sadece bizim eklediğimiz session verilerini sil (session.clear() yapma!)
-    for key in ['rol', 'ad_soyad', 'birim', 'yetki_duzeyi']:
+    for key in ['role', 'full_name', 'department', 'auth_level']:
         session.pop(key, None)
         
-    flash('Başarıyla çıkış yapıldı.', 'info')
-    
-    # Giriş sayfasına yönlendir
+    flash('Successfully logged out.', 'info')
     return redirect(url_for('auth.login'))
 
-# app/auth/routes.py içindeki importlara eklemediysen ekle:
-from flask_mail import Message
-
-@bp.route('/sifre-talep', methods=['POST'])
-def sifre_talep():
-    girilen = request.form.get('iletisim_bilgisi')
+@bp.route('/password-reset-request', methods=['POST'])
+def request_password_reset():
+    contact_info = request.form.get('contact_info')
     
-    # Otomatik @avrasya.edu.tr tamamlama
-    if '@' not in girilen:
-        eposta = girilen + '@avrasya.edu.tr'
+    if '@' not in contact_info:
+        email = contact_info + '@avrasya.edu.tr'
     else:
-        eposta = girilen
+        email = contact_info
         
-    user = Kullanici.query.filter_by(email=eposta).first()
+    user = User.query.filter_by(email=email).first()
     
     if user:
         token = get_reset_token(user.id)
-        # Link oluşturuluyor
-        link = url_for('auth.sifre_sifirla', token=token, _external=True)
+        link = url_for('auth.reset_password', token=token, _external=True)
         
-        msg = Message('🔒 Şifre Sıfırlama Talebi', recipients=[user.email])
+        msg = Message('🔒 Password Reset Request', recipients=[user.email])
         
-        # 1. YEDEK METİN (Eski cihazlar için)
-        msg.body = f"Merhaba {user.ad_soyad}, şifrenizi sıfırlamak için şu linke gidin: {link}"
+        msg.body = f"Hello {user.full_name}, to reset your password, visit the following link: {link}"
         
-        # 2. HTML TASARIM (Asıl görünecek şık kısım)
         msg.html = f"""
         <html>
             <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
                 <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                    
-                    <h2 style="color: #092442; text-align: center;">Şifre Sıfırlama</h2>
-                    
-                    <p>Merhaba <strong>{user.ad_soyad}</strong>,</p>
-                    
-                    <p>Hesabınız için şifre sıfırlama talebinde bulundunuz. Aşağıdaki butona tıklayarak yeni şifrenizi belirleyebilirsiniz:</p>
-                    
+                    <h2 style="color: #092442; text-align: center;">Password Reset</h2>
+                    <p>Hello <strong>{user.full_name}</strong>,</p>
+                    <p>You have requested to reset your password. Click the button below to set a new password:</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="{link}" style="background-color: #0d6efd; color: white; padding: 14px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">
-                            Şifremi Sıfırla
+                            Reset My Password
                         </a>
                     </div>
-                    
                     <p style="color: #666; font-size: 13px;">
-                        Bu buton 30 dakika süreyle geçerlidir.<br>
-                        Eğer butonu göremiyorsanız veya çalışmıyorsa, aşağıdaki bağlantıyı tarayıcınıza yapıştırın:
+                        This link is valid for 30 minutes.<br>
+                        If the button doesn't work, copy and paste the following link into your browser:
                     </p>
                     <p style="word-break: break-all; color: #999; font-size: 11px;">{link}</p>
-                    
                     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
                     <p style="text-align: center; color: #aaa; font-size: 11px;">
-                        Avrasya Üniversitesi - Envanter Takip Sistemi
+                        Enterprise Asset Management System
                     </p>
                 </div>
             </body>
@@ -164,131 +117,124 @@ def sifre_talep():
         
         try:
             mail.send(msg)
-            flash(f"Sıfırlama bağlantısı {user.email} adresine gönderildi.", "info")
+            flash(f"Reset link sent to {user.email}.", "info")
         except Exception as e:
-            flash(f"Mail gönderilemedi. Hata: {str(e)}", "danger")
-            print(f"MAIL HATASI: {e}")
+            flash(f"Failed to send email. Error: {str(e)}", "danger")
+            print(f"MAIL ERROR: {e}")
             
     else:
-        flash("Bu kullanıcı adıyla kayıtlı bir e-posta bulunamadı.", "warning")
+        flash("No email registered with this username.", "warning")
         
     return redirect(url_for('auth.login'))
 
-# --- YENİ ROTA: LİNKE TIKLAYINCA AÇILACAK SAYFA ---
-@bp.route('/sifre-sifirla/<token>', methods=['GET', 'POST'])
-def sifre_sifirla(token):
+@bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     
     user_id = verify_reset_token(token)
     if user_id is None:
-        flash('Sıfırlama bağlantısı geçersiz veya süresi dolmuş.', 'warning')
+        flash('The reset link is invalid or has expired.', 'warning')
         return redirect(url_for('auth.login'))
     
     if request.method == 'POST':
-        sifre = request.form.get('sifre')
-        sifre_tekrar = request.form.get('sifre_tekrar')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
         
-        if sifre != sifre_tekrar:
-            flash('Şifreler eşleşmiyor!', 'danger')
+        if password != confirm_password:
+            flash('Passwords do not match!', 'danger')
             return render_template('auth/reset_password.html', token=token)
             
-        user = Kullanici.query.get(user_id)
-        user.sifre = generate_password_hash(sifre)
+        user = User.query.get(user_id)
+        user.password = generate_password_hash(password)
         db.session.commit()
         
-        flash('Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz.', 'success')
+        flash('Your password has been successfully updated! You may now log in.', 'success')
         return redirect(url_for('auth.login'))
         
     return render_template('auth/reset_password.html', token=token)
 
-# app/auth/routes.py içindeki ilgili fonksiyonlar
-
-@bp.route('/ekle-kullanici', methods=['POST'])
+@bp.route('/add-user', methods=['POST'])
 @login_required
-def ekle_kullanici():
-    if session.get('rol') != 'admin': 
+def add_user():
+    if session.get('role') != 'admin': 
         return redirect(url_for('main.index'))
     
-    kadi = request.form.get('kullanici_adi')
-    email = request.form.get('email')  # <-- YENİ: Email alıyoruz
-    sifre = request.form.get('sifre')
-    ad_soyad = request.form.get('ad_soyad')
-    rol = request.form.get('rol')
-    birim = request.form.get('birim')
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    full_name = request.form.get('full_name')
+    role = request.form.get('role')
+    department = request.form.get('department')
     
-    try: yetki_duzeyi = int(request.form.get('yetki_duzeyi', 0))
-    except: yetki_duzeyi = 0
+    try: auth_level = int(request.form.get('auth_level', 0))
+    except: auth_level = 0
 
-    # ... (Güvenlik kontrolleri aynı kalsın) ...
-
-    mevcut = Kullanici.query.filter((Kullanici.kullanici_adi == kadi) | (Kullanici.email == email)).first()
-    if mevcut:
-        flash("Bu kullanıcı adı veya e-posta zaten kullanılıyor.", "warning")
+    existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+    if existing_user:
+        flash("This username or email is already in use.", "warning")
     else:
-        yeni_k = Kullanici(
-            kullanici_adi=kadi,
-            email=email,  # <-- YENİ: Email'i kaydediyoruz
-            ad_soyad=ad_soyad,
-            rol=rol,
-            birim=birim,
-            yetki_duzeyi=yetki_duzeyi,
-            sifre=generate_password_hash(sifre),
-            tarih=datetime.now().strftime("%d-%m-%Y %H:%M")
+        new_user = User(
+            username=username,
+            email=email,
+            full_name=full_name,
+            role=role,
+            department=department,
+            auth_level=auth_level,
+            password=generate_password_hash(password),
+            created_date=datetime.now().strftime("%d-%m-%Y %H:%M")
         )
-        db.session.add(yeni_k)
+        db.session.add(new_user)
         db.session.commit()
-        log_kaydet("Kullanıcı Eklendi", f"{kadi}", "Ekleme")
-        flash(f"{kadi} başarıyla eklendi.", "success")
+        save_log("User Added", f"{username}", "Addition")
+        flash(f"User {username} added successfully.", "success")
         
     return redirect(url_for('main.index', open_modal='userModal'))
 
-@bp.route('/guncelle-kullanici', methods=['POST'])
+@bp.route('/update-user', methods=['POST'])
 @login_required
-def guncelle_kullanici():
-    if session.get('rol') != 'admin':
+def update_user():
+    if session.get('role') != 'admin':
         return redirect(url_for('main.index'))
 
-    user_id = request.form.get('kullanici_id')
-    user = Kullanici.query.get(user_id)
+    user_id = request.form.get('user_id')
+    user = User.query.get(user_id)
     
     if user:
-        # ... (Admin kontrolü aynı kalsın) ...
-
-        user.kullanici_adi = request.form.get('kullanici_adi')
-        user.email = request.form.get('email') # <-- YENİ: Email güncelliyoruz
-        user.ad_soyad = request.form.get('ad_soyad')
-        user.rol = request.form.get('rol')
-        user.birim = request.form.get('birim')
-        try: user.yetki_duzeyi = int(request.form.get('yetki_duzeyi', 0))
-        except: user.yetki_duzeyi = 0
+        user.username = request.form.get('username')
+        user.email = request.form.get('email')
+        user.full_name = request.form.get('full_name')
+        user.role = request.form.get('role')
+        user.department = request.form.get('department')
+        try: user.auth_level = int(request.form.get('auth_level', 0))
+        except: user.auth_level = 0
             
-        sifre = request.form.get('sifre')
-        if sifre and sifre.strip() != "":
-            user.sifre = generate_password_hash(sifre)
+        password = request.form.get('password')
+        if password and password.strip() != "":
+            user.password = generate_password_hash(password)
             
         db.session.commit()
-        log_kaydet("Kullanıcı Güncellendi", f"{user.kullanici_adi}", "Güncelleme")
-        flash("Kullanıcı bilgileri güncellendi.", "success")
+        save_log("User Updated", f"{user.username}", "Update")
+        flash("User information updated.", "success")
     else:
-        flash("Kullanıcı bulunamadı.", "danger")
+        flash("User not found.", "danger")
         
     return redirect(url_for('main.index', open_modal='userModal'))
 
-@bp.route('/sil-kullanici/<int:id>')
+@bp.route('/delete-user/<int:id>')
 @login_required
-def sil_kullanici(id):
-    if session.get('rol') != 'admin': return redirect(url_for('main.index'))
+def delete_user(id):
+    if session.get('role') != 'admin': return redirect(url_for('main.index'))
     
-    user = Kullanici.query.get(id)
+    user = User.query.get(id)
     if user:
-        if user.kullanici_adi == 'admin':
-            flash("Ana yönetici silinemez!", "danger")
+        if user.username == 'admin':
+            flash("The main administrator cannot be deleted!", "danger")
         else:
-            kadi = user.kullanici_adi
+            username = user.username
             db.session.delete(user)
             db.session.commit()
-            log_kaydet("Kullanıcı Silindi", f"{kadi}", "Silme")
-            flash("Kullanıcı silindi.", "success")
+            save_log("User Deleted", f"{username}", "Deletion")
+            flash("User deleted.", "success")
             
     return redirect(url_for('main.index', open_modal='userModal'))
